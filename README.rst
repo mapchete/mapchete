@@ -15,187 +15,151 @@ Tile-based geodata processing.
 .. image:: https://img.shields.io/pypi/pyversions/mapchete.svg
     :target: https://pypi.python.org/pypi/mapchete
 
-Mapchete processes raster and vector geodata in digestable chunks.
+``mapchete`` is a Python library for processing large geospatial raster and vector datasets. It reads and writes data in a tiled fashion, allowing you to run your algorithms on data that is too large to fit into memory, and it can process your data in parallel.
 
-Processing larger amounts of data requires chunking the input data into smaller tiles
-and process them one by one. Python provides a lot of useful packages to process geodata
-like shapely_ or numpy_. From within your process code you will have access to the geodata
-in the form of ``NumPy`` arrays for raster data or GeoJSON-like feature dictionaries for
-vector data.
+You define the data inputs, output format, and the geographic extent, and ``mapchete`` handles the rest. Your custom Python code is then applied to each tile, enabling complex processing workflows on a massive scale.
 
-Internally the processing job is split into tasks which can processed in parallel using either
-``concurrent.futures`` or build task graphs and use dask_ to intelligently process either on
-the local machine or on a cluster.
+---
 
-With the help of fiona_ and rasterio_ Mapchete takes care about resampling and
-reprojecting geodata, applying your Python code to the tiles and writing the output either
-into a single file or into a directory of files organized in a WMTS_-like tile pyramid.
-Details on tiling scheme and available map projections are outlined in the
-`tiling documentation`_.
+### Key Features
 
-.. _shapely: http://toblerity.org/shapely/
-.. _numpy: http://www.numpy.org/
-.. _dask: https://www.dask.org/
-.. _fiona: https://github.com/Toblerity/Fiona
-.. _rasterio: https://github.com/mapbox/rasterio/
-.. _WMTS: https://en.wikipedia.org/wiki/Web_Map_Tile_Service
-.. _`tiling documentation`: https://mapchete.readthedocs.io/en/latest/tiling.html
+* 🗺️ **Process Large Datasets**: Work with massive raster and vector data without memory issues using a tile-based, out-of-core approach.
+* ⚡ **Parallel Processing**: Automatically run computations on multiple CPU cores to significantly speed up your workflows.
+* ⚙️ **Simple Configuration**: Separate your processing logic from your data configuration using easy-to-read ``.mapchete`` files.
+* 🐍 **Pythonic API**: Use ``mapchete`` directly from the command line or as a library in your own Python applications.
+* 🔌 **Flexible & Extensible**: Natively supports common raster and vector formats (e.g., GeoTIFF, GeoPackage). Easily add your own drivers for custom formats.
+* 🖥️ **Interactive Inspection**: Instantly visualize your processing inputs and results on a browser map with the built-in ``serve`` command.
 
+---
 
-.. figure:: https://mapchete.readthedocs.io/en/latest/_images/mercator_pyramid.svg
-   :align: center
-   :target: https://mapchete.readthedocs.io/en/latest/tiling.html
+### Installation
 
-   (standard Web Mercator pyramid used in the web)
+``mapchete`` requires a working GDAL installation. We highly recommend installing ``mapchete`` and its dependencies from PyPI using ``pip`` after GDAL is installed on the system:
+
+.. code-block:: bash
+
+    pip install mapchete
+
+Alternatively, it can be installed from the ``conda-forge`` channel using ``conda`` or ``mamba``:
+
+.. code-block:: bash
+
+    mamba install -c conda-forge mapchete
 
 
------
-Usage
------
+---
 
-You need a ``.mapchete`` file for the process configuration. The configuration is based
-on the ``YAML`` syntax.
+### Quickstart: Generate a Hillshade
+
+A great way to get started with ``mapchete`` is to generate a hillshade from a Digital Elevation Model (DEM). A hillshade creates a 3D-like relief effect by modeling how the surface would be illuminated by a light source. This example uses the modern process syntax where inputs and custom parameters are defined as typed function arguments.
+
+You can find free DEM data for your area of interest from many sources, such as the `Copernicus DEM <https://registry.opendata.aws/copernicus-dem/>`_.
+
+**1. Create a ``mapchete`` configuration file.**
+
+This file now includes a ``process_parameters`` section to control the hillshade's appearance. These values are passed directly to your Python script. Save this file as ``hillshade.mapchete``:
 
 .. code-block:: yaml
 
-    process: my_python_process.py  # or a Python module path: mypythonpackage.myprocess
-    zoom_levels:
-        min: 0
-        max: 12
-    input:
-        dem: /path/to/dem.tif
-        land_polygons: /path/to/polygon/file.geojson
-    output:
-        format: PNG_hillshade
-        path: /output/path
+    # The Python file containing the processing algorithm.
+    process: create_hillshade.py
+    # Note: there is a predefined process available, so you don't need to write your own hillshade process
+    # process: mapchete.processes.hillshade
+
+    # The CRS and grid definition for the output.
     pyramid:
-        grid: mercator
+      grid: geodetic
 
-    # process specific parameters
-    resampling: cubic_spline
+    # Define the zoom levels to process.
+    zoom_levels:
+      min: 7
+      max: 12
 
+    # User-defined parameters passed to the 'execute()' function.
+    process_parameters:
+      azimuth: 315
+      altitude: 45
+      z_factor: 2.0
+      scale: 1.0
 
-You also need either a ``.py`` file or a Python module path where you specify the process
-itself.
+    # Define the input data.
+    # The key 'dem' will be the name of the variable passed to the execute() function.
+    input:
+      dem: path/to/your/dem.tif
+
+    # Define the output format and location.
+    output:
+      path: ./hillshade_output
+      format: PNG
+      bands: 3
+      dtype: uint8  # Hillshade is an 8-bit grayscale image
+
+**2. Create your processing script.**
+
+The ``execute`` function now accepts the hillshade parameters from the config file as arguments. It also uses ``raise Empty``, the recommended way to tell ``mapchete`` that a tile has no data and should be skipped. Save this file as ``create_hillshade.py``:
 
 .. code-block:: python
 
-    def execute(mp, resampling="nearest"):
+    import numpy as np
+    from mapchete import Empty, RasterInput
+    # mapchete has a built-in helper for this common task!
+    from mapchete.processes.hillshade import hillshade
 
-        # Open elevation model.
-        with mp.open("dem") as src:
-            # Skip tile if there is no data available or read data into a NumPy array.
-            if src.is_empty(1):
-                return "empty"
-            else:
-                dem = src.read(1, resampling=resampling)
+    def execute(
+        dem: RasterInput,
+        azimuth: int = 315,
+        altitude: int = 45,
+        z_factor: float = 1.0,
+        scale: float = 1.0,
+    ) -> np.ndarray:
+        """
+        Generate a hillshade from an input DEM tile.
+        The function arguments are automatically populated from the .mapchete file.
+        """
+        # If the input tile is empty, raise an Empty exception to skip it.
+        if dem.is_empty():
+            raise Empty
 
-        # Create hillshade using a built-in hillshade function.
-        hillshade = mp.hillshade(dem)
+        # Read the elevation data and generate the hillshade with the given parameters.
+        return hillshade(
+            dem.read(),
+            azimuth=azimuth,
+            altitude=altitude,
+            z_factor=z_factor,
+            scale=scale
+        )
 
-        # Clip with polygons from vector file and return result.
-        with mp.open("land_polygons") as land_file:
-            return mp.clip(hillshade, land_file.read())
+**3. Run the process.**
 
+To run the process, use the ``execute`` subcommand. You can edit the values in ``hillshade.mapchete`` and re-run the process to see how the lighting changes. Make sure to use the ``--overwrite`` flag if you want to overwrite existing output.
 
-You can then interactively inspect the process output directly on a map in a
-browser (first, install dependencies by ``pip install mapchete[serve]`` go to
-``localhost:5000``):
+.. code-block:: bash
 
-.. code-block:: shell
+    mapchete execute hillshade.mapchete
 
-    $ mapchete serve hillshade.mapchete --memory
+**4. View the output.**
 
+Use the ``serve`` command to inspect your results on an interactive map.
 
-The ``serve`` tool recognizes changes in your process configuration or in the
-process file. If you edit one of these, just refresh the browser and inspect the
-changes (note: use the ``--memory`` flag to make sure to reprocess each tile and
-turn off browser caching).
+.. code-block:: bash
 
-Once you are done with editing, batch process everything using the ``execute``
-tool.
+    mapchete serve hillshade.mapchete
 
-.. code-block:: shell
+---
 
-    $ mapchete execute hillshade.mapchete
+### Documentation
 
+For more detailed information, tutorials, and the API reference, please visit our full documentation at:
+**`mapchete.readthedocs.io <https://mapchete.readthedocs.io/>`_**
 
--------------
-Documentation
--------------
+---
 
-There are many more options such as zoom-dependent process parameters, metatiling, tile
-buffers or interpolating from an existing output of a higher zoom level. For deeper
-insights, please go to the documentation_.
+### Contributing
 
-.. _documentation: http://mapchete.readthedocs.io/en/latest/index.html
+Contributions are welcome! We are happy to receive bug reports, feature requests, or pull requests. Please have a look at our **`CONTRIBUTING.md <path/to/CONTRIBUTING.md>`_** file for guidelines on how to get started.
 
-Mapchete is used in many preprocessing steps for the `EOX Maps`_ layers:
+---
 
-* Merge multiple DEMs into one global DEM.
-* Create a customized relief shade for the Terrain Layer.
-* Generalize landmasks & coastline from OSM for multiple zoom levels.
-* Extract cloudless pixel for Sentinel-2 cloudless_.
+### License
 
-.. _cloudless: https://cloudless.eox.at/
-.. _`EOX Maps`: http://maps.eox.at/
-
-
-------------
-Installation
-------------
-
-via PyPi:
-
-.. code-block:: shell
-
-    $ pip install mapchete
-
-
-from source:
-
-.. code-block:: shell
-
-    $ git clone git@github.com:ungarj/mapchete.git && cd mapchete
-    $ pip install .
-
-
-
-To make sure Rasterio, Fiona and Shapely are properly built against your local GDAL and
-GEOS installations, don't install the binaries but build them on your system:
-
-.. code-block:: shell
-
-    $ pip install --upgrade rasterio fiona shapely --no-binary :all:
-
-
-To keep the core dependencies minimal if you install mapchete using ``pip``, some features
-are only available if you manually install additional dependencies:
-
-.. code-block:: shell
-
-    # for contour extraction:
-    $ pip install mapchete[contours]
-
-    # for dask processing:
-    $ pip install mapchete[dask]
-
-    # for S3 bucket reading and writing:
-    $ pip install mapchete[s3]
-
-    # for mapchete serve:
-    $ pip install mapchete[serve]
-
-    # for VRT generation:
-    $ pip install mapchete[vrt]
-
-
--------
-License
--------
-
-MIT License
-
-Copyright (c) 2015 - 2022 `EOX IT Services`_
-
-.. _`EOX IT Services`: https://eox.at/
+This project is licensed under the **`MIT License <https://github.com/mapchete/mapchete/blob/master/LICENSE>`_**.
