@@ -155,10 +155,10 @@ For more detailed information, tutorials, and the API reference, please visit ou
 Contributing
 ------------
 
-Contributions are welcome! We are happy to receive bug reports, feature requests, or pull requests. Please have a look at our `CONTRIBUTING.md <path/to/CONTRIBUTING.md>`_ file for guidelines on how to get started.
+Contributions are welcome! We are happy to receive bug reports, feature requests, or pull requests. Please have a look at our `CONTRIBUTING.rst <CONTRIBUTING.rst>`_ file for guidelines on how to get started.
 
 
 License
 -------
 
-This project is licensed under the `MIT License <https://github.com/mapchete/mapchete/blob/master/LICENSE>`_.
+This project is licensed under the `MIT License <LICENSE>`_.
