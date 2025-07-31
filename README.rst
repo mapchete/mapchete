@@ -1,4 +1,4 @@
-.. image:: logo/mapchete.svg
+.. image:: logo/mapchete_grey.svg
 
 Tile-based geodata processing.
 
