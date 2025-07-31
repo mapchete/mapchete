@@ -54,7 +54,7 @@ A great way to get started with ``mapchete`` is to generate a hillshade from a D
 
 You can find free DEM data for your area of interest from many sources, such as the `Copernicus DEM <https://registry.opendata.aws/copernicus-dem/>`_.
 
-**1. Create a `mapchete` configuration file.**
+**1. Create a mapchete configuration file.**
 
 This file now includes a ``process_parameters`` section to control the hillshade's appearance. These values are passed directly to your Python script. Save this file as ``hillshade.mapchete``:
 
@@ -149,16 +149,16 @@ Documentation
 -------------
 
 For more detailed information, tutorials, and the API reference, please visit our full documentation at:
-**`mapchete.readthedocs.io <https://mapchete.readthedocs.io/>`_**
+`mapchete.readthedocs.io <https://mapchete.readthedocs.io/>`_
 
 
 Contributing
 ------------
 
-Contributions are welcome! We are happy to receive bug reports, feature requests, or pull requests. Please have a look at our **`CONTRIBUTING.md <path/to/CONTRIBUTING.md>`_** file for guidelines on how to get started.
+Contributions are welcome! We are happy to receive bug reports, feature requests, or pull requests. Please have a look at our `CONTRIBUTING.md <path/to/CONTRIBUTING.md>`_ file for guidelines on how to get started.
 
 
 License
 -------
 
-This project is licensed under the **`MIT License <https://github.com/mapchete/mapchete/blob/master/LICENSE>`_**.
+This project is licensed under the `MIT License <https://github.com/mapchete/mapchete/blob/master/LICENSE>`_.
