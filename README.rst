@@ -34,7 +34,7 @@ Key Features
 Installation
 ------------
 
-``mapchete`` requires a working GDAL installation. We highly recommend installing ``mapchete`` and its dependencies from PyPI using ``pip`` after GDAL is installed on the system:
+We highly recommend installing ``mapchete`` and its dependencies from PyPI using ``pip``:
 
 .. code-block:: bash
 
