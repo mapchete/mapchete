@@ -19,9 +19,9 @@ Tile-based geodata processing.
 
 You define the data inputs, output format, and the geographic extent, and ``mapchete`` handles the rest. Your custom Python code is then applied to each tile, enabling complex processing workflows on a massive scale.
 
----
 
-### Key Features
+Key Features
+------------
 
 * 🗺️ **Process Large Datasets**: Work with massive raster and vector data without memory issues using a tile-based, out-of-core approach.
 * ⚡ **Parallel Processing**: Automatically run computations on multiple CPU cores to significantly speed up your workflows.
@@ -30,9 +30,9 @@ You define the data inputs, output format, and the geographic extent, and ``mapc
 * 🔌 **Flexible & Extensible**: Natively supports common raster and vector formats (e.g., GeoTIFF, GeoPackage). Easily add your own drivers for custom formats.
 * 🖥️ **Interactive Inspection**: Instantly visualize your processing inputs and results on a browser map with the built-in ``serve`` command.
 
----
 
-### Installation
+Installation
+------------
 
 ``mapchete`` requires a working GDAL installation. We highly recommend installing ``mapchete`` and its dependencies from PyPI using ``pip`` after GDAL is installed on the system:
 
@@ -47,15 +47,14 @@ Alternatively, it can be installed from the ``conda-forge`` channel using ``cond
     mamba install -c conda-forge mapchete
 
 
----
-
-### Quickstart: Generate a Hillshade
+Quickstart: Generate a Hillshade
+--------------------------------
 
 A great way to get started with ``mapchete`` is to generate a hillshade from a Digital Elevation Model (DEM). A hillshade creates a 3D-like relief effect by modeling how the surface would be illuminated by a light source. This example uses the modern process syntax where inputs and custom parameters are defined as typed function arguments.
 
 You can find free DEM data for your area of interest from many sources, such as the `Copernicus DEM <https://registry.opendata.aws/copernicus-dem/>`_.
 
-**1. Create a ``mapchete`` configuration file.**
+**1. Create a `mapchete` configuration file.**
 
 This file now includes a ``process_parameters`` section to control the hillshade's appearance. These values are passed directly to your Python script. Save this file as ``hillshade.mapchete``:
 
@@ -145,21 +144,21 @@ Use the ``serve`` command to inspect your results on an interactive map.
 
     mapchete serve hillshade.mapchete
 
----
 
-### Documentation
+Documentation
+-------------
 
 For more detailed information, tutorials, and the API reference, please visit our full documentation at:
 **`mapchete.readthedocs.io <https://mapchete.readthedocs.io/>`_**
 
----
 
-### Contributing
+Contributing
+------------
 
 Contributions are welcome! We are happy to receive bug reports, feature requests, or pull requests. Please have a look at our **`CONTRIBUTING.md <path/to/CONTRIBUTING.md>`_** file for guidelines on how to get started.
 
----
 
-### License
+License
+-------
 
 This project is licensed under the **`MIT License <https://github.com/mapchete/mapchete/blob/master/LICENSE>`_**.
