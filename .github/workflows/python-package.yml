@@ -60,14 +60,14 @@ jobs:
 
       # Upload the report to Codecov
       - name: Upload coverage to Codecov
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         uses: codecov/codecov-action@v4
         with:
           file: ./coverage.xml
 
           # this will let the workflow fail if coverage is below 100%
       - name: Pytest coverage
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         run: coverage report --skip-covered --show-missing --fail-under 100
 
       - name: Stop containers
