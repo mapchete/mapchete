@@ -15,6 +15,9 @@ Tile-based geodata processing.
 .. image:: https://img.shields.io/pypi/pyversions/mapchete.svg
     :target: https://pypi.python.org/pypi/mapchete
 
+.. image:: https://codecov.io/gh/mapchete/mapchete/branch/main/graph/badge.svg?token=aOracso0OQ
+    :target: https://codecov.io/gh/mapchete/mapchete
+
 ``mapchete`` is a Python library for processing large geospatial raster and vector datasets. It reads and writes data in a tiled fashion, allowing you to run your algorithms on data that is too large to fit into memory, and it can process your data in parallel.
 
 You define the data inputs, output format, and the geographic extent, and ``mapchete`` handles the rest. Your custom Python code is then applied to each tile, enabling complex processing workflows on a massive scale.
