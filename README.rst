@@ -2,25 +2,28 @@
 
 Tile-based geodata processing.
 
-.. image:: https://badge.fury.io/py/mapchete.svg
-    :target: https://badge.fury.io/py/mapchete
+.. image:: https://img.shields.io/pypi/v/mapchete.svg
+   :target: https://pypi.org/project/mapchete/
 
-.. image:: https://github.com/ungarj/mapchete/actions/workflows/python-package.yml/badge.svg
-    :target: https://github.com/ungarj/mapchete/actions
+.. image:: https://img.shields.io/pypi/l/mapchete.svg
+   :target: https://github.com/mapchete/mapchete/blob/main/LICENSE
 
-.. image:: https://readthedocs.org/projects/mapchete/badge/?version=latest
-    :target: http://mapchete.readthedocs.io/en/latest/?badge=latest
-    :alt: Documentation Status
-
-.. image:: https://img.shields.io/pypi/pyversions/mapchete.svg
-    :target: https://pypi.python.org/pypi/mapchete
+.. image:: https://github.com/mapchete/mapchete/actions/workflows/python-package.yml/badge.svg
+   :target: https://github.com/mapchete/mapchete/actions
 
 .. image:: https://codecov.io/gh/mapchete/mapchete/branch/main/graph/badge.svg?token=aOracso0OQ
-    :target: https://codecov.io/gh/mapchete/mapchete
+   :target: https://codecov.io/gh/mapchete/mapchete
 
-``mapchete`` is a Python library for processing large geospatial raster and vector datasets. It reads and writes data in a tiled fashion, allowing you to run your algorithms on data that is too large to fit into memory, and it can process your data in parallel.
+.. image:: https://img.shields.io/github/repo-size/mapchete/mapchete
+   :alt: GitHub repo size
 
-You define the data inputs, output format, and the geographic extent, and ``mapchete`` handles the rest. Your custom Python code is then applied to each tile, enabling complex processing workflows on a massive scale.
+.. image:: https://readthedocs.org/projects/mapchete/badge/?version=stable
+    :target: http://mapchete.readthedocs.io/en/stable/?badge=stable
+    :alt: Documentation Status
+
+mapchete is a Python library for processing large geospatial raster and vector datasets. It reads and writes data in a tiled fashion, allowing you to run your algorithms on data that is too large to fit into memory, and it can process your data in parallel.
+
+You define the data inputs, output format, and the geographic extent, and mapchete handles the rest. Your custom Python code is then applied to each tile, enabling complex processing workflows on a massive scale.
 
 
 Key Features
@@ -29,7 +32,7 @@ Key Features
 * 🗺️ **Process Large Datasets**: Work with massive raster and vector data without memory issues using a tile-based, out-of-core approach.
 * ⚡ **Parallel Processing**: Automatically run computations on multiple CPU cores to significantly speed up your workflows.
 * ⚙️ **Simple Configuration**: Separate your processing logic from your data configuration using easy-to-read ``.mapchete`` files.
-* 🐍 **Pythonic API**: Use ``mapchete`` directly from the command line or as a library in your own Python applications.
+* 🐍 **Pythonic API**: Use mapchete directly from the command line or as a library in your own Python applications.
 * 🔌 **Flexible & Extensible**: Natively supports common raster and vector formats (e.g., GeoTIFF, GeoPackage). Easily add your own drivers for custom formats.
 * 🖥️ **Interactive Inspection**: Instantly visualize your processing inputs and results on a browser map with the built-in ``serve`` command.
 
@@ -37,7 +40,7 @@ Key Features
 Installation
 ------------
 
-We highly recommend installing ``mapchete`` and its dependencies from PyPI using ``pip``:
+We highly recommend installing mapchete and its dependencies from PyPI using ``pip``:
 
 .. code-block:: bash
 
@@ -53,7 +56,7 @@ Alternatively, it can be installed from the ``conda-forge`` channel using ``cond
 Quickstart: Generate a Hillshade
 --------------------------------
 
-A great way to get started with ``mapchete`` is to generate a hillshade from a Digital Elevation Model (DEM). A hillshade creates a 3D-like relief effect by modeling how the surface would be illuminated by a light source. This example uses the modern process syntax where inputs and custom parameters are defined as typed function arguments.
+A great way to get started with mapchete is to generate a hillshade from a Digital Elevation Model (DEM). A hillshade creates a 3D-like relief effect by modeling how the surface would be illuminated by a light source. This example uses the modern process syntax where inputs and custom parameters are defined as typed function arguments.
 
 You can find free DEM data for your area of interest from many sources, such as the `Copernicus DEM <https://registry.opendata.aws/copernicus-dem/>`_.
 
@@ -98,7 +101,7 @@ This file now includes a ``process_parameters`` section to control the hillshade
 
 **2. Create your processing script.**
 
-The ``execute`` function now accepts the hillshade parameters from the config file as arguments. It also uses ``raise Empty``, the recommended way to tell ``mapchete`` that a tile has no data and should be skipped. Save this file as ``create_hillshade.py``:
+The ``execute`` function now accepts the hillshade parameters from the config file as arguments. It also uses ``raise Empty``, the recommended way to tell mapchete that a tile has no data and should be skipped. Save this file as ``create_hillshade.py``:
 
 .. code-block:: python
 
