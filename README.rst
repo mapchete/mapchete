@@ -3,23 +3,21 @@
 Tile-based geodata processing.
 
 .. image:: https://img.shields.io/pypi/v/mapchete.svg
-   :target: https://pypi.org/project/mapchete/
+  :target: https://pypi.org/project/mapchete/
 
 .. image:: https://img.shields.io/pypi/l/mapchete.svg
-   :target: https://github.com/mapchete/mapchete/blob/main/LICENSE
+  :target: https://github.com/mapchete/mapchete/blob/main/LICENSE
 
 .. image:: https://img.shields.io/github/actions/workflow/status/mapchete/mapchete/python-package.yml?label=tests
-   :target: https://github.com/mapchete/mapchete/actions
+  :target: https://github.com/mapchete/mapchete/actions
 
 .. image:: https://codecov.io/gh/mapchete/mapchete/branch/main/graph/badge.svg?token=aOracso0OQ
-   :target: https://codecov.io/gh/mapchete/mapchete
+  :target: https://codecov.io/gh/mapchete/mapchete
 
 .. image:: https://img.shields.io/github/repo-size/mapchete/mapchete
-   :alt: GitHub repo size
 
 .. image:: https://readthedocs.org/projects/mapchete/badge/?version=stable
-    :target: http://mapchete.readthedocs.io/en/stable/?badge=stable
-    :alt: Documentation Status
+  :target: http://mapchete.readthedocs.io/en/stable/?badge=stable
 
 mapchete is a Python library for processing large geospatial raster and vector datasets. It reads and writes data in a tiled fashion, allowing you to run your algorithms on data that is too large to fit into memory, and it can process your data in parallel.
 
