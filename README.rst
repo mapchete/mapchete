@@ -8,7 +8,7 @@ Tile-based geodata processing.
 .. image:: https://img.shields.io/pypi/l/mapchete.svg
    :target: https://github.com/mapchete/mapchete/blob/main/LICENSE
 
-.. image:: https://github.com/mapchete/mapchete/actions/workflows/python-package.yml/badge.svg
+.. image:: https://img.shields.io/github/actions/workflow/status/mapchete/mapchete/python-package.yml?label=tests
    :target: https://github.com/mapchete/mapchete/actions
 
 .. image:: https://codecov.io/gh/mapchete/mapchete/branch/main/graph/badge.svg?token=aOracso0OQ
