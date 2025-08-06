@@ -1,4 +1,4 @@
-.. image:: logo/mapchete_grey.svg
+.. image:: https://github.com/mapchete/mapchete/blob/main/logo/mapchete_grey.svg
 
 Tile-based geodata processing.
 
@@ -15,6 +15,7 @@ Tile-based geodata processing.
   :target: https://codecov.io/gh/mapchete/mapchete
 
 .. image:: https://img.shields.io/github/repo-size/mapchete/mapchete
+  :target: https://github.com/mapchete/mapchete
 
 .. image:: https://readthedocs.org/projects/mapchete/badge/?version=stable
   :target: http://mapchete.readthedocs.io/en/stable/?badge=stable
