@@ -5,6 +5,9 @@ Tile-based geodata processing.
 .. image:: https://img.shields.io/pypi/v/mapchete.svg
   :target: https://pypi.org/project/mapchete/
 
+.. image:: https://img.shields.io/conda/v/conda-forge/mapchete
+  :target: https://anaconda.org/conda-forge/mapchete
+
 .. image:: https://img.shields.io/pypi/l/mapchete.svg
   :target: https://github.com/mapchete/mapchete/blob/main/LICENSE
 
