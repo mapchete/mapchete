@@ -33,6 +33,10 @@ def single_batch(
         task_info = TaskInfo.from_future(future)
 
         if write_in_parent_process:
+            if output_writer is None:
+                raise ValueError(
+                    "OutputWriter has to be provided if write_in_parent_process is False"
+                )
             task_info = write_wrapper(
                 task_info,
                 output_writer=output_writer,
@@ -125,12 +129,17 @@ def get_task_wrapper(
     """Return a partially initialized wrapper function for task."""
     if write_in_parent_process:
         return partial(execute_wrapper, append_data=True)
-    else:
+
+    elif output_writer:
         return partial(
             execute_and_write_wrapper,
             output_writer=output_writer,
             append_data=propagate_results,
         )
+
+    raise ValueError(
+        "OutputWriter has to be provided if write_in_parent_process is False"
+    )
 
 
 def execute_wrapper(
@@ -155,7 +164,6 @@ def execute_wrapper(
             tile=task.tile,
             processed=True,
             process_msg=processor_message,
-            written=None,
             write_msg=None,
             output=output if append_data else None,
         )
@@ -165,7 +173,6 @@ def execute_wrapper(
             id=task.id,
             processed=True,
             process_msg=processor_message,
-            written=None,
             write_msg=None,
             output=output if append_data else None,
         )
@@ -210,7 +217,7 @@ def write_wrapper(
 
 def execute_and_write_wrapper(
     task: Task,
-    output_writer: Optional[OutputDataWriter] = None,
+    output_writer: OutputDataWriter,
     dependencies: Optional[dict] = None,
     append_data: bool = False,
     **_,

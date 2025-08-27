@@ -56,7 +56,7 @@ class ProcessFunc:
         self.function_parameters = dict(**inspect.signature(func).parameters)
 
     def __call__(self, *args, **kwargs: Any) -> Any:
-        kwargs = self.filter_parameters(kwargs)
+        kwargs = self.create_function_kwargs(kwargs)
         return self._load_func()(*args, **kwargs)
 
     def analyze_parameters(
@@ -67,6 +67,9 @@ class ProcessFunc:
             for name, param in self.function_parameters.items():
                 if param.default == inspect.Parameter.empty and name not in [
                     "mp",
+                    "tile",
+                    "process_pixelbuffer",
+                    "output_pixelbuffer",
                     "kwargs",
                     "__",
                 ]:
@@ -92,13 +95,16 @@ class ProcessFunc:
                         f"zoom {zoom}: parameter '{param_name}' is set in the process configuration but not a process function parameter"
                     )
 
-    def filter_parameters(self, kwargs):
+    def filter_parameters(self, kwargs: Dict[str, Any]) -> Dict[str, Any]:
         """Return function kwargs."""
         return {
             k: v
             for k, v in kwargs.items()
             if k in self.function_parameters and v is not None
         }
+
+    def create_function_kwargs(self, kwargs: Dict[str, Any]) -> Dict[str, Any]:
+        return self.filter_parameters(kwargs)
 
     def _load_func(self):
         """Import and return process function."""
