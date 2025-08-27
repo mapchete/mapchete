@@ -361,6 +361,9 @@ class TileTask(Task):
                 extended_kwargs = dict(
                     self.process_func_params,
                     mp=mp,
+                    tile=self.tile,
+                    process_pixelbuffer=self.tile.pixelbuffer,
+                    output_pixelbuffer=self.output_params.get("pixelbuffer"),
                     **{k: v for k, v in self.input.items()},
                 )
                 process_data = self.process(
