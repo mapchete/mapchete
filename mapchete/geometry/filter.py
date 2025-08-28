@@ -47,7 +47,6 @@ def is_type(
     """
     Checks whether geometry type is in alignment with target type.
     """
-    target_type = get_geometry_type(target_type)
     if isinstance(target_type, tuple):
         return any(
             [
@@ -61,6 +60,7 @@ def is_type(
         )
 
     geometry_type = get_geometry_type(geometry.geom_type)
+    target_type = get_geometry_type(target_type)
 
     # simple match
     if geometry_type == target_type:

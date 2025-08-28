@@ -127,7 +127,7 @@ class MFuture:
 
     @staticmethod
     def from_func_partial(func: Callable, item: Any) -> MFuture:
-        name = getattr(item, "id")
+        name = getattr(item, "id", None)
         try:
             result = func(item)
         except Exception as exc:  # pragma: no cover
