@@ -104,7 +104,9 @@ def create_item(
         crs_unit_to_meter=1,
     )
     logger.debug("item_path: %s", item_path)
-    item_json = json.dumps(tile_direcotry_item_to_dict(item), indent=indent)
+    item_json = json.dumps(
+        tile_direcotry_item_to_dict(item, relative_paths=relative_paths), indent=indent
+    )
     click.echo(item_json)
     if force or click.confirm(f"Write output to {item_path}?", abort=True):
         with fsspec.open(item_path, "w") as dst:

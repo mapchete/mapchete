@@ -1,10 +1,14 @@
+import copy
 import datetime
+import fsspec
 import logging
 from collections import OrderedDict
+import os
 
 import numpy as np
 import numpy.ma as ma
 from pyproj import CRS
+import pystac
 from shapely.geometry import box, mapping
 
 from mapchete.errors import ReprojectionFailed
@@ -271,10 +275,19 @@ def tile_directory_stac_item(
         out["asset_templates"]["bands"]["eo:bands"] = item_metadata["eo:bands"]
         # out["assets"]["thumbnail"]["eo:bands"] = item_metadata["eo:bands"]
     out["links"] = item_metadata.get("links", [])
-    if item_path:
+    if item_path and relative_paths is not True:
         out["links"].extend([{"rel": "self", "href": str(item_path)}])
-
-    return pystac.read_dict(out)
+        self_href = next(
+            (link["href"] for link in out["links"] if link["rel"] == "self"), None
+        )
+        return pystac.read_dict(out, href=self_href)
+    elif relative_paths:
+        out["links"].extend([{"rel": "self", "href": str(item_path.name)}])
+        # For the read_dict pystac function as it needs the param to out proper self path
+        self_href = next(
+            (link["href"] for link in out["links"] if link["rel"] == "self"), None
+        )
+        return make_stac_item_relative(pystac.read_dict(out, href=self_href))
 
 
 def _scale(grid, pixel_x_size, default_unit_to_meter=1):
@@ -487,7 +500,7 @@ def create_prototype_files(mp):
             )
 
 
-def tile_direcotry_item_to_dict(item) -> dict:
+def tile_direcotry_item_to_dict(item, relative_paths: bool = False) -> dict:
     item_dict = item.to_dict()
 
     # we have to add 'tiled-assets' to stac extensions in order to GDAL identify
@@ -496,4 +509,72 @@ def tile_direcotry_item_to_dict(item) -> dict:
     stac_extensions.add("tiled-assets")
     item_dict["stac_extensions"] = list(stac_extensions)
 
-    return item_dict
+    if relative_paths:
+        return make_stac_item_relative(item_dict)
+    else:
+        return item_dict
+
+
+def make_stac_item_relative(stac_item):
+    """
+    Convert all asset hrefs and self links to relative paths.
+    Accepts a pystac.Item, pystac.Collection, or a STAC dict.
+    Returns the updated object (Item/Collection) or dict.
+    """
+
+    def relpath(href):
+        # Strip protocol (s3://, file://, etc.) using fsspec
+        protocol = fsspec.utils.get_protocol(href)
+        path = href
+        if protocol != "file":
+            if href.startswith(f"{protocol}://"):
+                path = href[len(protocol) + 3 :]  # remove protocol://
+        # Keep only the filename
+        return os.path.basename(path)
+
+    if isinstance(stac_item, dict):
+        stac_item = copy.deepcopy(stac_item)
+
+        # Patch self link
+        for link in stac_item.get("links", []):
+            if link.get("rel") == "self" and "href" in link:
+                link["href"] = relpath(link["href"])
+
+        # Patch assets
+        for asset in stac_item.get("assets", {}).values():
+            if "href" in asset:
+                asset["href"] = relpath(asset["href"])
+
+        return stac_item
+
+    elif isinstance(stac_item, (pystac.Item, pystac.Collection)):
+        # Patch self link
+        if stac_item.get_self_href():
+            stac_item._self_href = relpath(stac_item.get_self_href())
+
+        # Patch assets
+        for asset in stac_item.assets.values():
+            asset.href = relpath(asset.href)
+
+        # Patch other links by recreating them if needed
+        new_links = []
+        for link in stac_item.links:
+            if link.rel != "self":
+                new_links.append(
+                    pystac.Link(
+                        rel=link.rel,
+                        target=relpath(link.target),
+                        media_type=link.media_type,
+                        title=link.title,
+                    )
+                )
+            else:
+                new_links.append(link)
+        stac_item.links = new_links
+
+        return stac_item
+
+    else:
+        raise TypeError(
+            "Input must be a pystac.Item, pystac.Collection, or a STAC dict"
+        )
