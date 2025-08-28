@@ -280,16 +280,18 @@ def tile_directory_stac_item(
         self_href = next(
             (link["href"] for link in out["links"] if link["rel"] == "self"), None
         )
-        return pystac.read_dict(out, href=self_href)
+        out_item = pystac.read_dict(out, href=self_href)
     elif item_path and relative_paths:
         out["links"].extend([{"rel": "self", "href": str(item_path.name)}])
         # For the read_dict pystac function as it needs the param to out proper self path
         self_href = next(
             (link["href"] for link in out["links"] if link["rel"] == "self"), None
         )
-        return make_stac_item_relative(pystac.read_dict(out, href=self_href))
+        out_item = make_stac_item_relative(pystac.read_dict(out, href=self_href))
     else:
-        return pystac.read_dict(out)
+        out_item = pystac.read_dict(out)
+
+    return out_item
 
 
 def _scale(grid, pixel_x_size, default_unit_to_meter=1):
