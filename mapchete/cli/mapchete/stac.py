@@ -12,7 +12,7 @@ from mapchete.formats import read_output_metadata
 from mapchete.io import MPath
 from mapchete.stac import (
     create_prototype_files,
-    tile_direcotry_item_to_dict,
+    tile_directory_item_to_dict,
     tile_directory_stac_item,
 )
 from mapchete.zoom_levels import ZoomLevels
@@ -105,7 +105,7 @@ def create_item(
     )
     logger.debug("item_path: %s", item_path)
     item_json = json.dumps(
-        tile_direcotry_item_to_dict(item, relative_paths=relative_paths), indent=indent
+        tile_directory_item_to_dict(item, relative_paths=relative_paths), indent=indent
     )
     click.echo(item_json)
     if force or click.confirm(f"Write output to {item_path}?", abort=True):

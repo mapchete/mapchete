@@ -1,5 +1,6 @@
 import json
 
+import pystac
 import pytest
 import rasterio
 from packaging import version
@@ -15,6 +16,8 @@ from mapchete.stac import (
     tile_pyramid_from_item,
     update_tile_directory_stac_item,
     zoom_levels_from_item,
+    make_stac_item_relative,
+    tile_directory_item_to_dict,
 )
 from mapchete.tile import BufferedTilePyramid
 
@@ -300,3 +303,45 @@ def test_create_prototype_file_exists(cleantopo_tl):
     create_prototype_files(cleantopo_tl.mp())
     with rasterio_open(stac_path):
         pass
+
+
+def test_make_stac_item_with_relative_paths(eox_stacta, eox_stacta_rel_paths):
+    item_dict_from_json = make_stac_item_relative(eox_stacta.read_json())
+    control_item_dict_from_json = eox_stacta_rel_paths.read_json()
+
+    assert (
+        item_dict_from_json["links"][0]["href"] == "2024-viewing-basic-epsg-4326.json"
+    )
+    assert item_dict_from_json["links"][0] == control_item_dict_from_json["links"][0]
+    assert (
+        item_dict_from_json["asset_templates"]["bands"]["href"]
+        == control_item_dict_from_json["asset_templates"]["bands"]["href"]
+    )
+
+    item_dict = make_stac_item_relative(
+        pystac.Item.from_file(str(eox_stacta)).to_dict()
+    )
+    for link in item_dict["links"]:
+        assert "://" not in link
+    assert (
+        item_dict["asset_templates"]["bands"]["href"]
+        == control_item_dict_from_json["asset_templates"]["bands"]["href"]
+    )
+
+    item = tile_directory_item_to_dict(
+        pystac.Item.from_file(str(eox_stacta)), relative_paths=True
+    )
+    for link in item_dict["links"]:
+        assert "://" not in link
+    assert (
+        item["asset_templates"]["bands"]["href"]
+        == control_item_dict_from_json["asset_templates"]["bands"]["href"]
+    )
+
+    item = make_stac_item_relative(pystac.Item.from_file(str(eox_stacta)))
+    for link in item.links:
+        assert "://" not in link.href
+    assert (
+        item.to_dict()["asset_templates"]["bands"]["href"]
+        == control_item_dict_from_json["asset_templates"]["bands"]["href"]
+    )

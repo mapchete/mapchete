@@ -1,9 +1,7 @@
 import copy
 import datetime
-import fsspec
 import logging
 from collections import OrderedDict
-import os
 
 import numpy as np
 import numpy.ma as ma
@@ -504,7 +502,7 @@ def create_prototype_files(mp):
             )
 
 
-def tile_direcotry_item_to_dict(item, relative_paths: bool = False) -> dict:
+def tile_directory_item_to_dict(item, relative_paths: bool = False) -> dict:
     item_dict = item.to_dict()
 
     # we have to add 'tiled-assets' to stac extensions in order to GDAL identify
@@ -519,55 +517,87 @@ def tile_direcotry_item_to_dict(item, relative_paths: bool = False) -> dict:
         return item_dict
 
 
-def make_stac_item_relative(stac_item):
+def make_stac_item_relative(stac_item, base_href: str = None):
     """
-    Convert all asset hrefs and self links to relative paths.
-    Accepts a pystac.Item, pystac.Collection, or a STAC dict.
-    Returns the updated object (Item/Collection) or dict.
+    Convert all asset hrefs, self links, and asset_templates to relative paths.
     """
+    from fsspec import utils
 
-    def relpath(href):
-        # Strip protocol (s3://, file://, etc.) using fsspec
-        protocol = fsspec.utils.get_protocol(href)
+    def relpath(href: str, base_href: str = None, is_self=False) -> str:
+        if not href:
+            return href
+
+        # Remove protocol first
+        protocol = utils.get_protocol(href)
         path = href
-        if protocol != "file":
-            if href.startswith(f"{protocol}://"):
-                path = href[len(protocol) + 3 :]  # remove protocol://
-        # Keep only the filename
-        return os.path.basename(path)
+        if protocol != "file" and path.startswith(f"{protocol}://"):
+            path = path[len(protocol) + 3 :]
+
+        # Self link: just use filename
+        if is_self:
+            return MPath(path).name
+
+        # Templates: strip everything before first '{'
+        if "{" in path and "}" in path:
+            first_brace_idx = path.index("{")
+            return path[first_brace_idx:]
+
+        # Normal assets: relative to base_href parent
+        if base_href:
+            try:
+                return str(MPath(path).relative_to(MPath(base_href).parent))
+            except Exception:
+                return MPath(path).name
+        else:
+            return MPath(path).name
 
     if isinstance(stac_item, dict):
         stac_item = copy.deepcopy(stac_item)
+        if base_href is None:
+            self_links = [
+                i for i in stac_item.get("links", []) if i.get("rel") == "self"
+            ]
+            base_href = self_links[0]["href"] if self_links else None
 
-        # Patch self link
+        # Patch self links
         for link in stac_item.get("links", []):
             if link.get("rel") == "self" and "href" in link:
-                link["href"] = relpath(link["href"])
+                link["href"] = relpath(link["href"], base_href, is_self=True)
 
         # Patch assets
         for asset in stac_item.get("assets", {}).values():
             if "href" in asset:
-                asset["href"] = relpath(asset["href"])
+                asset["href"] = relpath(asset["href"], base_href)
+
+        # Patch asset_templates
+        for tmpl in stac_item.get("asset_templates", {}).values():
+            if "href" in tmpl:
+                tmpl["href"] = relpath(tmpl["href"], base_href)
 
         return stac_item
 
     elif isinstance(stac_item, (pystac.Item, pystac.Collection)):
+        if base_href is None:
+            base_href = stac_item.get_self_href()
+
         # Patch self link
         if stac_item.get_self_href():
-            stac_item._self_href = relpath(stac_item.get_self_href())
+            stac_item._self_href = relpath(
+                stac_item.get_self_href(), base_href, is_self=True
+            )
 
         # Patch assets
         for asset in stac_item.assets.values():
-            asset.href = relpath(asset.href)
+            asset.href = relpath(asset.href, base_href)
 
-        # Patch other links by recreating them if needed
+        # Patch other links
         new_links = []
         for link in stac_item.links:
             if link.rel != "self":
                 new_links.append(
                     pystac.Link(
                         rel=link.rel,
-                        target=relpath(link.target),
+                        target=relpath(link.target, base_href),
                         media_type=link.media_type,
                         title=link.title,
                     )
@@ -575,6 +605,12 @@ def make_stac_item_relative(stac_item):
             else:
                 new_links.append(link)
         stac_item.links = new_links
+
+        # Patch asset_templates from extra_fields if present
+        if hasattr(stac_item, "extra_fields"):
+            for tmpl in stac_item.extra_fields.get("asset_templates", {}).values():
+                if "href" in tmpl:
+                    tmpl["href"] = relpath(tmpl["href"], base_href)
 
         return stac_item
 
