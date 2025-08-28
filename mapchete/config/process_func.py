@@ -17,7 +17,13 @@ from mapchete.errors import (
 )
 from mapchete.log import add_module_logger
 from mapchete.path import MPath, absolute_path
-from mapchete.process_func_special_types import ProcessTile, PixelBuffer
+from mapchete.process_func_special_types import (
+    Buffer,
+    OutputNodataValue,
+    OutputPath,
+    ProcessTile,
+    PixelBuffer,
+)
 from mapchete.tile import BufferedTile
 
 
@@ -73,7 +79,13 @@ class ProcessFunc:
                             "the magic 'mp' object is deprecated and will be removed soon"
                         )
                     )
-                if param.annotation in [ProcessTile, PixelBuffer] or name in [
+                if param.annotation in [
+                    ProcessTile,
+                    PixelBuffer,
+                    Buffer,
+                    OutputNodataValue,
+                    OutputPath,
+                ] or name in [
                     "mp",
                     "kwargs",
                     "__",
@@ -116,6 +128,7 @@ class ProcessFunc:
         parameters_at_zoom: Dict[str, Any],
         inputs: Dict[str, Any],
         process_tile: BufferedTile,
+        output_params: Dict[str, Any],
     ) -> Any:
         # check for annotated special parameters
         for name, param in self.function_parameters.items():
@@ -123,6 +136,20 @@ class ProcessFunc:
                 parameters_at_zoom[name] = process_tile
             elif param.annotation == PixelBuffer:
                 parameters_at_zoom[name] = process_tile.pixelbuffer
+            elif param.annotation == OutputNodataValue:
+                try:
+                    parameters_at_zoom[name] = output_params["nodata"]
+                except KeyError:  # pragma: no cover
+                    raise KeyError("this process output does not have a nodata value")
+            elif param.annotation == OutputPath:
+                try:
+                    parameters_at_zoom[name] = output_params["path"]
+                except KeyError:  # pragma: no cover
+                    raise KeyError("this process output does not have a path")
+            elif param.annotation == Buffer:
+                parameters_at_zoom[name] = (
+                    process_tile.pixel_x_size * process_tile.pixelbuffer
+                )
 
         return self.__call__(
             **parameters_at_zoom,

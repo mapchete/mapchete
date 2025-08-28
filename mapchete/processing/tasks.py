@@ -365,6 +365,7 @@ class TileTask(Task):
                         parameters_at_zoom=dict(self.process_func_params, mp=mp),
                         inputs=self.input,
                         process_tile=self.tile,
+                        output_params=self.output_params,
                     )
                 else:  # pragma: no cover
                     raise ValueError("no process func set")

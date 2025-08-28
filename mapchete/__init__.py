@@ -16,7 +16,13 @@ from mapchete.formats.protocols import (
 from mapchete.grid import Grid
 from mapchete.path import MPath
 from mapchete.processing import Mapchete, MapcheteProcess
-from mapchete.process_func_special_types import ProcessTile, PixelBuffer
+from mapchete.process_func_special_types import (
+    ProcessTile,
+    PixelBuffer,
+    Buffer,
+    OutputNodataValue,
+    OutputPath,
+)
 from mapchete.tile import count_tiles
 from mapchete.timer import Timer
 from mapchete.types import MPathLike
@@ -29,6 +35,9 @@ __all__ = [
     "Mapchete",
     "MapcheteProcess",
     "Timer",
+    "Buffer",
+    "OutputNodataValue",
+    "OutputPath",
     "PixelBuffer",
     "ProcessTile",
     "Executor",

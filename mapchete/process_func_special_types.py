@@ -1,11 +1,12 @@
-from pydantic import NonNegativeInt
+from pydantic import NonNegativeFloat, NonNegativeInt
 
+from mapchete.path import MPath
 from mapchete.tile import BufferedTile
+from mapchete.types import NodataVal
 
 
-class ProcessTile(BufferedTile):
-    """Special class indicating a process tile."""
-
-
-class PixelBuffer(NonNegativeInt):
-    """Special class indicating current process tile pixelbuffer."""
+ProcessTile = BufferedTile
+PixelBuffer = NonNegativeInt
+OutputNodataValue = NodataVal
+OutputPath = MPath
+Buffer = NonNegativeFloat
