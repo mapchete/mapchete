@@ -1,0 +1,11 @@
+process: process.py
+zoom_levels: 8
+pyramid:
+    grid: geodetic
+input:
+    dem: ../../test/testdata/cleantopo_tl.tif
+output:
+    path: output
+    format: GTiff
+    dtype: uint8
+    bands: 1
