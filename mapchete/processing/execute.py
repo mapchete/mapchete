@@ -33,7 +33,7 @@ def single_batch(
         task_info = TaskInfo.from_future(future)
 
         if write_in_parent_process:
-            if output_writer is None:
+            if output_writer is None:  # pragma: no cover
                 raise ValueError(
                     "OutputWriter has to be provided if write_in_parent_process is False"
                 )
@@ -139,7 +139,7 @@ def get_task_wrapper(
 
     raise ValueError(
         "OutputWriter has to be provided if write_in_parent_process is False"
-    )
+    )  # pragma: no cover
 
 
 def execute_wrapper(

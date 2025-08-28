@@ -134,7 +134,7 @@ class MFuture:
             return MFuture(exception=exc, name=name)
         return MFuture(result=result.output, profiling=result.profiling, name=name)
 
-    def result(self, timeout: int = mapchete_options.future_timeout, **kwargs) -> Any:
+    def result(self, timeout: float = mapchete_options.future_timeout, **kwargs) -> Any:
         """Return task result."""
         self._populate_from_future(timeout=timeout)
 
@@ -162,7 +162,7 @@ class MFuture:
         )
 
     def _populate_from_future(
-        self, timeout: int = mapchete_options.future_timeout, **kwargs
+        self, timeout: float = mapchete_options.future_timeout, **kwargs
     ):
         """Fill internal cache with future.result() if future was provided."""
         # only check if there is a cached future but no result nor exception
