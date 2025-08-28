@@ -14,6 +14,7 @@ from mapchete.testing import ProcessFixture
         lazy_fixture("example_custom_tile_size"),
         lazy_fixture("example_file_groups"),
         lazy_fixture("example_hillshade"),
+        lazy_fixture("example_special_kwargs"),
     ],
 )
 def test_example(process_fixture: ProcessFixture):

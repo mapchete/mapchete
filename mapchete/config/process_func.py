@@ -17,6 +17,9 @@ from mapchete.errors import (
 )
 from mapchete.log import add_module_logger
 from mapchete.path import MPath, absolute_path
+from mapchete.process_func_special_types import ProcessTile, PixelBuffer
+from mapchete.tile import BufferedTile
+
 
 logger = logging.getLogger(__name__)
 
@@ -56,8 +59,7 @@ class ProcessFunc:
         self.function_parameters = dict(**inspect.signature(func).parameters)
 
     def __call__(self, *args, **kwargs: Any) -> Any:
-        kwargs = self.create_function_kwargs(kwargs)
-        return self._load_func()(*args, **kwargs)
+        return self._load_func()(*args, **self.filter_parameters(kwargs))
 
     def analyze_parameters(
         self, parameters_per_zoom: Dict[int, ZoomParameters]
@@ -65,14 +67,20 @@ class ProcessFunc:
         for zoom, config_parameters in parameters_per_zoom.items():
             # make sure parameters with no defaults are present in configuration, except of magical "mp" object
             for name, param in self.function_parameters.items():
-                if param.default == inspect.Parameter.empty and name not in [
+                if name in ["mp"]:
+                    warnings.warn(
+                        DeprecationWarning(
+                            "the magic 'mp' object is deprecated and will be removed soon"
+                        )
+                    )
+                if param.annotation in [ProcessTile, PixelBuffer] or name in [
                     "mp",
-                    "tile",
-                    "process_pixelbuffer",
-                    "output_pixelbuffer",
                     "kwargs",
                     "__",
                 ]:
+                    continue
+
+                elif param.default == inspect.Parameter.empty:
                     if (
                         name not in config_parameters.input
                         and name not in config_parameters.process_parameters
@@ -103,8 +111,23 @@ class ProcessFunc:
             if k in self.function_parameters and v is not None
         }
 
-    def create_function_kwargs(self, kwargs: Dict[str, Any]) -> Dict[str, Any]:
-        return self.filter_parameters(kwargs)
+    def execute(
+        self,
+        parameters_at_zoom: Dict[str, Any],
+        inputs: Dict[str, Any],
+        process_tile: BufferedTile,
+    ) -> Any:
+        # check for annotated special parameters
+        for name, param in self.function_parameters.items():
+            if param.annotation == ProcessTile:
+                parameters_at_zoom[name] = process_tile
+            elif param.annotation == PixelBuffer:
+                parameters_at_zoom[name] = process_tile.pixelbuffer
+
+        return self.__call__(
+            **parameters_at_zoom,
+            **inputs,
+        )
 
     def _load_func(self):
         """Import and return process function."""

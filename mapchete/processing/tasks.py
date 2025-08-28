@@ -222,13 +222,13 @@ class TileTask(Task):
     def __init__(
         self,
         tile: TileLike,
+        config: MapcheteConfig,
         id: Optional[str] = None,
-        config: Optional[MapcheteConfig] = None,
         func: Optional[Callable] = None,
         dependencies: Optional[dict] = None,
     ):
         """Set attributes depending on baselevels or not."""
-        self.tile = (
+        self.tile = (  # type: ignore
             config.process_pyramid.tile(*tile) if isinstance(tile, tuple) else tile
         )
         _default_id = default_tile_task_id(tile)
@@ -351,24 +351,23 @@ class TileTask(Task):
                                         task_key=task_key, result=task_result
                                     )
                 # Actually run process.
-                mp = MapcheteProcess(
-                    tile=self.tile,
-                    params=self.process_func_params,
-                    input=self.input,
-                    output_params=self.output_params,
-                )
                 # this contains key: params mapping, where under param.annotation we can inspect for target type
-                extended_kwargs = dict(
-                    self.process_func_params,
-                    mp=mp,
-                    tile=self.tile,
-                    process_pixelbuffer=self.tile.pixelbuffer,
-                    output_pixelbuffer=self.output_params.get("pixelbuffer"),
-                    **{k: v for k, v in self.input.items()},
-                )
-                process_data = self.process(
-                    **extended_kwargs,
-                )
+                if isinstance(self.process, ProcessFunc):
+                    # for backwards compatibility:
+                    mp = MapcheteProcess(
+                        tile=self.tile,
+                        params=self.process_func_params,
+                        input=self.input,
+                        output_params=self.output_params,
+                    )
+
+                    process_data = self.process.execute(
+                        parameters_at_zoom=dict(self.process_func_params, mp=mp),
+                        inputs=self.input,
+                        process_tile=self.tile,
+                    )
+                else:  # pragma: no cover
+                    raise ValueError("no process func set")
         except MapcheteNodataTile:
             raise
         except Exception as e:
