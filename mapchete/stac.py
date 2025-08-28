@@ -548,7 +548,7 @@ def make_stac_item_relative(stac_item, base_href: str = None):
                 return str(MPath(path).relative_to(MPath(base_href).parent))
             except Exception:
                 return MPath(path).name
-        else: # pragma: no cover
+        else:  # pragma: no cover
             return MPath(path).name
 
     if isinstance(stac_item, dict):
