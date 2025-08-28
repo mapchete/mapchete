@@ -345,3 +345,20 @@ def test_make_stac_item_with_relative_paths(eox_stacta, eox_stacta_rel_paths):
         item.to_dict()["asset_templates"]["bands"]["href"]
         == control_item_dict_from_json["asset_templates"]["bands"]["href"]
     )
+
+
+def test_make_stac_item_relative_type_error():
+    invalid_inputs = [
+        "not a stac item",
+        123,
+        3.14,
+        ["list", "of", "things"],
+        None,
+    ]
+
+    for val in invalid_inputs:
+        with pytest.raises(TypeError) as excinfo:
+            make_stac_item_relative(val)
+        assert "Input must be a pystac.Item, pystac.Collection, or a STAC dict" in str(
+            excinfo.value
+        )
