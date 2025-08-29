@@ -1,7 +1,13 @@
-from mapchete import Empty, Tile, TilePixelBuffer, OutputNodataValue
-from mapchete.formats.protocols import RasterInput
+from mapchete import (
+    Empty,
+    Tile,
+    TilePixelBuffer,
+    OutputNodataValue,
+    TileBuffer,
+    OutputPath,
+    RasterInput,
+)
 from mapchete.path import MPath
-from mapchete.process_func_special_types import TileBuffer, OutputPath
 from mapchete.tile import BufferedTile
 
 
