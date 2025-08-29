@@ -89,9 +89,9 @@ def create_item(
     else:
         metadata = default_item_metadata or {}
 
-    if default_id in ["./", "."] and not relative_paths:
+    if default_id in ["./", "."] and not relative_paths:  # pragma: no cover
         item_id = str(default_basepath.name)
-    elif default_id in ["./", "."] and relative_paths:
+    elif default_id in ["./", "."] and relative_paths:  # pragma: no cover
         item_id = default_basepath.absolute_path().name
     else:
         item_id = item_id or metadata.get("id", default_id)
