@@ -521,17 +521,12 @@ def make_stac_item_relative(stac_item, base_href: str = None):
     """
     Convert all asset hrefs, self links, and asset_templates to relative paths.
     """
-    from fsspec import utils
 
     def relpath(href: str, base_href: str = None, is_self=False) -> str:
         if not href:  # pragma: no cover
             return href
 
-        # Remove protocol first
-        protocol = utils.get_protocol(href)
-        path = href
-        if protocol != "file" and path.startswith(f"{protocol}://"):
-            path = path[len(protocol) + 3 :]
+        path = str(MPath(href).without_protocol())
 
         # Self link: just use filename
         if is_self:
