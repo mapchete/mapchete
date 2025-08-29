@@ -1,3 +1,4 @@
+import os
 import json
 
 import pystac
@@ -7,6 +8,7 @@ from packaging import version
 from rasterio.errors import RasterioIOError
 from shapely.geometry import box, shape
 
+from mapchete import MPath
 from mapchete.commands import execute
 from mapchete.io import rasterio_open
 from mapchete.geometry import reproject_geometry
@@ -101,9 +103,19 @@ def test_tiled_asset_path():
         item_path="foo/bar.json",
         tile_pyramid=BufferedTilePyramid("geodetic"),
         zoom_levels=range(0),
+        relative_paths=True,
     )
     basepath = item.to_dict()["asset_templates"]["bands"]["href"]
-    assert basepath.startswith("foo/")
+    assert basepath == ("{TileMatrix}/{TileRow}/{TileCol}.tif")
+
+    item = tile_directory_stac_item(
+        item_id="foo",
+        item_path="foo/bar.json",
+        tile_pyramid=BufferedTilePyramid("geodetic"),
+        zoom_levels=range(0),
+    )
+    basepath = item.to_dict()["asset_templates"]["bands"]["href"]
+    assert basepath.startswith(str(MPath(os.getcwd()).joinpath("foo")))
 
     # use alternative asset basepath
     item = tile_directory_stac_item(
@@ -123,7 +135,13 @@ def test_tiled_asset_path():
         tile_pyramid=BufferedTilePyramid("geodetic"),
         zoom_levels=range(0),
     )
-    basepath = item.to_dict()["asset_templates"]["bands"]["href"]
+    # native pystac to_dict() translates paths to absolutes and should, I have no idea why this worked before without failing
+    # basepath = item.to_dict()["asset_templates"]["bands"]["href"]
+
+    # This needs the custom wrapper to work properly, for now
+    basepath = make_stac_item_relative(item.to_dict())["asset_templates"]["bands"][
+        "href"
+    ]
     assert basepath.startswith("{TileMatrix}/{TileRow}")
 
 
