@@ -34,8 +34,8 @@ def multipart_to_singleparts(
 def omit_empty_geometries(geometry: Geometry) -> Generator[Geometry, None, None]:
     if not geometry.is_empty:
         yield geometry
-    else:
-        logger.warning("empty geometry omitted")
+    # else:
+    #     logger.warning("empty geometry omitted")
 
 
 def is_type(
@@ -124,9 +124,9 @@ def filter_by_geometry_type(
                 singlepart_equivalent_matches=singlepart_equivalent_matches,
                 multipart_equivalent_matches=multipart_equivalent_matches,
             )
-    else:
-        logger.warning(
-            "omit geometry of type %s because it does not match the target type of %s",
-            geometry.geom_type,
-            target_type,
-        )
+    # else:
+    #     logger.warning(
+    #         "omit geometry of type %s because it does not match the target type of %s",
+    #         geometry.geom_type,
+    #         target_type,
+    #     )
