@@ -3,6 +3,22 @@ Changelog
 #########
 
 ---------------------
+2025.8.0 - 2025-08-29
+---------------------
+
+* core
+
+  * `mapchete.stac`: relative paths generation for self_href on STACTA JSON (#689)
+  * added `Tile`, `TilePixelBuffer`, `OutputNodataValue`, `TileBuffer` and `OutputPath` annotations to import special parameters in user process code (#687)
+  * `executor.future.MPath`: add task name to `__repr__` (#687)
+  * `geometry.filter.is_type`: fix bug where some multipart geometries were not matched (#687)
+
+* CI
+
+  * added python 3.13 to workflow matrix (#689)
+
+
+---------------------
 2025.6.0 - 2025-06-05
 ---------------------
 
