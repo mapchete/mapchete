@@ -25,7 +25,7 @@ from mapchete.processing.tasks import (
     TileTask,
     TileTaskBatch,
 )
-from mapchete.stac import tile_direcotry_item_to_dict, update_tile_directory_stac_item
+from mapchete.stac import tile_directory_item_to_dict, update_tile_directory_stac_item
 from mapchete.tile import BatchBy, BufferedTile, count_tiles
 from mapchete.timer import Timer
 from mapchete.types import TileLike, ZoomLevelsLike
@@ -610,7 +610,7 @@ class Mapchete(object):
             logger.debug("write STAC item JSON to %s", self.config.output.stac_path)
             self.config.output.stac_path.parent.makedirs()
             with self.config.output.stac_path.open("w") as dst:
-                dst.write(json.dumps(tile_direcotry_item_to_dict(item), indent=indent))
+                dst.write(json.dumps(tile_directory_item_to_dict(item), indent=indent))
         except ReprojectionFailed:  # pragma: no cover
             logger.warning(
                 "cannot create STAC item because footprint cannot be reprojected into EPSG:4326"

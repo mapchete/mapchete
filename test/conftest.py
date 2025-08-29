@@ -253,6 +253,18 @@ def aws_s3_stacta(aws_s3_testdata_dir):
 
 
 @pytest.fixture
+def eox_stacta(testdata_dir):
+    """Fixture for STACTA."""
+    return testdata_dir / "stac" / "eoxcloudless-viewing-basic-dummy.json"
+
+
+@pytest.fixture
+def eox_stacta_rel_paths(testdata_dir):
+    """Fixture for STACTA."""
+    return testdata_dir / "stac" / "eoxcloudless-viewing-basic-rel-paths-dummy.json"
+
+
+@pytest.fixture
 def s2_band():
     """
     Fixture for Sentinel-2 raster band.

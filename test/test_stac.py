@@ -1,11 +1,14 @@
+import os
 import json
 
+import pystac
 import pytest
 import rasterio
 from packaging import version
 from rasterio.errors import RasterioIOError
 from shapely.geometry import box, shape
 
+from mapchete import MPath
 from mapchete.commands import execute
 from mapchete.io import rasterio_open
 from mapchete.geometry import reproject_geometry
@@ -15,6 +18,8 @@ from mapchete.stac import (
     tile_pyramid_from_item,
     update_tile_directory_stac_item,
     zoom_levels_from_item,
+    make_stac_item_relative,
+    tile_directory_item_to_dict,
 )
 from mapchete.tile import BufferedTilePyramid
 
@@ -98,9 +103,19 @@ def test_tiled_asset_path():
         item_path="foo/bar.json",
         tile_pyramid=BufferedTilePyramid("geodetic"),
         zoom_levels=range(0),
+        relative_paths=True,
     )
     basepath = item.to_dict()["asset_templates"]["bands"]["href"]
-    assert basepath.startswith("foo/")
+    assert basepath == ("{TileMatrix}/{TileRow}/{TileCol}.tif")
+
+    item = tile_directory_stac_item(
+        item_id="foo",
+        item_path="foo/bar.json",
+        tile_pyramid=BufferedTilePyramid("geodetic"),
+        zoom_levels=range(0),
+    )
+    basepath = item.to_dict()["asset_templates"]["bands"]["href"]
+    assert basepath.startswith(str(MPath(os.getcwd()).joinpath("foo")))
 
     # use alternative asset basepath
     item = tile_directory_stac_item(
@@ -120,8 +135,42 @@ def test_tiled_asset_path():
         tile_pyramid=BufferedTilePyramid("geodetic"),
         zoom_levels=range(0),
     )
-    basepath = item.to_dict()["asset_templates"]["bands"]["href"]
+    # native pystac to_dict() translates paths to absolutes and should, I have no idea why this worked before without failing
+    # basepath = item.to_dict()["asset_templates"]["bands"]["href"]
+
+    # This needs the custom wrapper to work properly, for now
+    basepath = make_stac_item_relative(item.to_dict())["asset_templates"]["bands"][
+        "href"
+    ]
+    assert basepath == ("{TileMatrix}/{TileRow}/{TileCol}.tif")
+
+    # Test cwd `.`/ `.` as input path
+    item = tile_directory_stac_item(
+        item_id="foo",
+        item_path=".",
+        relative_paths=True,
+        tile_pyramid=BufferedTilePyramid("geodetic"),
+        zoom_levels=range(0),
+    ).to_dict()
+
+    item = make_stac_item_relative(item)
+
+    self_href = item["links"][0]["href"]
+    assert self_href == "foo.json"
+    basepath = item["asset_templates"]["bands"]["href"]
     assert basepath.startswith("{TileMatrix}/{TileRow}")
+
+    item = tile_directory_stac_item(
+        item_id="foo",
+        item_path=".",
+        tile_pyramid=BufferedTilePyramid("geodetic"),
+        zoom_levels=range(0),
+    ).to_dict()
+
+    self_href = item["links"][0]["href"]
+    assert self_href == str(MPath(os.getcwd()).joinpath("foo.json"))
+    basepath = item["asset_templates"]["bands"]["href"]
+    assert basepath.startswith(str(MPath(os.getcwd())))
 
 
 def test_tiled_asset_eo_bands_metadata():
@@ -300,3 +349,62 @@ def test_create_prototype_file_exists(cleantopo_tl):
     create_prototype_files(cleantopo_tl.mp())
     with rasterio_open(stac_path):
         pass
+
+
+def test_make_stac_item_with_relative_paths(eox_stacta, eox_stacta_rel_paths):
+    item_dict_from_json = make_stac_item_relative(eox_stacta.read_json())
+    control_item_dict_from_json = eox_stacta_rel_paths.read_json()
+
+    assert (
+        item_dict_from_json["links"][0]["href"] == "2024-viewing-basic-epsg-4326.json"
+    )
+    assert item_dict_from_json["links"][0] == control_item_dict_from_json["links"][0]
+    assert (
+        item_dict_from_json["asset_templates"]["bands"]["href"]
+        == control_item_dict_from_json["asset_templates"]["bands"]["href"]
+    )
+
+    item_dict = make_stac_item_relative(
+        pystac.Item.from_file(str(eox_stacta)).to_dict()
+    )
+    for link in item_dict["links"]:
+        assert "://" not in link
+    assert (
+        item_dict["asset_templates"]["bands"]["href"]
+        == control_item_dict_from_json["asset_templates"]["bands"]["href"]
+    )
+
+    item = tile_directory_item_to_dict(
+        pystac.Item.from_file(str(eox_stacta)), relative_paths=True
+    )
+    for link in item_dict["links"]:
+        assert "://" not in link
+    assert (
+        item["asset_templates"]["bands"]["href"]
+        == control_item_dict_from_json["asset_templates"]["bands"]["href"]
+    )
+
+    item = make_stac_item_relative(pystac.Item.from_file(str(eox_stacta)))
+    for link in item.links:
+        assert "://" not in link.href
+    assert (
+        item.to_dict()["asset_templates"]["bands"]["href"]
+        == control_item_dict_from_json["asset_templates"]["bands"]["href"]
+    )
+
+
+def test_make_stac_item_relative_type_error():
+    invalid_inputs = [
+        "not a stac item",
+        123,
+        3.14,
+        ["list", "of", "things"],
+        None,
+    ]
+
+    for val in invalid_inputs:
+        with pytest.raises(TypeError) as excinfo:
+            make_stac_item_relative(val)
+        assert "Input must be a pystac.Item, pystac.Collection, or a STAC dict" in str(
+            excinfo.value
+        )

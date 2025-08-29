@@ -12,7 +12,7 @@ from mapchete.formats import read_output_metadata
 from mapchete.io import MPath
 from mapchete.stac import (
     create_prototype_files,
-    tile_direcotry_item_to_dict,
+    tile_directory_item_to_dict,
     tile_directory_stac_item,
 )
 from mapchete.zoom_levels import ZoomLevels
@@ -77,6 +77,9 @@ def create_item(
         zoom = zoom or default_zoom
     zoom = ZoomLevels.from_inp(zoom)
 
+    if relative_paths is False:
+        default_basepath = default_basepath.absolute_path()
+
     if zoom is None:  # pragma: no cover
         raise ValueError("zoom must be set")
 
@@ -86,7 +89,13 @@ def create_item(
     else:
         metadata = default_item_metadata or {}
 
-    item_id = item_id or metadata.get("id", default_id)
+    if default_id in ["./", "."] and not relative_paths:  # pragma: no cover
+        item_id = str(default_basepath.name)
+    elif default_id in ["./", "."] and relative_paths:  # pragma: no cover
+        item_id = default_basepath.absolute_path().name
+    else:
+        item_id = item_id or metadata.get("id", default_id)
+
     logger.debug("use item ID %s", item_id)
     item_path = item_path or MPath.from_inp(default_basepath) / f"{item_id}.json"
     item = tile_directory_stac_item(
@@ -104,7 +113,9 @@ def create_item(
         crs_unit_to_meter=1,
     )
     logger.debug("item_path: %s", item_path)
-    item_json = json.dumps(tile_direcotry_item_to_dict(item), indent=indent)
+    item_json = json.dumps(
+        tile_directory_item_to_dict(item, relative_paths=relative_paths), indent=indent
+    )
     click.echo(item_json)
     if force or click.confirm(f"Write output to {item_path}?", abort=True):
         with fsspec.open(item_path, "w") as dst:

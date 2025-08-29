@@ -1,3 +1,4 @@
+import copy
 import datetime
 import logging
 from collections import OrderedDict
@@ -5,6 +6,7 @@ from collections import OrderedDict
 import numpy as np
 import numpy.ma as ma
 from pyproj import CRS
+import pystac
 from shapely.geometry import box, mapping
 
 from mapchete.errors import ReprojectionFailed
@@ -103,6 +105,9 @@ def tile_directory_stac_item(
 
     asset_basepath = MPath.from_inp(asset_basepath) if asset_basepath else None
     item_path = MPath.from_inp(item_path) if item_path else None
+
+    if item_path in ["./", "."]:
+        item_path = item_path.absolute_path().joinpath(f"{item_id}.json")
 
     item_metadata = _cleanup_datetime(item_metadata or {})
     timestamp = (
@@ -257,7 +262,10 @@ def tile_directory_stac_item(
             "tiles:tile_matrix_sets": {tile_matrix_set_identifier: tile_matrix_set},
         },
         "asset_templates": {
-            "bands": {"href": str(band_asset_template), "type": bands_type}
+            "bands": {
+                "href": str(MPath(band_asset_template).absolute_path()),
+                "type": bands_type,
+            }
         },
         "assets": {
             # "thumbnail": {
@@ -271,10 +279,23 @@ def tile_directory_stac_item(
         out["asset_templates"]["bands"]["eo:bands"] = item_metadata["eo:bands"]
         # out["assets"]["thumbnail"]["eo:bands"] = item_metadata["eo:bands"]
     out["links"] = item_metadata.get("links", [])
-    if item_path:
+    if item_path and relative_paths is not True:
         out["links"].extend([{"rel": "self", "href": str(item_path)}])
+        self_href = next(
+            (link["href"] for link in out["links"] if link["rel"] == "self"), None
+        )
+        out_item = pystac.read_dict(out, href=self_href)
+    elif item_path and relative_paths is True:
+        out["links"].extend([{"rel": "self", "href": str(item_path.name)}])
+        # For the read_dict pystac function as it needs the param to out proper self path
+        self_href = next(
+            (link["href"] for link in out["links"] if link["rel"] == "self"), None
+        )
+        out_item = make_stac_item_relative(pystac.read_dict(out, href=self_href))
+    else:
+        out_item = pystac.read_dict(out)
 
-    return pystac.read_dict(out)
+    return out_item
 
 
 def _scale(grid, pixel_x_size, default_unit_to_meter=1):
@@ -487,7 +508,7 @@ def create_prototype_files(mp):
             )
 
 
-def tile_direcotry_item_to_dict(item) -> dict:
+def tile_directory_item_to_dict(item, relative_paths: bool = False) -> dict:
     item_dict = item.to_dict()
 
     # we have to add 'tiled-assets' to stac extensions in order to GDAL identify
@@ -496,4 +517,105 @@ def tile_direcotry_item_to_dict(item) -> dict:
     stac_extensions.add("tiled-assets")
     item_dict["stac_extensions"] = list(stac_extensions)
 
-    return item_dict
+    if relative_paths:
+        return make_stac_item_relative(item_dict)
+    else:
+        return item_dict
+
+
+def make_stac_item_relative(stac_item, base_href: str = None):
+    """
+    Convert all asset hrefs, self links, and asset_templates to relative paths.
+    """
+
+    def relpath(href: str, base_href: str = None, is_self=False) -> str:
+        if not href:  # pragma: no cover
+            return href
+
+        path = str(MPath(href).without_protocol())
+
+        # Self link: just use filename
+        if is_self:
+            return MPath(path).name
+
+        # Templates: strip everything before first '{'
+        if "{" in path and "}" in path:
+            first_brace_idx = path.index("{")
+            return path[first_brace_idx:]
+
+        # Normal assets: relative to base_href parent
+        if base_href:  # pragma: no cover
+            try:
+                return str(MPath(path).relative_to(MPath(base_href).parent))
+            except Exception:
+                return MPath(path).name
+        else:  # pragma: no cover
+            return MPath(path).name
+
+    if isinstance(stac_item, dict):
+        stac_item = copy.deepcopy(stac_item)
+        if base_href is None:
+            self_links = [
+                i for i in stac_item.get("links", []) if i.get("rel") == "self"
+            ]
+            base_href = self_links[0]["href"] if self_links else None
+
+        # Patch self links
+        for link in stac_item.get("links", []):
+            if link.get("rel") == "self" and "href" in link:
+                link["href"] = relpath(link["href"], base_href, is_self=True)
+
+        # Patch assets
+        for asset in stac_item.get("assets", {}).values():
+            if "href" in asset:  # pragma: no cover
+                asset["href"] = relpath(asset["href"], base_href)
+
+        # Patch asset_templates
+        for tmpl in stac_item.get("asset_templates", {}).values():
+            if "href" in tmpl:
+                tmpl["href"] = relpath(tmpl["href"], base_href)
+
+        return stac_item
+
+    elif isinstance(stac_item, (pystac.Item, pystac.Collection)):
+        if base_href is None:
+            base_href = stac_item.get_self_href()
+
+        # Patch self link
+        if stac_item.get_self_href():
+            stac_item._self_href = relpath(
+                stac_item.get_self_href(), base_href, is_self=True
+            )
+
+        # Patch assets
+        for asset in stac_item.assets.values():  # pragma: no cover
+            asset.href = relpath(asset.href, base_href)
+
+        # Patch other links
+        new_links = []
+        for link in stac_item.links:
+            if link.rel != "self":  # pragma: no cover
+                new_links.append(
+                    pystac.Link(
+                        rel=link.rel,
+                        target=relpath(link.target, base_href),
+                        media_type=link.media_type,
+                        title=link.title,
+                    )
+                )
+            else:
+                new_links.append(link)
+        stac_item.links = new_links
+
+        # Patch asset_templates from extra_fields if present
+        if hasattr(stac_item, "extra_fields"):
+            for tmpl in stac_item.extra_fields.get("asset_templates", {}).values():
+                if "href" in tmpl:
+                    tmpl["href"] = relpath(tmpl["href"], base_href)
+
+        return stac_item
+
+    else:
+        raise TypeError(
+            "Input must be a pystac.Item, pystac.Collection, or a STAC dict"
+        )
