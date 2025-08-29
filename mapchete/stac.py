@@ -259,7 +259,10 @@ def tile_directory_stac_item(
             "tiles:tile_matrix_sets": {tile_matrix_set_identifier: tile_matrix_set},
         },
         "asset_templates": {
-            "bands": {"href": str(band_asset_template), "type": bands_type}
+            "bands": {
+                "href": str(MPath(band_asset_template).absolute_path()),
+                "type": bands_type,
+            }
         },
         "assets": {
             # "thumbnail": {

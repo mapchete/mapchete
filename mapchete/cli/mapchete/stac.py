@@ -77,6 +77,9 @@ def create_item(
         zoom = zoom or default_zoom
     zoom = ZoomLevels.from_inp(zoom)
 
+    if relative_paths is False:
+        default_basepath = default_basepath.absolute_path()
+
     if zoom is None:  # pragma: no cover
         raise ValueError("zoom must be set")
 
@@ -86,7 +89,13 @@ def create_item(
     else:
         metadata = default_item_metadata or {}
 
-    item_id = item_id or metadata.get("id", default_id)
+    if default_id in ["./", "."] and not relative_paths:
+        item_id = str(default_basepath.name)
+    elif default_id in ["./", "."] and relative_paths:
+        item_id = default_basepath.absolute_path().name
+    else:
+        item_id = item_id or metadata.get("id", default_id)
+
     logger.debug("use item ID %s", item_id)
     item_path = item_path or MPath.from_inp(default_basepath) / f"{item_id}.json"
     item = tile_directory_stac_item(
