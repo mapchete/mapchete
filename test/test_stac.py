@@ -142,7 +142,35 @@ def test_tiled_asset_path():
     basepath = make_stac_item_relative(item.to_dict())["asset_templates"]["bands"][
         "href"
     ]
+    assert basepath == ("{TileMatrix}/{TileRow}/{TileCol}.tif")
+
+    # Test cwd `.`/ `.` as input path
+    item = tile_directory_stac_item(
+        item_id="foo",
+        item_path=".",
+        relative_paths=True,
+        tile_pyramid=BufferedTilePyramid("geodetic"),
+        zoom_levels=range(0),
+    ).to_dict()
+
+    item = make_stac_item_relative(item)
+
+    self_href = item["links"][0]["href"]
+    assert self_href == "foo.json"
+    basepath = item["asset_templates"]["bands"]["href"]
     assert basepath.startswith("{TileMatrix}/{TileRow}")
+
+    item = tile_directory_stac_item(
+        item_id="foo",
+        item_path=".",
+        tile_pyramid=BufferedTilePyramid("geodetic"),
+        zoom_levels=range(0),
+    ).to_dict()
+
+    self_href = item["links"][0]["href"]
+    assert self_href == str(MPath(os.getcwd()).joinpath("foo.json"))
+    basepath = item["asset_templates"]["bands"]["href"]
+    assert basepath.startswith(str(MPath(os.getcwd())))
 
 
 def test_tiled_asset_eo_bands_metadata():

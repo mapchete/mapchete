@@ -106,6 +106,9 @@ def tile_directory_stac_item(
     asset_basepath = MPath.from_inp(asset_basepath) if asset_basepath else None
     item_path = MPath.from_inp(item_path) if item_path else None
 
+    if item_path in ["./", "."]:
+        item_path = item_path.absolute_path().joinpath(f"{item_id}.json")
+
     item_metadata = _cleanup_datetime(item_metadata or {})
     timestamp = (
         item_metadata.get("properties", {}).get("start_datetime")
@@ -282,7 +285,7 @@ def tile_directory_stac_item(
             (link["href"] for link in out["links"] if link["rel"] == "self"), None
         )
         out_item = pystac.read_dict(out, href=self_href)
-    elif item_path and relative_paths:
+    elif item_path and relative_paths is True:
         out["links"].extend([{"rel": "self", "href": str(item_path.name)}])
         # For the read_dict pystac function as it needs the param to out proper self path
         self_href = next(
