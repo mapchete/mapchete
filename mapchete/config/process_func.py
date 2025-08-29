@@ -18,11 +18,11 @@ from mapchete.errors import (
 from mapchete.log import add_module_logger
 from mapchete.path import MPath, absolute_path
 from mapchete.process_func_special_types import (
-    Buffer,
+    TileBuffer,
     OutputNodataValue,
     OutputPath,
-    ProcessTile,
-    PixelBuffer,
+    Tile,
+    TilePixelBuffer,
 )
 from mapchete.tile import BufferedTile
 
@@ -80,9 +80,9 @@ class ProcessFunc:
                         )
                     )
                 if param.annotation in [
-                    ProcessTile,
-                    PixelBuffer,
-                    Buffer,
+                    Tile,
+                    TilePixelBuffer,
+                    TileBuffer,
                     OutputNodataValue,
                     OutputPath,
                 ] or name in [
@@ -132,9 +132,9 @@ class ProcessFunc:
     ) -> Any:
         # check for annotated special parameters
         for name, param in self.function_parameters.items():
-            if param.annotation == ProcessTile:
+            if param.annotation == Tile:
                 parameters_at_zoom[name] = process_tile
-            elif param.annotation == PixelBuffer:
+            elif param.annotation == TilePixelBuffer:
                 parameters_at_zoom[name] = process_tile.pixelbuffer
             elif param.annotation == OutputNodataValue:
                 try:
@@ -146,7 +146,7 @@ class ProcessFunc:
                     parameters_at_zoom[name] = output_params["path"]
                 except KeyError:  # pragma: no cover
                     raise KeyError("this process output does not have a path")
-            elif param.annotation == Buffer:
+            elif param.annotation == TileBuffer:
                 parameters_at_zoom[name] = (
                     process_tile.pixel_x_size * process_tile.pixelbuffer
                 )

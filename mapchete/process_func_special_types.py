@@ -5,8 +5,11 @@ from mapchete.tile import BufferedTile
 from mapchete.types import NodataVal
 
 
-ProcessTile = BufferedTile
-PixelBuffer = NonNegativeInt
+# properties related to current process tile
+Tile = BufferedTile
+TileBuffer = NonNegativeFloat
+TilePixelBuffer = NonNegativeInt
+
+# properties related to output
 OutputNodataValue = NodataVal
 OutputPath = MPath
-Buffer = NonNegativeFloat

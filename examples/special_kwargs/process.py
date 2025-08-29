@@ -1,15 +1,15 @@
-from mapchete import Empty, ProcessTile, PixelBuffer, OutputNodataValue
+from mapchete import Empty, Tile, TilePixelBuffer, OutputNodataValue
 from mapchete.formats.protocols import RasterInput
 from mapchete.path import MPath
-from mapchete.process_func_special_types import Buffer, OutputPath
+from mapchete.process_func_special_types import TileBuffer, OutputPath
 from mapchete.tile import BufferedTile
 
 
 def execute(
     dem: RasterInput,
-    process_tile: ProcessTile,
-    pixelbuffer: PixelBuffer,
-    buffer: Buffer,
+    process_tile: Tile,
+    pixelbuffer: TilePixelBuffer,
+    buffer: TileBuffer,
     nodata: OutputNodataValue,
     outpath: OutputPath,
 ):

@@ -17,9 +17,9 @@ from mapchete.grid import Grid
 from mapchete.path import MPath
 from mapchete.processing import Mapchete, MapcheteProcess
 from mapchete.process_func_special_types import (
-    ProcessTile,
-    PixelBuffer,
-    Buffer,
+    Tile,
+    TilePixelBuffer,
+    TileBuffer,
     OutputNodataValue,
     OutputPath,
 )
@@ -35,11 +35,11 @@ __all__ = [
     "Mapchete",
     "MapcheteProcess",
     "Timer",
-    "Buffer",
+    "TileBuffer",
     "OutputNodataValue",
     "OutputPath",
-    "PixelBuffer",
-    "ProcessTile",
+    "TilePixelBuffer",
+    "Tile",
     "Executor",
     "Empty",
     "MapcheteNodataTile",
