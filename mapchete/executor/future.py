@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import uuid
 import logging
 from typing import Any, Callable, Dict, Optional, Protocol, Tuple, Union
 
@@ -58,18 +59,18 @@ class MFuture:
         self.skipped = skipped
         self.skip_info = skip_info
         self.status = status
-        self.name = name or repr(self)
+        self.name = name or uuid.uuid4().hex[:8]
 
     def __repr__(self):  # pragma: no cover
         """Return string representation."""
-        return f"<MFuture: type: {type(self._result)}, exception: {type(self._exception)}, profiling: {self.profiling})"
+        return f"<MFuture: {self.name} type: {type(self._result)}, exception: {type(self._exception)}, profiling: {self.profiling})"
 
     @staticmethod
     def from_future(
         future: FutureProtocol,
         lazy: bool = True,
         result: Optional[Any] = None,
-        timeout: int = mapchete_options.future_timeout,
+        timeout: float = mapchete_options.future_timeout,
     ) -> MFuture:
         # get status and name if possible
         # get distributed.Future.status or None
@@ -126,13 +127,14 @@ class MFuture:
 
     @staticmethod
     def from_func_partial(func: Callable, item: Any) -> MFuture:
+        name = getattr(item, "id", None)
         try:
             result = func(item)
         except Exception as exc:  # pragma: no cover
-            return MFuture(exception=exc)
-        return MFuture(result=result.output, profiling=result.profiling)
+            return MFuture(exception=exc, name=name)
+        return MFuture(result=result.output, profiling=result.profiling, name=name)
 
-    def result(self, timeout: int = mapchete_options.future_timeout, **kwargs) -> Any:
+    def result(self, timeout: float = mapchete_options.future_timeout, **kwargs) -> Any:
         """Return task result."""
         self._populate_from_future(timeout=timeout)
 
@@ -160,7 +162,7 @@ class MFuture:
         )
 
     def _populate_from_future(
-        self, timeout: int = mapchete_options.future_timeout, **kwargs
+        self, timeout: float = mapchete_options.future_timeout, **kwargs
     ):
         """Fill internal cache with future.result() if future was provided."""
         # only check if there is a cached future but no result nor exception

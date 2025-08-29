@@ -1161,6 +1161,16 @@ def example_hillshade(mp_tmpdir):
 
 
 @pytest.fixture
+def example_special_kwargs(mp_tmpdir):
+    """Fixture for examples/special_kwargs/special_kwargs.mapchete."""
+    with ProcessFixture(
+        EXAMPLES_DIR / "special_kwargs/special_kwargs.mapchete",
+        output_tempdir=mp_tmpdir,
+    ) as example:
+        yield example
+
+
+@pytest.fixture
 def point() -> Point:
     return Point(1, 0)
 

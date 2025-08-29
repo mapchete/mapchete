@@ -732,7 +732,7 @@ class MapcheteConfig(object):
                     area, src_crs=area_crs or dst_crs, dst_crs=dst_crs
                 ).intersection(
                     reproject_geometry(
-                        box(*Bounds.from_inp(bounds)),
+                        Bounds.from_inp(bounds).geometry,
                         src_crs=bounds_crs or dst_crs,
                         dst_crs=dst_crs,
                     ),

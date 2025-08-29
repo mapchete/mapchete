@@ -17,6 +17,15 @@ from mapchete.errors import (
 )
 from mapchete.log import add_module_logger
 from mapchete.path import MPath, absolute_path
+from mapchete.process_func_special_types import (
+    TileBuffer,
+    OutputNodataValue,
+    OutputPath,
+    Tile,
+    TilePixelBuffer,
+)
+from mapchete.tile import BufferedTile
+
 
 logger = logging.getLogger(__name__)
 
@@ -56,8 +65,7 @@ class ProcessFunc:
         self.function_parameters = dict(**inspect.signature(func).parameters)
 
     def __call__(self, *args, **kwargs: Any) -> Any:
-        kwargs = self.filter_parameters(kwargs)
-        return self._load_func()(*args, **kwargs)
+        return self._load_func()(*args, **self.filter_parameters(kwargs))
 
     def analyze_parameters(
         self, parameters_per_zoom: Dict[int, ZoomParameters]
@@ -65,11 +73,26 @@ class ProcessFunc:
         for zoom, config_parameters in parameters_per_zoom.items():
             # make sure parameters with no defaults are present in configuration, except of magical "mp" object
             for name, param in self.function_parameters.items():
-                if param.default == inspect.Parameter.empty and name not in [
+                if name in ["mp"]:
+                    warnings.warn(
+                        DeprecationWarning(
+                            "the magic 'mp' object is deprecated and will be removed soon"
+                        )
+                    )
+                if param.annotation in [
+                    Tile,
+                    TilePixelBuffer,
+                    TileBuffer,
+                    OutputNodataValue,
+                    OutputPath,
+                ] or name in [
                     "mp",
                     "kwargs",
                     "__",
                 ]:
+                    continue
+
+                elif param.default == inspect.Parameter.empty:
                     if (
                         name not in config_parameters.input
                         and name not in config_parameters.process_parameters
@@ -92,13 +115,46 @@ class ProcessFunc:
                         f"zoom {zoom}: parameter '{param_name}' is set in the process configuration but not a process function parameter"
                     )
 
-    def filter_parameters(self, kwargs):
+    def filter_parameters(self, kwargs: Dict[str, Any]) -> Dict[str, Any]:
         """Return function kwargs."""
         return {
             k: v
             for k, v in kwargs.items()
             if k in self.function_parameters and v is not None
         }
+
+    def execute(
+        self,
+        parameters_at_zoom: Dict[str, Any],
+        inputs: Dict[str, Any],
+        process_tile: BufferedTile,
+        output_params: Dict[str, Any],
+    ) -> Any:
+        # check for annotated special parameters
+        for name, param in self.function_parameters.items():
+            if param.annotation == Tile:
+                parameters_at_zoom[name] = process_tile
+            elif param.annotation == TilePixelBuffer:
+                parameters_at_zoom[name] = process_tile.pixelbuffer
+            elif param.annotation == OutputNodataValue:
+                try:
+                    parameters_at_zoom[name] = output_params["nodata"]
+                except KeyError:  # pragma: no cover
+                    raise KeyError("this process output does not have a nodata value")
+            elif param.annotation == OutputPath:
+                try:
+                    parameters_at_zoom[name] = output_params["path"]
+                except KeyError:  # pragma: no cover
+                    raise KeyError("this process output does not have a path")
+            elif param.annotation == TileBuffer:
+                parameters_at_zoom[name] = (
+                    process_tile.pixel_x_size * process_tile.pixelbuffer
+                )
+
+        return self.__call__(
+            **parameters_at_zoom,
+            **inputs,
+        )
 
     def _load_func(self):
         """Import and return process function."""

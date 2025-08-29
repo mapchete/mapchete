@@ -1,3 +1,4 @@
+import logging
 from typing import Generator, Tuple, Union
 
 from mapchete.errors import GeometryTypeError
@@ -13,6 +14,8 @@ from mapchete.types import (
     MultipartGeometry,
     SinglepartGeometry,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def multipart_to_singleparts(
@@ -31,6 +34,8 @@ def multipart_to_singleparts(
 def omit_empty_geometries(geometry: Geometry) -> Generator[Geometry, None, None]:
     if not geometry.is_empty:
         yield geometry
+    # else:
+    #     logger.warning("empty geometry omitted")
 
 
 def is_type(
@@ -55,9 +60,10 @@ def is_type(
         )
 
     geometry_type = get_geometry_type(geometry.geom_type)
+    target_type = get_geometry_type(target_type)
 
     # simple match
-    if geometry_type == get_geometry_type(target_type):
+    if geometry_type == target_type:
         return True
 
     # GeometryCollections don't have a corresponding singlepart or multipart type
@@ -118,3 +124,9 @@ def filter_by_geometry_type(
                 singlepart_equivalent_matches=singlepart_equivalent_matches,
                 multipart_equivalent_matches=multipart_equivalent_matches,
             )
+    # else:
+    #     logger.warning(
+    #         "omit geometry of type %s because it does not match the target type of %s",
+    #         geometry.geom_type,
+    #         target_type,
+    #     )
