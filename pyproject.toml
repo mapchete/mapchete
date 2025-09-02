@@ -39,6 +39,8 @@ dependencies = [
     "pydantic>=2.3.0",
     "pydantic_settings>=2.0.0",
     "pyproj",
+    "pystac[urllib3]>=1.8.2",
+    "pystac-client>=0.7.2",
     "python-dateutil",
     "rasterio>1.2.10",
     "retry",
@@ -92,10 +94,6 @@ serve = [
 ]
 spatial-index = [
     "rtree",
-]
-stac = [
-    "pystac[urllib3]>=1.8.2",
-    "pystac-client>=0.7.2",
 ]
 vrt = [
     "lxml",

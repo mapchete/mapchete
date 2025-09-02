@@ -8,6 +8,7 @@ from contextlib import ExitStack
 from typing import Any, Generator, Iterator, List, Optional, Tuple, Union
 
 from cachetools import LRUCache
+import pystac
 from shapely.geometry import Polygon, base
 from shapely.ops import unary_union
 
@@ -578,12 +579,6 @@ class Mapchete(object):
         On TileDirectory outputs, the tiled-assets are updated regarding
         zoom levels and bounds.
         """
-        try:
-            import pystac
-        except ImportError:  # pragma: no cover
-            logger.warning("install extra mapchete[stac] to write STAC item files")
-            return
-
         if not self.config.output.use_stac or self.config.mode in [
             ProcessingMode.READONLY,
             ProcessingMode.MEMORY,
