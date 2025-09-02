@@ -7,6 +7,8 @@ from typing import Optional
 import numpy as np
 import numpy.ma as ma
 from pyproj import CRS
+import pystac
+from pystac.version import get_stac_version
 from shapely.geometry import box, mapping
 
 from mapchete.errors import ReprojectionFailed
@@ -89,13 +91,6 @@ def tile_directory_stac_item(
     -------
     pystac.Item
     """
-    try:
-        import pystac
-        from pystac.version import get_stac_version
-    except ImportError:  # pragma: no cover
-        raise ImportError(
-            "dependencies for extra mapchete[stac] is required for this feature"
-        )
     if item_id is None:
         raise ValueError("item_id must be set")
     if zoom_levels is None:
@@ -527,12 +522,6 @@ def make_stac_item_relative(stac_item, base_href: Optional[str] = None):
     """
     Convert all asset hrefs, self links, and asset_templates to relative paths.
     """
-    try:
-        import pystac
-    except ImportError:  # pragma: no cover
-        raise ImportError(
-            "dependencies for extra mapchete[stac] is required for this feature"
-        )
 
     def relpath(href: str, base_href: Optional[str] = None, is_self=False) -> str:
         if not href:  # pragma: no cover
