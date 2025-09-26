@@ -3,6 +3,16 @@ Changelog
 #########
 
 ---------------------
+2025.9.1 - 2025-09-26
+---------------------
+
+* core
+
+  * `path.MPath`: strip endpoint url, otherwise fiona would throw an error (#700)
+  * `processing.tasks`: fix regressed test coverage (#701)
+
+
+---------------------
 2025.9.0 - 2025-09-02
 ---------------------
 
