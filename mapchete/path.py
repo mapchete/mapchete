@@ -749,7 +749,10 @@ class MPath(os.PathLike):
         endpoint_url = getattr(self.fs, "endpoint_url", None)
         if endpoint_url:
             self._gdal_options.update(aws_https=endpoint_url.startswith("https://"))
-            return endpoint_url.replace("http://", "").replace("https://", "")
+            # strip final "/", otherwise fiona would throw an error
+            return (
+                endpoint_url.replace("http://", "").replace("https://", "").rstrip("/")
+            )
         else:
             return None
 
