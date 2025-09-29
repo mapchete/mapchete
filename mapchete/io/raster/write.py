@@ -94,7 +94,7 @@ def RasterioRemoteMemoryWriter(
         logger.debug("upload rasterio MemoryFile to %s", path)
         retry_call(
             _upload,
-            fargs=(path, dataset),
+            fargs=(path, memfile),
             logger=logger,
             **io_retry_settings.model_dump(exclude_none=True),
         )
