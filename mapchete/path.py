@@ -1039,18 +1039,24 @@ def tiles_exist(
 
     is_https_without_ls = _is_https_without_ls(config.output_reader.path)
     # special case: if output path is empty, skip existence check
-    if not is_https_without_ls and next(config.output_reader.path.walk()).subdirs == []:
-        logger.debug("no output tiles found, skip existence check")
-        if process_tiles_batches:
-            for batch in process_tiles_batches:
-                for tile in batch:
-                    yield (tile, False)
-        elif output_tiles_batches:
-            for batch in output_tiles_batches:
-                for tile in batch:
-                    yield (tile, False)
+    if not is_https_without_ls:
+        try:
+            subdirs = next(config.output_reader.path.walk()).subdirs
+        except StopIteration:  # pragma: no cover
+            subdirs = []
+        if not subdirs:
+            logger.debug("no output tiles found, skip existence check")
+            if process_tiles_batches:
+                for batch in process_tiles_batches:
+                    for tile in batch:
+                        yield (tile, False)
+            elif output_tiles_batches:
+                for batch in output_tiles_batches:
+                    for tile in batch:
+                        yield (tile, False)
+            return
 
-    elif process_tiles_batches:
+    if process_tiles_batches:
         yield from _process_tiles_batches_exist(
             process_tiles_batches,
             config,
