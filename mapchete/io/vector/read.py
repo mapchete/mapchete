@@ -186,7 +186,7 @@ def _read_vector_window_from_file(
 
 @retry(
     logger=logger,
-    **dict(IORetrySettings()),
+    **IORetrySettings().model_dump(exclude_none=True),
 )
 def _get_reprojected_features_from_file(
     inp: MPath,

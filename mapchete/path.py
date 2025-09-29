@@ -419,6 +419,11 @@ class MPath(os.PathLike):
         return self.fs.open(self._path_str, mode, **kwargs)
 
     @_retry
+    def write(self, data: Union[str, bytes], mode: str = "wb") -> None:
+        with self.fs.open(self._path_str, mode) as dst:
+            dst.write(data)
+
+    @_retry
     def read_text(self) -> str:
         """Open and return file content as text."""
         try:

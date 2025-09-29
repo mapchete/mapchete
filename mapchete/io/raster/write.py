@@ -10,12 +10,10 @@ import numpy.ma as ma
 import rasterio
 from rasterio.io import DatasetWriter, MemoryFile, BufferedDatasetWriter
 from rasterio.profiles import Profile
-from retry.api import retry_call
 
 from mapchete.io.raster.array import extract_from_array
 from mapchete.path import MPath, MPathLike
 from mapchete.protocols import GridProtocol
-from mapchete.settings import io_retry_settings
 from mapchete.validate import validate_write_window_params
 
 logger = logging.getLogger(__name__)
@@ -80,9 +78,9 @@ def RasterioRemoteMemoryWriter(
     BufferedDatasetWriter or DatasetWriter
     """
 
-    def _upload(path: MPath, dataset: Union[BufferedDatasetWriter, DatasetWriter]):
+    def _upload(path: MPath, memfile: MemoryFile):
         with path.fs.open(path, "wb") as dst:
-            dst.write(dataset.getbuffer())
+            dst.write(memfile.getbuffer())
 
     path = MPath.from_inp(path)
 
@@ -92,12 +90,7 @@ def RasterioRemoteMemoryWriter(
             yield dataset
 
         logger.debug("upload rasterio MemoryFile to %s", path)
-        retry_call(
-            _upload,
-            fargs=(path, memfile),
-            logger=logger,
-            **io_retry_settings.model_dump(exclude_none=True),
-        )
+        path.write(memfile.getbuffer())
 
         logger.debug("close rasterio MemoryFile")
 
@@ -125,17 +118,13 @@ def RasterioRemoteTempFileWriter(
     path = MPath.from_inp(path)
 
     logger.debug("open RasterioTempFileWriter for path %s", path)
-    with NamedTemporaryFile(suffix=path.suffix) as tmpfile:
-        with rasterio.open(tmpfile.name, "w+", *args, **kwargs) as dataset:
+    with NamedTemporaryFile(suffix=path.suffix) as tempfile:
+        with rasterio.open(tempfile.name, "w+", *args, **kwargs) as dataset:
             yield dataset
 
-        logger.debug("upload TempFile %s to %s", tmpfile.name, path)
-        retry_call(
-            path.fs.put_file,
-            fargs=(tmpfile.name, path),
-            logger=logger,
-            **io_retry_settings.model_dump(exclude_none=True),
-        )
+        logger.debug("upload TempFile %s to %s", tempfile.name, path)
+
+        MPath.from_inp(tempfile.name).cp(path)
 
         logger.debug("close and remove tempfile")
 
