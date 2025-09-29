@@ -10,10 +10,12 @@ import numpy.ma as ma
 import rasterio
 from rasterio.io import DatasetWriter, MemoryFile, BufferedDatasetWriter
 from rasterio.profiles import Profile
+from retry.api import retry_call
 
 from mapchete.io.raster.array import extract_from_array
 from mapchete.path import MPath, MPathLike
 from mapchete.protocols import GridProtocol
+from mapchete.settings import io_retry_settings
 from mapchete.validate import validate_write_window_params
 
 logger = logging.getLogger(__name__)
@@ -57,63 +59,85 @@ def rasterio_write(
         raise
 
 
-class RasterioRemoteMemoryWriter:
-    path: MPath
-    _sink: Union[BufferedDatasetWriter, DatasetWriter]
+@contextmanager
+def RasterioRemoteMemoryWriter(
+    path: MPathLike, *args, **kwargs
+) -> Generator[Union[BufferedDatasetWriter, DatasetWriter], None, None]:
+    """
+    Write to an in-memory file and upload it to remote storage on closing.
 
-    def __init__(self, path: MPathLike, *args, **kwargs):
-        logger.debug("open RasterioRemoteMemoryWriter for path %s", path)
-        self.path = MPath.from_inp(path)
-        self.fs = self.path.fs
-        self._dst = MemoryFile()
-        self._open_args = args
-        self._open_kwargs = kwargs
-        self._sink = None
+    Parameters
+    ----------
+    path : str or MPath
+        Path to write to.
+    args : list
+        Arguments to be passed on to rasterio.open()
+    kwargs : dict
+        Keyword arguments to be passed on to rasterio.open()
 
-    def __enter__(self):
-        self._sink = self._dst.open(*self._open_args, **self._open_kwargs)
-        return self._sink
+    Returns
+    -------
+    BufferedDatasetWriter or DatasetWriter
+    """
 
-    def __exit__(self, exc_type, exc_value, exc_traceback):
-        try:
-            self._sink.close()
-            if exc_value is None:
-                logger.debug("upload rasterio MemoryFile to %s", self.path)
-                with self.fs.open(self.path, "wb") as dst:
-                    dst.write(self._dst.getbuffer())
-        finally:
-            logger.debug("close rasterio MemoryFile")
-            self._dst.close()
+    def _upload(path: MPath, dataset: Union[BufferedDatasetWriter, DatasetWriter]):
+        with path.fs.open(path, "wb") as dst:
+            dst.write(dataset.getbuffer())
 
+    path = MPath.from_inp(path)
 
-class RasterioRemoteTempFileWriter:
-    path: MPath
-    _sink: Union[BufferedDatasetWriter, DatasetWriter]
+    logger.debug("open RasterioRemoteMemoryWriter for path %s", path)
+    with MemoryFile() as memfile:
+        with memfile.open(*args, **kwargs) as dataset:
+            yield dataset
 
-    def __init__(self, path: MPathLike, *args, **kwargs):
-        logger.debug("open RasterioTempFileWriter for path %s", path)
-        self.path = MPath.from_inp(path)
-        self.fs = self.path.fs
-        self._dst = NamedTemporaryFile(suffix=self.path.suffix)
-        self._open_args = args
-        self._open_kwargs = kwargs
-        self._sink = None
-
-    def __enter__(self):
-        self._sink = rasterio.open(
-            self._dst.name, "w+", *self._open_args, **self._open_kwargs
+        logger.debug("upload rasterio MemoryFile to %s", path)
+        retry_call(
+            _upload,
+            fargs=(path, dataset),
+            logger=logger,
+            **io_retry_settings.model_dump(exclude_none=True),
         )
-        return self._sink
 
-    def __exit__(self, exc_type, exc_value, exc_traceback):
-        try:
-            self._sink.close()
-            if exc_value is None:
-                logger.debug("upload TempFile %s to %s", self._dst.name, self.path)
-                self.fs.put_file(self._dst.name, self.path)
-        finally:
-            logger.debug("close and remove tempfile")
-            self._dst.close()
+        logger.debug("close rasterio MemoryFile")
+
+
+@contextmanager
+def RasterioRemoteTempFileWriter(
+    path: MPathLike, *args, **kwargs
+) -> Generator[Union[BufferedDatasetWriter, DatasetWriter], None, None]:
+    """
+    Write to a temporary file and upload it to remote storage on closing.
+
+    Parameters
+    ----------
+    path : str or MPath
+        Path to write to.
+    args : list
+        Arguments to be passed on to rasterio.open()
+    kwargs : dict
+        Keyword arguments to be passed on to rasterio.open()
+
+    Returns
+    -------
+    BufferedDatasetWriter or DatasetWriter
+    """
+    path = MPath.from_inp(path)
+
+    logger.debug("open RasterioTempFileWriter for path %s", path)
+    with NamedTemporaryFile(suffix=path.suffix) as tmpfile:
+        with rasterio.open(tmpfile.name, "w+", *args, **kwargs) as dataset:
+            yield dataset
+
+        logger.debug("upload TempFile %s to %s", tmpfile.name, path)
+        retry_call(
+            path.fs.put_file,
+            fargs=(tmpfile.name, path),
+            logger=logger,
+            **io_retry_settings.model_dump(exclude_none=True),
+        )
+
+        logger.debug("close and remove tempfile")
 
 
 class RasterioRemoteWriter:
