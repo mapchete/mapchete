@@ -47,9 +47,9 @@ def FionaRemoteMemoryWriter(
     with MemoryFile() as memfile:
         with memfile.open(*args, **kwargs) as sink:
             yield sink
-        logger.debug("upload fiona MemoryFile to %s", path)
 
-        path.write(memfile.getbuffer())
+        logger.debug("upload fiona MemoryFile to %s", path)
+        path.write_content(memfile.getbuffer(), mode="wb")
 
         logger.debug("close fiona MemoryFile")
 

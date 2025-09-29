@@ -59,7 +59,7 @@ def rasterio_write(
 
 @contextmanager
 def RasterioRemoteMemoryWriter(
-    path: MPathLike, *args, **kwargs
+    path: MPath, *args, **kwargs
 ) -> Generator[Union[BufferedDatasetWriter, DatasetWriter], None, None]:
     """
     Write to an in-memory file and upload it to remote storage on closing.
@@ -77,27 +77,20 @@ def RasterioRemoteMemoryWriter(
     -------
     BufferedDatasetWriter or DatasetWriter
     """
-
-    def _upload(path: MPath, memfile: MemoryFile):
-        with path.fs.open(path, "wb") as dst:
-            dst.write(memfile.getbuffer())
-
-    path = MPath.from_inp(path)
-
     logger.debug("open RasterioRemoteMemoryWriter for path %s", path)
     with MemoryFile() as memfile:
         with memfile.open(*args, **kwargs) as dataset:
             yield dataset
 
         logger.debug("upload rasterio MemoryFile to %s", path)
-        path.write(memfile.getbuffer())
+        path.write_content(memfile.getbuffer(), mode="wb")
 
         logger.debug("close rasterio MemoryFile")
 
 
 @contextmanager
 def RasterioRemoteTempFileWriter(
-    path: MPathLike, *args, **kwargs
+    path: MPath, *args, **kwargs
 ) -> Generator[Union[BufferedDatasetWriter, DatasetWriter], None, None]:
     """
     Write to a temporary file and upload it to remote storage on closing.
@@ -115,15 +108,12 @@ def RasterioRemoteTempFileWriter(
     -------
     BufferedDatasetWriter or DatasetWriter
     """
-    path = MPath.from_inp(path)
-
     logger.debug("open RasterioTempFileWriter for path %s", path)
     with NamedTemporaryFile(suffix=path.suffix) as tempfile:
         with rasterio.open(tempfile.name, "w+", *args, **kwargs) as dataset:
             yield dataset
 
         logger.debug("upload TempFile %s to %s", tempfile.name, path)
-
         MPath.from_inp(tempfile.name).cp(path)
 
         logger.debug("close and remove tempfile")
