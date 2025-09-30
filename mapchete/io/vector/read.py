@@ -243,7 +243,7 @@ def reprojected_features(
     for feature in src.filter(bbox=dst_bounds):
         try:
             # check validity
-            original_geom = to_shape(feature)
+            original_geom = repair(to_shape(feature))
             target_geometry_type = target_geometry_type or original_geom.geom_type
 
             # clip with bounds and omit if clipped geometry is empty
