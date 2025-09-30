@@ -265,7 +265,7 @@ def reprojected_features(
                         reprojected_geom, target_geometry_type
                     ):
                         yield {
-                            "properties": feature["properties"],
+                            "properties": dict(feature["properties"]),
                             "geometry": mapping(filtered_geom),
                         }
         # this can be handled quietly
