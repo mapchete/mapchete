@@ -3,7 +3,42 @@ from typing import Union
 import pytest
 
 from mapchete import VectorInput
+from mapchete.geometry import to_shape
 from mapchete.testing import ProcessFixture
+
+
+@pytest.mark.parametrize(
+    "validity_check",
+    [True, False],
+)
+@pytest.mark.parametrize(
+    "clip_to_crs_bounds",
+    [True, False],
+)
+@pytest.mark.parametrize(
+    "pixelbuffer",
+    [0, 10],
+)
+def test_read_generator(
+    flatgeobuf: ProcessFixture,
+    validity_check: bool,
+    clip_to_crs_bounds: bool,
+    pixelbuffer: int,
+):
+    vector_input: VectorInput = flatgeobuf.process_mp().open("file1")  # type: ignore
+    for feature in vector_input.read_generator(
+        validity_check=validity_check,
+        clip_to_crs_bounds=clip_to_crs_bounds,
+        pixelbuffer=pixelbuffer,
+    ):
+        assert isinstance(feature, dict)
+        assert "type" in feature
+        assert feature["type"] == "Feature"
+        assert "geometry" in feature
+        assert isinstance(feature["geometry"], dict)
+        assert "properties" in feature
+        assert isinstance(feature["properties"], dict)
+        assert to_shape(feature).is_valid
 
 
 @pytest.mark.parametrize(

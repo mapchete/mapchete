@@ -6,7 +6,7 @@ Currently limited by extensions .shp and .geojson but could be extended easily.
 
 import logging
 from functools import cached_property
-from typing import Optional, List, Tuple, Union
+from typing import Generator, Optional, List, Tuple, Union
 
 from affine import Affine
 import numpy as np
@@ -27,11 +27,12 @@ from mapchete.io.vector import (
     convert_vector,
     read_vector,
     read_vector_window,
+    read_vector_window_generator,
 )
 from mapchete.io.vector.indexed_features import object_geometry
 from mapchete.path import MPath
 from mapchete.tile import BufferedTile
-from mapchete.types import CRSLike, ShapeLike
+from mapchete.types import CRSLike, ShapeLike, GeoJSONLikeFeature
 
 logger = logging.getLogger(__name__)
 
@@ -272,8 +273,8 @@ class InputTile(base.InputTile, VectorInput):
         target_geometry_type: Optional[
             Union[GeometryTypeLike, Tuple[GeometryTypeLike]]
         ] = None,
-        **kwargs,
-    ) -> List[dict]:
+        **__,
+    ) -> List[GeoJSONLikeFeature]:
         """
         Read reprojected & resampled input data.
 
@@ -308,6 +309,23 @@ class InputTile(base.InputTile, VectorInput):
                 clip_to_crs_bounds=clip_to_crs_bounds,
                 target_geometry_type=target_geometry_type,
             )
+        )
+
+    def read_generator(
+        self,
+        validity_check: bool = True,
+        clip_to_crs_bounds: bool = False,
+        target_geometry_type: Optional[
+            Union[GeometryTypeLike, Tuple[GeometryTypeLike]]
+        ] = None,
+        **__,
+    ) -> Generator[GeoJSONLikeFeature, None, None]:
+        yield from read_vector_window_generator(
+            inp=self.path,
+            grid=self.tile,
+            validity_check=validity_check,
+            clip_to_crs_bounds=clip_to_crs_bounds,
+            target_geometry_type=target_geometry_type,
         )
 
     def is_empty(self) -> bool:

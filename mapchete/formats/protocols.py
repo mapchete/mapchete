@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from types import TracebackType
-from typing import Any, Callable, List, Optional, Protocol, Tuple, Type
+from typing import Any, Callable, Generator, List, Optional, Protocol, Tuple, Type
 
 import numpy as np
 import numpy.ma as ma
@@ -11,7 +11,14 @@ from shapely.geometry.base import BaseGeometry
 from mapchete.path import MPath
 from mapchete.protocols import GridProtocol
 from mapchete.tile import BufferedTile, BufferedTilePyramid
-from mapchete.types import BandIndexes, BoundsLike, CRSLike, ResamplingLike, TileLike
+from mapchete.types import (
+    BandIndexes,
+    BoundsLike,
+    CRSLike,
+    ResamplingLike,
+    TileLike,
+    GeoJSONLikeFeature,
+)
 
 
 class InputTileProtocol(GridProtocol):  # pragma: no cover
@@ -51,8 +58,14 @@ class RasterInput(InputTileProtocol):  # pragma: no cover
 class VectorInput(InputTileProtocol):  # pragma: no cover
     def read(
         self, validity_check: bool = True, clip_to_crs_bounds: bool = False, **kwargs
-    ) -> List[dict]:
+    ) -> List[GeoJSONLikeFeature]:
         """Read reprojected and clipped vector features from input."""
+        ...
+
+    def read_generator(
+        self, validity_check: bool = True, clip_to_crs_bounds: bool = False, **kwargs
+    ) -> Generator[GeoJSONLikeFeature, None, None]:
+        """Generate reprojected and clipped vector features from input."""
         ...
 
     def read_union_geometry(
