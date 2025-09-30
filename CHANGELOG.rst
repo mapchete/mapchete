@@ -2,6 +2,25 @@
 Changelog
 #########
 
+
+2025.9.2 - 2025-09-30
+---------------------
+
+* core
+
+  * `settings`: parse `io_settings` upon loading module (#703)
+  * `io.raster.write`: refactor `RasterioRemoteTempFileWriter` and `RasterioRemoteMemoryWriter` to make code less complex; add retry for upload functions (#703)
+  * `io.vector.write`: refactor `FionaRemoteTempFileWriter` and `FionaRemoteMemoryWriter` to make code less complex; add retry for upload functions (#703)
+  * `path`: speed up `tiles_exist()` check if output directory is empty (#703)
+  * `path`: add MPath.write_content() (#703)
+  * `formats.default.vector_file`: add `VectorInput.read_generator()` which behaves simlar to `VectorInput.read()`
+  * `io.vector.read_vector_window`: use `shapely.clip_by_rect` to create intersection (#703)
+
+* packaging
+
+  * update `flask` requirement from `<3.0.0` to `<4.0.0` (#702)
+
+
 ---------------------
 2025.9.1 - 2025-09-26
 ---------------------
