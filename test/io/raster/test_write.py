@@ -121,3 +121,20 @@ def test_rasterio_write_remote_exception(mp_s3_tmpdir, in_memory):
             **COGDeflateProfile(dtype="uint8"),
         ):
             raise ValueError()
+
+
+def test_rasterio_write_errors(local_raster, mp_s3_tmpdir):
+    test_file = mp_s3_tmpdir / "test.tif"
+    with rasterio_open(local_raster) as src:
+        arr = src.read()
+
+        with pytest.raises(ZeroDivisionError):
+            with rasterio_write(test_file, **src.meta) as dst:
+                dst.write(arr)
+                # force error
+                1 / 0  # type: ignore
+
+    # check that file was not created
+    with pytest.raises(FileNotFoundError):
+        with rasterio_open(test_file) as src:
+            pass
