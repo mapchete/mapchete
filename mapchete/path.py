@@ -421,7 +421,7 @@ class MPath(os.PathLike):
     @_retry
     def write_content(self, content: Union[str, bytes], mode: str = "wb") -> None:
         with self.fs.open(self._path_str, mode) as dst:
-            dst.write(content)
+            dst.write(content)  # type: ignore
 
     @_retry
     def read_text(self) -> str:

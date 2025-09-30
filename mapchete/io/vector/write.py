@@ -40,7 +40,6 @@ def FionaRemoteMemoryWriter(
     -------
     fiona.Collection
     """
-
     path = MPath.from_inp(path)
     logger.debug("open FionaRemoteMemoryWriter for path %s", path)
 

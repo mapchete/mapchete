@@ -16,7 +16,6 @@ from mapchete.types import (
     BoundsLike,
     CRSLike,
     ResamplingLike,
-    TileLike,
     GeoJSONLikeFeature,
 )
 
@@ -103,7 +102,7 @@ class InputDataProtocol(Protocol):  # pragma: no cover
     preprocessing_tasks: dict = {}
     preprocessing_tasks_results: dict = {}
 
-    def open(self, tile: TileLike, **kwargs) -> InputTileProtocol:
+    def open(self, tile: BufferedTile, **kwargs) -> InputTileProtocol:
         """Return an input instance for a given process tile."""
         ...
 
@@ -160,7 +159,7 @@ class OutputDataReaderProtocol(Protocol):  # pragma: no cover
     def open(
         self,
         tile: BufferedTile,
-        process: "MapcheteProcess",  # noqa: F821
+        process: "MapcheteProcess",  # noqa: F821 # type: ignore
     ) -> InputTileProtocol: ...
 
     def for_web(self, data) -> np.ndarray: ...
