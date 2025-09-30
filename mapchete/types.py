@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from typing import (
+    Any,
     Dict,
     Iterable,
     List,
@@ -14,11 +15,9 @@ from typing import (
     runtime_checkable,
 )
 
-from mapchete._deprecated import deprecated
-
 from fiona.crs import CRS as FionaCRS  # type: ignore
 from geojson_pydantic import Feature, FeatureCollection as GeoJSONGeometryType
-from pydantic import BaseModel
+from pydantic import BaseModel, PositiveInt
 from rasterio.crs import CRS as RasterioCRS
 from rasterio.enums import Resampling
 from shapely.geometry import (
@@ -33,6 +32,9 @@ from shapely.geometry import (
 )
 from shapely.geometry.base import BaseGeometry
 from tilematrix import Shape, Tile
+
+from mapchete._deprecated import deprecated
+
 
 SinglepartGeometry = Union[
     Point,
@@ -64,7 +66,7 @@ CoordArrays = Tuple[Iterable[float], Iterable[float]]
 
 
 GeoJSONLikeFeature = TypedDict(
-    "GeoJSONLikeFeature", {"geometry": dict, "properties": dict}
+    "GeoJSONLikeFeature", {"geometry": dict, "properties": Dict[str, Any]}
 )
 MPathLike = Union[str, os.PathLike]
 BoundsLike = Union[List[float], Tuple[float, float, float, float], dict, Polygon]
@@ -75,7 +77,7 @@ CRSLike = Union[FionaCRS, RasterioCRS]
 NodataVal = Optional[float]
 NodataVals = Union[List[NodataVal], NodataVal]
 ResamplingLike = Union[Resampling, str]
-BandIndex = int
+BandIndex = PositiveInt
 BandIndexes = Union[BandIndex, List[BandIndex]]
 
 

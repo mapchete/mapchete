@@ -22,6 +22,7 @@ from typing import (
     TextIO,
     NamedTuple,
     Union,
+    Tuple,
 )
 
 from aiohttp import BasicAuth
@@ -416,6 +417,11 @@ class MPath(os.PathLike):
         """Open file."""
         logger.debug("%s: make self.fs.open() call ...", str(self))
         return self.fs.open(self._path_str, mode, **kwargs)
+
+    @_retry
+    def write_content(self, content: Union[str, bytes], mode: str = "wb") -> None:
+        with self.fs.open(self._path_str, mode) as dst:
+            dst.write(content)  # type: ignore
 
     @_retry
     def read_text(self) -> str:
@@ -955,7 +961,7 @@ def tiles_exist(
         Generator[Generator[BufferedTile, None, None], None, None]
     ] = None,
     **kwargs,
-):
+) -> Generator[Tuple[BufferedTile, bool], None, None]:
     """
     Yield tiles and whether their output already exists or not.
 
@@ -1031,17 +1037,34 @@ def tiles_exist(
         logger.debug("sort output tiles by %s, this could take a while", sort_attribute)
         output_tiles_batches = _batch_tiles_by_attribute(output_tiles, sort_attribute)
 
+    is_https_without_ls = _is_https_without_ls(config.output_reader.path)
+    # special case: if output path is empty, skip existence check
+    if not is_https_without_ls:
+        try:
+            subdirs = next(config.output_reader.path.walk()).subdirs
+        except StopIteration:  # pragma: no cover
+            subdirs = []
+        if not subdirs:
+            logger.debug("no output tiles found, skip existence check")
+            if process_tiles_batches:
+                for batch in process_tiles_batches:
+                    for tile in batch:
+                        yield (tile, False)
+            elif output_tiles_batches:
+                for batch in output_tiles_batches:
+                    for tile in batch:
+                        yield (tile, False)
+            return
+
     if process_tiles_batches:
         yield from _process_tiles_batches_exist(
             process_tiles_batches,
             config,
-            _is_https_without_ls(config.output_reader.path),
+            is_https_without_ls,
         )
     elif output_tiles_batches:
         yield from _output_tiles_batches_exist(
-            output_tiles_batches,
-            config,
-            _is_https_without_ls(config.output_reader.path),
+            output_tiles_batches, config, is_https_without_ls
         )
 
 
@@ -1076,7 +1099,7 @@ def _output_tiles_batches_exist(
     output_tiles_batches: Generator[Generator[BufferedTile, None, None], None, None],
     config,
     is_https_without_ls,
-):
+) -> Generator[Tuple[BufferedTile, bool], None, None]:
     with Executor(concurrency=mapchete_options.tiles_exist_concurrency) as executor:
         for batch in executor.as_completed(
             _output_tiles_batch_exists,
@@ -1086,7 +1109,9 @@ def _output_tiles_batches_exist(
             yield from batch.result()
 
 
-def _output_tiles_batch_exists(tiles, config, is_https_without_ls):
+def _output_tiles_batch_exists(
+    tiles, config, is_https_without_ls
+) -> List[Tuple[BufferedTile, bool]]:
     if tiles:
         zoom = tiles[0].zoom
         # determine output paths
@@ -1107,7 +1132,9 @@ def _output_tiles_batch_exists(tiles, config, is_https_without_ls):
         return []
 
 
-def _process_tiles_batches_exist(process_tiles_batches, config, is_https_without_ls):
+def _process_tiles_batches_exist(
+    process_tiles_batches, config, is_https_without_ls
+) -> Generator[Tuple[BufferedTile, bool], None, None]:
     with Executor(concurrency=mapchete_options.tiles_exist_concurrency) as executor:
         for batch in executor.as_completed(
             _process_tiles_batch_exists,
@@ -1117,7 +1144,9 @@ def _process_tiles_batches_exist(process_tiles_batches, config, is_https_without
             yield from batch.result()
 
 
-def _process_tiles_batch_exists(tiles, config, is_https_without_ls):
+def _process_tiles_batch_exists(
+    tiles, config, is_https_without_ls
+) -> List[Tuple[BufferedTile, bool]]:
     def _all_output_tiles_exist(process_tile, existing_output_tiles):
         # a process tile only exists if all of its output tiles exist
         for output_tile in config.output_pyramid.intersecting(process_tile):
@@ -1158,9 +1187,9 @@ def _existing_output_tiles(
     output_rows: List[BufferedTile],
     output_paths: dict,
     config,
-    zoom=None,
-    is_https_without_ls=False,
-):
+    zoom: int,
+    is_https_without_ls: bool = False,
+) -> Set[BufferedTile]:
     existing_tiles = set()
     for row in output_rows:
         logger.debug("check existing tiles in row %s", row)

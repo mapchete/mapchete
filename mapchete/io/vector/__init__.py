@@ -11,6 +11,7 @@ from mapchete.io.vector.open import fiona_open
 from mapchete.io.vector.read import (
     fiona_read,
     read_vector_window,
+    read_vector_window_generator,
 )
 from mapchete.io.vector.write import fiona_write, write_vector_window
 from mapchete.types import Geometry, GeometryLike, CRSLike, BoundsLike
@@ -20,6 +21,7 @@ __all__ = [
     "fiona_write",
     "fiona_open",
     "read_vector_window",
+    "read_vector_window_generator",
     "write_vector_window",
     "IndexedFeatures",
     "convert_vector",

@@ -20,61 +20,69 @@ from mapchete.types import MPathLike, GeoJSONLikeFeature
 logger = logging.getLogger(__name__)
 
 
-class FionaRemoteMemoryWriter:
-    path: MPath
-    _dst: MemoryFile
-    _sink: fiona.Collection
+@contextmanager
+def FionaRemoteMemoryWriter(
+    path: MPathLike, *args, **kwargs
+) -> Generator[fiona.Collection, None, None]:
+    """
+    Write to a fiona-supported remote file using an in-memory file.
 
-    def __init__(self, path, *args, **kwargs):
-        logger.debug("open FionaRemoteMemoryWriter for path %s", path)
-        self.path = path
-        self._dst = MemoryFile()
-        self._open_args = args
-        self._open_kwargs = kwargs
+    Parameters
+    ----------
+    path : str or MPath
+        Path to write to.
+    args : list
+        Arguments to be passed on to fiona.open()
+    kwargs : dict
+        Keyword arguments to be passed on to fiona.open()
 
-    def __enter__(self):
-        self._sink = self._dst.open(*self._open_args, **self._open_kwargs)
-        return self._sink
+    Returns
+    -------
+    fiona.Collection
+    """
+    path = MPath.from_inp(path)
+    logger.debug("open FionaRemoteMemoryWriter for path %s", path)
 
-    def __exit__(self, exc_type, exc_value, exc_traceback):
-        try:
-            self._sink.close()
-            if exc_value is None:
-                logger.debug("upload fiona MemoryFile to %s", self.path)
-                with self.path.open("wb") as dst:
-                    dst.write(self._dst.getbuffer())
-        finally:
-            logger.debug("close fiona MemoryFile")
-            self._dst.close()
+    with MemoryFile() as memfile:
+        with memfile.open(*args, **kwargs) as sink:
+            yield sink
+
+        logger.debug("upload fiona MemoryFile to %s", path)
+        path.write_content(memfile.getbuffer(), mode="wb")
+
+        logger.debug("close fiona MemoryFile")
 
 
-class FionaRemoteTempFileWriter:
-    path: MPath
-    _dst: MemoryFile
-    _sink: fiona.Collection
+@contextmanager
+def FionaRemoteTempFileWriter(
+    path: MPathLike, *args, **kwargs
+) -> Generator[fiona.Collection, None, None]:
+    """
+    Write to a temporary file and upload it to remote storage on closing.
 
-    def __init__(self, path, *args, **kwargs):
-        logger.debug("open FionaRemoteTempFileWriter for path %s", path)
-        self.path = path
-        self._dst = NamedTemporaryFile(suffix=self.path.suffix)
-        self._open_args = args
-        self._open_kwargs = kwargs
+    Parameters
+    ----------
+    path : str or MPath
+        Path to write to.
+    args : list
+        Arguments to be passed on to fiona.open()
+    kwargs : dict
+        Keyword arguments to be passed on to fiona.open()
 
-    def __enter__(self):
-        self._sink = fiona.open(
-            self._dst.name, "w", *self._open_args, **self._open_kwargs
-        )
-        return self._sink
+    Returns
+    -------
+    fiona.Collection
+    """
+    path = MPath.from_inp(path)
+    logger.debug("open FionaRemoteTempFileWriter for path %s", path)
+    with NamedTemporaryFile(suffix=path.suffix) as tempfile:
+        with fiona.open(tempfile.name, "w", *args, **kwargs) as dataset:
+            yield dataset
 
-    def __exit__(self, exc_type, exc_value, exc_traceback):
-        try:
-            self._sink.close()
-            if exc_value is None:
-                logger.debug("upload TempFile %s to %s", self._dst.name, self.path)
-                self.path.fs.put_file(self._dst.name, self.path)
-        finally:
-            logger.debug("close and remove tempfile")
-            self._dst.close()
+        logger.debug("upload TempFile %s to %s", tempfile.name, path)
+        MPath.from_inp(tempfile.name).cp(path)
+
+        logger.debug("close and remove tempfile")
 
 
 @contextmanager

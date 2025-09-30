@@ -89,3 +89,4 @@ class MapcheteOptions(BaseSettings):
 
 
 mapchete_options = MapcheteOptions()
+io_retry_settings = IORetrySettings()
