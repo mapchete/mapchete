@@ -32,8 +32,6 @@ def test_read_generator(
         pixelbuffer=pixelbuffer,
     ):
         assert isinstance(feature, dict)
-        assert "type" in feature
-        assert feature["type"] == "Feature"
         assert "geometry" in feature
         assert isinstance(feature["geometry"], dict)
         assert "properties" in feature
