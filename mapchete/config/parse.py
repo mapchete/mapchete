@@ -196,7 +196,9 @@ def get_zoom_levels(
 
 
 def guess_geometry(
-    some_input: Union[MPathLike, dict, BaseGeometry], base_dir=None
+    some_input: Union[MPathLike, dict, BaseGeometry],
+    base_dir: Optional[MPathLike] = None,
+    bounds: Optional[BoundsLike] = None,
 ) -> Tuple[BaseGeometry, CRS]:
     """
     Guess and parse geometry if possible.
@@ -207,8 +209,14 @@ def guess_geometry(
     - a path to a Fiona-readable file
     """
     crs = None
+    # GeoJSON mapping
+    if isinstance(some_input, dict) and "type" in some_input:
+        geom = shape(some_input)
     # WKT or path:
-    if isinstance(some_input, (str, MPath)):
+    elif isinstance(some_input, (str, MPathLike)) or (
+        isinstance(some_input, dict) and "path" in some_input
+    ):
+        # WKT string
         if (
             str(some_input)
             .upper()
@@ -226,14 +234,18 @@ def guess_geometry(
         ):
             geom = wkt.loads(str(some_input))
         else:
+            from mapchete.grid import Grid
+
             features = IndexedFeatures.from_file(
-                MPath.from_inp(some_input).absolute_path(base_dir)
+                MPath.from_inp(some_input).absolute_path(base_dir),
+                grid=Grid.from_bounds(
+                    bounds=bounds, shape=(1, 1), crs=getattr(bounds, "crs")
+                )
+                if bounds
+                else None,
             )
             geom = features.read_union_geometry()
             crs = features.crs
-    # GeoJSON mapping
-    elif isinstance(some_input, dict):
-        geom = shape(some_input)
     # shapely geometry
     elif isinstance(some_input, BaseGeometry):
         geom = some_input
