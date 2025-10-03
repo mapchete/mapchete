@@ -85,11 +85,15 @@ class IndexedFeatures(FeatureCollectionProtocol):
         self._items = {}
         self._non_geo_items = set()
         self.bounds = None
-        for feature in features:
+        for counter, feature in enumerate(features):
             if isinstance(feature, tuple):
                 id_, feature = feature
             else:
-                id_ = object_id(feature)
+                try:
+                    id_ = object_id(feature)
+                except TypeError:
+                    # use feature position in interable as ID
+                    id_ = counter
             self._items[id_] = feature
             try:
                 try:
