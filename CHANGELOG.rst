@@ -3,6 +3,16 @@ Changelog
 #########
 
 
+2025.10.0 - 2025-10-03
+----------------------
+
+* core
+
+  * `path.MPath.new()`: make sure bucket name is included in path string (#705)
+  * `config.parse.guess_geometry()`: speed up using process bounds subset in case a vector file is being provided (#706)
+  * `io.vector.IndexedFeatures()`: automatically assign enumeration value if features don't have an ID (#706)
+
+
 2025.9.2 - 2025-09-30
 ---------------------
 
