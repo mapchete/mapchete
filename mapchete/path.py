@@ -327,7 +327,12 @@ class MPath(os.PathLike):
                 raise ValueError(f"cannot create MPath from dictionary: {path_info}")
             # S3 json does not return path information with protocol, so let's add it manually
             if "s3" in self.protocols:
-                path_str = f"s3://{path_str}"
+                bucket_name = self.elements[2]
+                path_str = (
+                    f"s3://{path_str}"
+                    if path_str.startswith(bucket_name)
+                    else f"s3://{bucket_name}/{path_str}"
+                )
         elif isinstance(path, MPath):
             path_info = info_dict or path._info
             path_str = path._path_str
