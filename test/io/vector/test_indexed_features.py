@@ -42,8 +42,7 @@ def test_indexed_features_bounds():
     assert IndexedFeatures([(0, feature)])
 
     # no featuere id
-    with pytest.raises(TypeError):
-        IndexedFeatures([feature])
+    assert IndexedFeatures([feature])
 
     class Foo:
         __geo_interface__ = mapping(box(0, 1, 2, 3))
