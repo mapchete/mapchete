@@ -3,6 +3,14 @@ Changelog
 #########
 
 
+2025.10.1 - 2025-10-10
+----------------------
+
+* core
+
+  * `config.parse.guess_geometry()`: add `raise_if_empty` flag to manage behavior on empty geometries (#707)
+
+
 2025.10.0 - 2025-10-03
 ----------------------
 
