@@ -199,6 +199,7 @@ def guess_geometry(
     some_input: Union[MPathLike, dict, BaseGeometry],
     base_dir: Optional[MPathLike] = None,
     bounds: Optional[BoundsLike] = None,
+    raise_if_empty: bool = True,
 ) -> Tuple[BaseGeometry, CRS]:
     """
     Guess and parse geometry if possible.
@@ -256,7 +257,10 @@ def guess_geometry(
         )
     if not geom.is_valid:  # pragma: no cover
         raise TypeError("area is not a valid geometry")
-    if not is_type(geom, target_type=(Polygon, MultiPolygon)):
+    if geom.is_empty:  # pragma: no cover
+        if raise_if_empty:
+            raise GeometryTypeError("geometry is empty")
+    elif not is_type(geom, target_type=(Polygon, MultiPolygon)):
         raise GeometryTypeError(
             f"area must either be a Polygon or a MultiPolygon, not {geom.geom_type}"
         )
