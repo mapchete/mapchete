@@ -210,6 +210,11 @@ def execute(
                         time.sleep(retry_delay)
                     else:
                         raise
+                finally:
+                    try:
+                        executor.cancel()  # type: ignore
+                    except Exception:
+                        pass
 
     except Exception as exception:
         all_observers.notify(status=Status.failed, exception=exception)
