@@ -213,7 +213,7 @@ def execute(
                 finally:
                     try:
                         executor.cancel()  # type: ignore
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         pass
 
     except Exception as exception:
