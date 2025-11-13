@@ -212,9 +212,10 @@ def execute(
                         raise
                 finally:
                     try:
+                        logger.debug("try to cancel all remaining futures ...")
                         executor.cancel()  # type: ignore
-                    except Exception:  # pragma: no cover
-                        pass
+                    except Exception as exc:  # pragma: no cover
+                        logger.exception(exc)
 
     except Exception as exception:
         all_observers.notify(status=Status.failed, exception=exception)
