@@ -68,7 +68,7 @@ def http_testdata_dir():
     except ClientConnectorError:
         raise ConnectionError(
             "HTTP test endpoint is not available, please run "
-            "'docker-compose -f test/docker-compose.yml up --remove-orphans' "
+            "'docker compose -f test/docker-compose.yml up --remove-orphans' "
             "before running tests"
         )
     return HTTP_TESTDATA_DIR
@@ -81,7 +81,7 @@ def secure_http_testdata_dir():
     except ClientConnectorError:
         raise ConnectionError(
             "HTTP test endpoint is not available, please run "
-            "'docker-compose -f test/docker-compose.yml up --remove-orphans' "
+            "'docker compose -f test/docker-compose.yml up --remove-orphans' "
             "before running tests"
         )
     return SECURE_HTTP_TESTDATA_DIR
@@ -119,7 +119,7 @@ def minio_testdata_bucket():
     except MaxRetryError:
         raise ConnectionError(
             "minio S3 test endpoint is not available, please run "
-            "'docker-compose -f test/docker-compose.yml up --remove-orphans' "
+            "'docker compose -f test/docker-compose.yml up --remove-orphans' "
             "before running tests"
         )
     s3_testdata = MPath(

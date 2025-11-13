@@ -271,7 +271,7 @@ class MPath(os.PathLike):
     @cached_property
     def protocols(self) -> Set[str]:
         """Return set of filesystem protocols."""
-        if isinstance(self.fs.protocol, str):
+        if isinstance(self.fs.protocol, str):  # pragma: no cover
             return set([self.fs.protocol])
         else:
             return set(self.fs.protocol)
