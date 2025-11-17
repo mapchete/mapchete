@@ -595,8 +595,15 @@ class Mapchete(object):
                 try:
                     # item = pystac.read_dict(output.stac_path.read_json())
                     stacta_item = STACTAItem.from_file(output.stac_path)
-                    # TODO: update
-                    raise NotImplementedError()
+                    stacta_item.update(
+                        id=output.stac_item_id,
+                        zoom_levels=self.config.init_zoom_levels,
+                        bounds=self.config.effective_bounds,
+                        item_metadata=output.stac_item_metadata,
+                        tile_pyramid=self.config.output_pyramid,
+                        bands_type=output.stac_asset_type,
+                        band_asset_template=output.tile_path_schema,
+                    )
                 except FileNotFoundError:
                     stacta_item = STACTAItem.from_tile_pyramid(
                         id=output.stac_item_id,
@@ -606,15 +613,6 @@ class Mapchete(object):
                         item_metadata=output.stac_item_metadata,
                         mime_type=output.stac_asset_type,
                         asset_template=output.tile_path_schema,
-                    )
-                    stacta_item.update(
-                        id=output.stac_item_id,
-                        zoom_levels=self.config.init_zoom_levels,
-                        bounds=self.config.effective_bounds,
-                        item_metadata=output.stac_item_metadata,
-                        tile_pyramid=self.config.output_pyramid,
-                        bands_type=output.stac_asset_type,
-                        band_asset_template=output.tile_path_schema,
                     )
                 logger.debug("write STAC item JSON to %s", output.stac_path)
                 output.stac_path.write_json(
