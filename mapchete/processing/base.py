@@ -8,7 +8,7 @@ from contextlib import ExitStack
 from typing import Any, Generator, Iterator, List, Optional, Tuple, Union
 
 from cachetools import LRUCache
-import pystac
+from pystac import Item
 from shapely.geometry import Polygon, base
 from shapely.ops import unary_union
 
@@ -586,8 +586,7 @@ class Mapchete(object):
             return
         # read existing STAC file
         try:
-            with self.config.output.stac_path.open("r") as src:
-                item = pystac.read_dict(json.loads(src.read()))
+            item = Item.from_dict(self.config.output.stac_path.read_json())
         except FileNotFoundError:
             item = None
         try:
