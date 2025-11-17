@@ -192,8 +192,8 @@ def execute(
                                 progress=Progress(total=len(tasks), current=count),
                                 task_info=task_info,
                             )
-                        all_observers.notify(status=Status.done)
-                        return
+                    all_observers.notify(status=Status.done)
+                    return
 
                 except cancel_on_exception:
                     # special exception indicating job was cancelled from the outside
