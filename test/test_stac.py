@@ -1,7 +1,9 @@
-import os
 import json
 
 import pystac
+from mapchete.enums import Concurrency
+from mapchete.stac.tiled_assets import TILED_ASSETS_VERSION
+from mapchete.zoom_levels import ZoomLevels
 import pytest
 import rasterio
 from packaging import version
@@ -13,10 +15,9 @@ from mapchete.commands import execute
 from mapchete.io import rasterio_open
 from mapchete.geometry import reproject_geometry
 from mapchete.stac import (
+    STACTAItem,
     create_prototype_files,
-    tile_directory_stac_item,
     tile_pyramid_from_item,
-    update_tile_directory_stac_item,
     zoom_levels_from_item,
     make_stac_item_relative,
     tile_directory_item_to_dict,
@@ -24,54 +25,38 @@ from mapchete.stac import (
 from mapchete.tile import BufferedTilePyramid
 
 
-def test_wkss_geodetic():
-    tp = BufferedTilePyramid("geodetic")
-    item = tile_directory_stac_item(
-        item_id="foo", item_path="foo/bar.json", tile_pyramid=tp, zoom_levels=range(6)
-    )
+@pytest.mark.parametrize(
+    "grid,wkss", [("geodetic", "WorldCRS84Quad"), ("mercator", "WebMercatorQuad")]
+)
+def test_wkss(grid, wkss):
+    tp = BufferedTilePyramid(grid)
+    item = STACTAItem.from_tile_pyramid(
+        tile_pyramid=tp, id="foo", zoom_levels=ZoomLevels(0, 6)
+    ).to_item()
     assert item.id == "foo"
-    assert shape(item.geometry).difference(box(*tp.bounds)).is_empty
-    assert item.bbox == list(tp.bounds)
-    assert item.datetime
-    assert (
-        "https://stac-extensions.github.io/tiled-assets/v1.0.0/schema.json"
-        in item.stac_extensions
-    )
-    assert "bands" in item.extra_fields["asset_templates"]
-    assert "tiles:tile_matrix_links" in item.properties
-    assert "tiles:tile_matrix_sets" in item.properties
-    assert "WorldCRS84Quad" in item.properties["tiles:tile_matrix_sets"]
-
-
-def test_wkss_mercator():
-    tp = BufferedTilePyramid("mercator")
-    item = tile_directory_stac_item(
-        item_id="foo", item_path="foo/bar.json", tile_pyramid=tp, zoom_levels=range(6)
-    )
-    assert item.id == "foo"
+    assert item.geometry
     item_geometry = reproject_geometry(
         shape(item.geometry), src_crs="EPSG:4326", dst_crs=tp.crs
     )
     assert item_geometry.difference(box(*tp.bounds)).is_empty
     assert item.datetime
     assert (
-        "https://stac-extensions.github.io/tiled-assets/v1.0.0/schema.json"
+        f"https://stac-extensions.github.io/tiled-assets/{TILED_ASSETS_VERSION}/schema.json"
         in item.stac_extensions
     )
     assert "bands" in item.extra_fields["asset_templates"]
     assert "tiles:tile_matrix_links" in item.properties
     assert "tiles:tile_matrix_sets" in item.properties
-    assert "WebMercatorQuad" in item.properties["tiles:tile_matrix_sets"]
+    assert wkss in item.properties["tiles:tile_matrix_sets"]
 
 
 def test_custom_datetime():
-    item = tile_directory_stac_item(
-        item_id="foo",
-        item_path="foo/bar.json",
+    item = STACTAItem.from_tile_pyramid(
+        id="foo",
         tile_pyramid=BufferedTilePyramid("geodetic"),
-        zoom_levels=range(6),
+        zoom_levels=ZoomLevels(0, 6),
         item_metadata=dict(properties=dict(start_datetime="2021-01-01 00:00:00")),
-    )
+    ).to_item()
     assert str(item.datetime) == "2021-01-01 00:00:00"
 
 
@@ -82,105 +67,71 @@ def test_custom_tilematrix():
             bounds=[145980, 0, 883260, 9584640.0],
             is_global=False,
             epsg=32630,
-        ),
+        ),  # type: ignore
         metatiling=4,
     )
-    item = tile_directory_stac_item(
-        item_id="foo",
-        item_path="foo/bar.json",
+    item = STACTAItem.from_tile_pyramid(
+        id="foo",
         tile_pyramid=tp,
-        zoom_levels=range(6),
+        zoom_levels=ZoomLevels(0, 6),
         item_metadata=dict(properties=dict(start_datetime="2021-01-01 00:00:00")),
-    )
+    ).to_item()
+    assert item.datetime
     assert str(item.datetime) == "2021-01-01 00:00:00"
     assert "custom" in item.properties["tiles:tile_matrix_sets"]
 
 
 def test_tiled_asset_path():
     # default: create absolute path from item basepath
-    item = tile_directory_stac_item(
-        item_id="foo",
-        item_path="foo/bar.json",
+    item = STACTAItem.from_tile_pyramid(
+        id="foo",
         tile_pyramid=BufferedTilePyramid("geodetic"),
-        zoom_levels=range(0),
-        relative_paths=True,
-    )
+        zoom_levels=ZoomLevels(0, 0),
+    ).to_item(self_href="foo/bar.json", relative_paths=True)
     basepath = item.to_dict()["asset_templates"]["bands"]["href"]
-    assert basepath == ("{TileMatrix}/{TileRow}/{TileCol}.tif")
+    assert basepath == "{TileMatrix}/{TileRow}/{TileCol}.tif"
 
-    item = tile_directory_stac_item(
-        item_id="foo",
-        item_path="foo/bar.json",
+    item = STACTAItem.from_tile_pyramid(
+        id="foo",
         tile_pyramid=BufferedTilePyramid("geodetic"),
-        zoom_levels=range(0),
-    )
+        zoom_levels=ZoomLevels(0, 0),
+    ).to_item(self_href="foo/bar.json", relative_paths=False)
     basepath = item.to_dict()["asset_templates"]["bands"]["href"]
-    assert basepath.startswith(str(MPath(os.getcwd()).joinpath("foo")))
+    assert basepath == str(MPath.cwd() / "foo" / "{TileMatrix}/{TileRow}/{TileCol}.tif")
 
     # use alternative asset basepath
-    item = tile_directory_stac_item(
-        item_id="foo",
-        item_path="foo/bar.json",
-        asset_basepath="s3://bar/",
+    item = STACTAItem.from_tile_pyramid(
+        id="foo",
         tile_pyramid=BufferedTilePyramid("geodetic"),
-        zoom_levels=range(0),
+        zoom_levels=ZoomLevels(0, 0),
+    ).to_item(
+        self_href="foo/bar.json",
+        asset_basepath="s3://bar/",
     )
     basepath = item.to_dict()["asset_templates"]["bands"]["href"]
     assert basepath.startswith("s3://bar/")
 
     # create relative path
-    item = tile_directory_stac_item(
-        item_id="foo",
-        relative_paths=True,
+    item = STACTAItem.from_tile_pyramid(
+        id="foo",
         tile_pyramid=BufferedTilePyramid("geodetic"),
-        zoom_levels=range(0),
-    )
+        zoom_levels=ZoomLevels(0, 0),
+    ).to_item(relative_paths=True)
     # native pystac to_dict() translates paths to absolutes and should, I have no idea why this worked before without failing
     # basepath = item.to_dict()["asset_templates"]["bands"]["href"]
-
+    item.make_asset_hrefs_relative()
     # This needs the custom wrapper to work properly, for now
-    basepath = make_stac_item_relative(item.to_dict())["asset_templates"]["bands"][
-        "href"
-    ]
-    assert basepath == ("{TileMatrix}/{TileRow}/{TileCol}.tif")
-
-    # Test cwd `.`/ `.` as input path
-    item = tile_directory_stac_item(
-        item_id="foo",
-        item_path=".",
-        relative_paths=True,
-        tile_pyramid=BufferedTilePyramid("geodetic"),
-        zoom_levels=range(0),
-    ).to_dict()
-
-    item = make_stac_item_relative(item)
-
-    self_href = item["links"][0]["href"]
-    assert self_href == "foo.json"
-    basepath = item["asset_templates"]["bands"]["href"]
-    assert basepath.startswith("{TileMatrix}/{TileRow}")
-
-    item = tile_directory_stac_item(
-        item_id="foo",
-        item_path=".",
-        tile_pyramid=BufferedTilePyramid("geodetic"),
-        zoom_levels=range(0),
-    ).to_dict()
-
-    self_href = item["links"][0]["href"]
-    assert self_href == str(MPath(os.getcwd()).joinpath("foo.json"))
-    basepath = item["asset_templates"]["bands"]["href"]
-    assert basepath.startswith(str(MPath(os.getcwd())))
+    basepath = item.to_dict()["asset_templates"]["bands"]["href"]
+    assert basepath == "{TileMatrix}/{TileRow}/{TileCol}.tif"
 
 
 def test_tiled_asset_eo_bands_metadata():
-    item = tile_directory_stac_item(
-        item_id="foo",
-        item_path="foo/bar.json",
+    item = STACTAItem.from_tile_pyramid(
+        id="foo",
         tile_pyramid=BufferedTilePyramid("geodetic"),
-        zoom_levels=range(6),
+        zoom_levels=ZoomLevels(0, 6),
         item_metadata={"eo:bands": {"foo": "bar"}},
-    )
+    ).to_item(self_href="foo/bar.json")
     assert (
         "https://stac-extensions.github.io/eo/v1.1.0/schema.json"
         in item.to_dict()["stac_extensions"]
@@ -191,50 +142,40 @@ def test_tiled_asset_eo_bands_metadata():
 def test_create_stac_item_errors():
     tp = BufferedTilePyramid("geodetic")
     # no item_id
-    with pytest.raises(ValueError):
-        tile_directory_stac_item(
-            item_path="foo/bar.json",
-            tile_pyramid=tp,
-            zoom_levels=range(6),
+    with pytest.raises(TypeError):
+        STACTAItem.from_tile_pyramid(
+            tile_pyramid=tp,  # type: ignore
+            zoom_levels=ZoomLevels(0, 6),
         )
 
     # no zoom_level
-    with pytest.raises(ValueError):
-        tile_directory_stac_item(
-            item_id="foo",
-            item_path="foo/bar.json",
+    with pytest.raises(TypeError):
+        STACTAItem.from_tile_pyramid(
+            id="foo",  # type: ignore
             tile_pyramid=tp,
         )
 
     # no tile_pyramid
-    with pytest.raises(ValueError):
-        tile_directory_stac_item(
-            item_id="foo",
-            item_path="foo/bar.json",
-            zoom_levels=range(6),
-        )
-
-    # no item_path or asset_basepath
-    with pytest.raises(ValueError):
-        tile_directory_stac_item(
-            item_id="foo",
-            tile_pyramid=tp,
-            zoom_levels=range(6),
+    with pytest.raises(TypeError):
+        STACTAItem.from_tile_pyramid(
+            id="foo",  # type: ignore
+            zoom_levels=ZoomLevels(0, 6),
         )
 
 
 def test_update_stac():
-    item = tile_directory_stac_item(
-        item_id="foo",
-        item_path="foo/bar.json",
+    stacta_item = STACTAItem.from_tile_pyramid(
+        id="foo",
         tile_pyramid=BufferedTilePyramid("geodetic"),
-        zoom_levels=range(6),
+        zoom_levels=ZoomLevels(0, 5),
     )
+    item = stacta_item.to_item(self_href="foo/bar.json")
     assert (
         len(item.properties["tiles:tile_matrix_sets"]["WorldCRS84Quad"]["tileMatrix"])
         == 6
     )
-    new_item = update_tile_directory_stac_item(item=item, zoom_levels=[6, 7])
+    stacta_item.update(zoom_levels=ZoomLevels(6, 7))
+    new_item = stacta_item.to_item()
     assert (
         len(
             new_item.properties["tiles:tile_matrix_sets"]["WorldCRS84Quad"][
@@ -246,37 +187,32 @@ def test_update_stac():
 
 
 def test_update_stac_errors():
-    item = tile_directory_stac_item(
-        item_id="foo",
-        item_path="foo/bar.json",
+    stacta_item = STACTAItem.from_tile_pyramid(
+        id="foo",
         tile_pyramid=BufferedTilePyramid("geodetic"),
-        zoom_levels=range(6),
+        zoom_levels=ZoomLevels(0, 6),
     )
     with pytest.raises(TypeError):
-        update_tile_directory_stac_item(
-            item=item, tile_pyramid=BufferedTilePyramid("geodetic", metatiling=4)
-        )
+        stacta_item.update(tile_pyramid=BufferedTilePyramid("geodetic", metatiling=4))
 
 
 def test_tile_pyramid_from_item():
     for metatiling in [1, 2, 4, 8, 16, 64]:
-        tp = BufferedTilePyramid("geodetic", metatiling=metatiling)
-        item = tile_directory_stac_item(
-            item_id="foo",
-            item_path="foo/bar.json",
+        tp = BufferedTilePyramid("geodetic", metatiling=metatiling)  # type: ignore
+        item = STACTAItem.from_tile_pyramid(
+            id="foo",
             tile_pyramid=tp,
-            zoom_levels=range(6),
-        )
+            zoom_levels=ZoomLevels(0, 6),
+        ).to_item()
         assert tp == tile_pyramid_from_item(item)
 
 
 def test_tile_pyramid_from_item_no_tilesets_error():
-    item = tile_directory_stac_item(
-        item_id="foo",
-        item_path="foo/bar.json",
+    item = STACTAItem.from_tile_pyramid(
+        id="foo",
         tile_pyramid=BufferedTilePyramid("geodetic"),
-        zoom_levels=range(6),
-    )
+        zoom_levels=ZoomLevels(0, 6),
+    ).to_item()
     # remove properties including tiled assets information
     item.properties = {}
 
@@ -287,24 +223,22 @@ def test_tile_pyramid_from_item_no_tilesets_error():
 def test_tile_pyramid_from_item_no_known_wkss_error(custom_grid_json):
     with open(custom_grid_json) as src:
         grid_def = json.loads(src.read())
-    item = tile_directory_stac_item(
-        item_id="foo",
-        item_path="foo/bar.json",
+    item = STACTAItem.from_tile_pyramid(
+        id="foo",
         tile_pyramid=BufferedTilePyramid(**grid_def),
-        zoom_levels=range(3),
-    )
+        zoom_levels=ZoomLevels(0, 3),
+    ).to_item
 
     with pytest.raises(ValueError):
         tile_pyramid_from_item(item)
 
 
 def test_zoom_levels_from_item_errors():
-    item = tile_directory_stac_item(
-        item_id="foo",
-        item_path="foo/bar.json",
+    item = STACTAItem.from_tile_pyramid(
+        id="foo",
         tile_pyramid=BufferedTilePyramid("geodetic"),
-        zoom_levels=range(6),
-    )
+        zoom_levels=ZoomLevels(0, 6),
+    ).to_item()
     # remove properties including tiled assets information
     item.properties = {}
     with pytest.raises(AttributeError):
@@ -317,7 +251,7 @@ def test_zoom_levels_from_item_errors():
 )
 def test_create_prototype_file(cleantopo_br):
     # create sparse tiledirectory with no tiles at row/col 0/0
-    execute(cleantopo_br.dict, zoom=[3], concurrency=None)
+    execute(cleantopo_br.dict, zoom=[3], concurrency=Concurrency.none)
 
     # read STACTA with rasterio and expect an exception
     stac_path = cleantopo_br.mp().config.output.stac_path
@@ -408,3 +342,9 @@ def test_make_stac_item_relative_type_error():
         assert "Input must be a pystac.Item, pystac.Collection, or a STAC dict" in str(
             excinfo.value
         )
+
+
+def test_stacta_item(stacta):
+    stacta_item = STACTAItem.from_file(stacta)
+    assert stacta_item
+    assert not shape(stacta_item).is_empty

@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 from collections import OrderedDict
 import copy
 import datetime
 import logging
-from typing import Optional
+from typing import Any, Optional
 
 import numpy as np
 import numpy.ma as ma
@@ -15,10 +17,13 @@ from mapchete.errors import ReprojectionFailed
 from mapchete.io import MPath
 from mapchete.io.raster import write_raster_window
 from mapchete.geometry import reproject_geometry
+from mapchete.stac.tiled_assets import STACTAItem
 from mapchete.tile import BufferedTilePyramid
 from mapchete.bounds import Bounds
 
 logger = logging.getLogger(__name__)
+
+__all__ = ["STACTAItem"]
 
 OUT_PIXEL_SIZE = 0.28e-3
 UNIT_TO_METER = {"mercator": 1, "geodetic": 111319.4907932732}
@@ -299,7 +304,7 @@ def _scale(grid, pixel_x_size, default_unit_to_meter=1):
     )
 
 
-def _cleanup_datetime(d):
+def _cleanup_datetime(d) -> OrderedDict[str, Any]:
     """Convert datetime objects in dictionary to strings."""
     return OrderedDict(
         (k, _cleanup_datetime(v))

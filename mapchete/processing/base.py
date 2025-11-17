@@ -1,6 +1,5 @@
 """Main module managing processes."""
 
-import json
 import logging
 import os
 import threading
@@ -8,7 +7,6 @@ from contextlib import ExitStack
 from typing import Any, Generator, Iterator, List, Optional, Tuple, Union
 
 from cachetools import LRUCache
-import pystac
 from shapely.geometry import Polygon, base
 from shapely.ops import unary_union
 
@@ -17,6 +15,7 @@ from mapchete.enums import Concurrency, ProcessingMode
 from mapchete.errors import MapcheteNodataTile, ReprojectionFailed
 from mapchete.executor import Executor, ExecutorBase, MFuture
 from mapchete.executor.types import Profiler
+from mapchete.formats.base import OutputSTACMixin, TileDirectoryOutputWriter
 from mapchete.path import batch_sort_property, tiles_exist
 from mapchete.processing.execute import batches, dask_graph, single_batch
 from mapchete.processing.tasks import (
@@ -26,7 +25,9 @@ from mapchete.processing.tasks import (
     TileTask,
     TileTaskBatch,
 )
-from mapchete.stac import tile_directory_item_to_dict, update_tile_directory_stac_item
+from mapchete.stac import (
+    STACTAItem,
+)
 from mapchete.tile import BatchBy, BufferedTile, count_tiles
 from mapchete.timer import Timer
 from mapchete.types import TileLike, ZoomLevelsLike
@@ -584,34 +585,47 @@ class Mapchete(object):
             ProcessingMode.MEMORY,
         ]:
             return
-        # read existing STAC file
-        try:
-            with self.config.output.stac_path.open("r") as src:
-                item = pystac.read_dict(json.loads(src.read()))
-        except FileNotFoundError:
-            item = None
-        try:
-            item = update_tile_directory_stac_item(
-                item=item,
-                item_path=str(self.config.output.stac_path),
-                item_id=self.config.output.stac_item_id,
-                zoom_levels=self.config.init_zoom_levels,
-                bounds=self.config.effective_bounds,
-                item_metadata=self.config.output.stac_item_metadata,
-                tile_pyramid=self.config.output_pyramid,
-                bands_type=self.config.output.stac_asset_type,
-                band_asset_template=self.config.output.tile_path_schema,
-            )
-            logger.debug("write STAC item JSON to %s", self.config.output.stac_path)
-            self.config.output.stac_path.parent.makedirs()
-            with self.config.output.stac_path.open("w") as dst:
-                dst.write(json.dumps(tile_directory_item_to_dict(item), indent=indent))
-        except ReprojectionFailed:  # pragma: no cover
-            logger.warning(
-                "cannot create STAC item because footprint cannot be reprojected into EPSG:4326"
-            )
-        except Exception as exc:  # pragma: no cover
-            logger.warning("cannot create or update STAC item: %s", str(exc))
+        # only if output is a TileDirectory and STAC is activated
+        output = self.config.output
+        if isinstance(output, OutputSTACMixin) and isinstance(
+            output, TileDirectoryOutputWriter
+        ):
+            try:
+                # read existing STAC file
+                try:
+                    # item = pystac.read_dict(output.stac_path.read_json())
+                    stacta_item = STACTAItem.from_file(output.stac_path)
+                    # TODO: update
+                    raise NotImplementedError()
+                except FileNotFoundError:
+                    stacta_item = STACTAItem.from_tile_pyramid(
+                        id=output.stac_item_id,
+                        tile_pyramid=self.config.output_pyramid,
+                        zoom_levels=self.config.init_zoom_levels,
+                        bounds=self.config.effective_bounds,
+                        item_metadata=output.stac_item_metadata,
+                        mime_type=output.stac_asset_type,
+                        asset_template=output.tile_path_schema,
+                    )
+                    stacta_item.update(
+                        id=output.stac_item_id,
+                        zoom_levels=self.config.init_zoom_levels,
+                        bounds=self.config.effective_bounds,
+                        item_metadata=output.stac_item_metadata,
+                        tile_pyramid=self.config.output_pyramid,
+                        bands_type=output.stac_asset_type,
+                        band_asset_template=output.tile_path_schema,
+                    )
+                logger.debug("write STAC item JSON to %s", output.stac_path)
+                output.stac_path.write_json(
+                    stacta_item.to_item().to_dict(), indent=indent
+                )
+            except ReprojectionFailed:  # pragma: no cover
+                logger.warning(
+                    "cannot create STAC item because footprint cannot be reprojected into EPSG:4326"
+                )
+            except Exception as exc:  # pragma: no cover
+                logger.warning("cannot create or update STAC item: %s", str(exc))
 
     def _process_and_overwrite_output(self, tile, process_tile):
         if self.with_cache:
