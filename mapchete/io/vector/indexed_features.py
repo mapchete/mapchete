@@ -98,8 +98,7 @@ class IndexedFeatures(FeatureCollectionProtocol):
             try:
                 try:
                     bounds = object_bounds(feature, dst_crs=crs)
-                except NoCRSError as exc:
-                    logger.debug(str(exc))
+                except NoCRSError:  # pragma: no cover
                     bounds = object_bounds(feature)
             except NoGeoError:
                 if allow_non_geo_objects:

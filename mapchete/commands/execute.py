@@ -192,8 +192,8 @@ def execute(
                                 progress=Progress(total=len(tasks), current=count),
                                 task_info=task_info,
                             )
-                        all_observers.notify(status=Status.done)
-                        return
+                    all_observers.notify(status=Status.done)
+                    return
 
                 except cancel_on_exception:
                     # special exception indicating job was cancelled from the outside
@@ -210,6 +210,12 @@ def execute(
                         time.sleep(retry_delay)
                     else:
                         raise
+                finally:
+                    try:
+                        logger.debug("try to cancel all remaining futures ...")
+                        executor.cancel()  # type: ignore
+                    except Exception as exc:  # pragma: no cover
+                        logger.exception(exc)
 
     except Exception as exception:
         all_observers.notify(status=Status.failed, exception=exception)
