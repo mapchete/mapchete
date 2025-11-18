@@ -26,7 +26,7 @@ from mapchete.processing.tasks import (
     TileTaskBatch,
 )
 from mapchete.stac import (
-    STACTAItem,
+    STACTA,
 )
 from mapchete.tile import BatchBy, BufferedTile, count_tiles
 from mapchete.timer import Timer
@@ -168,8 +168,10 @@ class Mapchete(object):
 
     def skip_tiles(
         self,
-        tiles: Optional[Iterator[BufferedTile]] = None,
-        tiles_batches: Optional[Iterator[Iterator[BufferedTile]]] = None,
+        tiles: Optional[Generator[BufferedTile, None, None]] = None,
+        tiles_batches: Optional[
+            Generator[Generator[BufferedTile, None, None], None, None]
+        ] = None,
     ) -> Iterator[Tuple[BufferedTile, bool]]:
         """
         Quickly determine whether tiles can be skipped for processing.
@@ -593,9 +595,8 @@ class Mapchete(object):
             try:
                 # read existing STAC file
                 try:
-                    # item = pystac.read_dict(output.stac_path.read_json())
-                    stacta_item = STACTAItem.from_file(output.stac_path)
-                    stacta_item.update(
+                    stacta_item = STACTA.from_file(output.stac_path)
+                    stacta_item.extend(
                         id=output.stac_item_id,
                         zoom_levels=self.config.init_zoom_levels,
                         bounds=self.config.effective_bounds,
@@ -605,7 +606,7 @@ class Mapchete(object):
                         band_asset_template=output.tile_path_schema,
                     )
                 except FileNotFoundError:
-                    stacta_item = STACTAItem.from_tile_pyramid(
+                    stacta_item = STACTA.from_tile_pyramid(
                         id=output.stac_item_id,
                         tile_pyramid=self.config.output_pyramid,
                         zoom_levels=self.config.init_zoom_levels,

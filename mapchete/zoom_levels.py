@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Union, Optional
+from typing import Any, List, Union, Optional
 
 from mapchete.types import ZoomLevelsLike
 
@@ -42,15 +42,15 @@ class ZoomLevels(list):
     def __repr__(self):
         return str(self)
 
-    def __getitem__(self, item):
+    def __getitem__(self, item) -> Any:
         if isinstance(item, int):
             return list(self)[item]
         elif isinstance(item, str):
             return self.__getattribute__(item)
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         other = other if isinstance(other, ZoomLevels) else ZoomLevels.from_inp(other)
-        return self.min == other.min and self.max and other.max
+        return bool(self.min == other.min and self.max and other.max)
 
     def __ne__(self, other):
         return not self == other
@@ -123,21 +123,29 @@ class ZoomLevels(list):
         }
 
     def intersection(self, other: ZoomLevelsLike) -> ZoomLevels:
-        other = other if isinstance(other, ZoomLevels) else ZoomLevels.from_inp(other)
+        other = ZoomLevels.from_inp(other)
         intersection = set(self).intersection(set(other))
         if len(intersection) == 0:
             raise ValueError("ZoomLevels do not intersect")
         return ZoomLevels(min(intersection), max(intersection))
 
     def difference(self, other: ZoomLevelsLike) -> ZoomLevels:
-        other = other if isinstance(other, ZoomLevels) else ZoomLevels.from_inp(other)
+        other = ZoomLevels.from_inp(other)
         difference = set(self).difference(set(other))
         if len(difference) == 0:  # pragma: no cover
             raise ValueError("ZoomLevels do not differ")
         return ZoomLevels(min(difference), max(difference))
 
+    def union(self, other: ZoomLevelsLike) -> ZoomLevels:
+        other = ZoomLevels.from_inp(other)
+        combined = list(set(self).union(set(other)))
+        combined.sort()
+        if combined != list(range(min(combined), max(combined) + 1)):
+            raise ValueError("Union of zoom levels intersection is invalid")
+        return ZoomLevels(min(combined), max(combined))
+
     def intersects(self, other: ZoomLevelsLike) -> bool:
-        other = other if isinstance(other, ZoomLevels) else ZoomLevels.from_inp(other)
+        other = ZoomLevels.from_inp(other)
         try:
             return len(self.intersection(other)) > 0
         except ValueError:
