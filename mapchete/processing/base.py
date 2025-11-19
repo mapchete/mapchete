@@ -590,16 +590,27 @@ class Mapchete(object):
             output, TileDirectoryOutputWriter
         ):
             try:
-                # read existing STACTA file
                 new_stacta = output.get_stacta()
-                # extend bounds and zoom levels
-                new_stacta.extend(
-                    zoom_levels=self.config.zoom_levels, bounds=self.config.bounds
-                )
-                # only write if values differ
-                if new_stacta != output.get_stacta():
-                    # write STACTA file
-                    new_stacta.to_file(output.stac_path)
+                if output.stac_path.exists():
+                    # preserve old stacta data
+                    old_stacta = output.get_stacta()
+
+                    # extend bounds and zoom levels
+                    new_stacta.extend(
+                        zoom_levels=self.config.zoom_levels, bounds=self.config.bounds
+                    )
+
+                    # if nothing changed, just quit
+                    if new_stacta == old_stacta:
+                        return
+
+                    # remove now deprecated prototype files
+                    old_stacta.remove_empty_prototype_files()
+
+                # write STACTA file
+                new_stacta.to_file(output.stac_path)
+                # write prototype files
+                new_stacta.create_prototype_files(out_profile=output.profile())  # type: ignore
             except ReprojectionFailed:  # pragma: no cover
                 logger.warning(
                     "cannot create STAC item because footprint cannot be reprojected into EPSG:4326"

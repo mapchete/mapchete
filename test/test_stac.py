@@ -6,7 +6,6 @@ from mapchete.zoom_levels import ZoomLevels
 import pytest
 import rasterio
 from packaging import version
-from rasterio.errors import RasterioIOError
 from shapely.geometry import box, shape
 
 from mapchete import MPath
@@ -49,7 +48,7 @@ def test_custom_datetime():
         id="foo",
         tile_pyramid=BufferedTilePyramid("geodetic"),
         zoom_levels=ZoomLevels(0, 6),
-        item_metadata=dict(properties=dict(start_datetime="2021-01-01 00:00:00")),
+        item_metadata=dict(start_datetime="2021-01-01 00:00:00"),
     ).to_item()
     assert str(item.datetime) == "2021-01-01 00:00:00"
 
@@ -68,7 +67,7 @@ def test_custom_tilematrix():
         id="foo",
         tile_pyramid=tp,
         zoom_levels=ZoomLevels(0, 6),
-        item_metadata=dict(properties=dict(start_datetime="2021-01-01 00:00:00")),
+        item_metadata=dict(start_datetime="2021-01-01 00:00:00"),
     ).to_item()
     assert item.datetime
     assert str(item.datetime) == "2021-01-01 00:00:00"
@@ -247,16 +246,9 @@ def test_create_prototype_file(cleantopo_br):
     # create sparse tiledirectory with no tiles at row/col 0/0
     execute(cleantopo_br.dict, zoom=[3], concurrency=Concurrency.none)
 
-    # read STACTA with rasterio and expect an exception
     stac_path = cleantopo_br.mp().config.output.stac_path
     assert stac_path.exists()
 
-    with pytest.raises(RasterioIOError):
-        with rasterio_open(stac_path):
-            pass
-
-    # create prototype file and assert reading is possible
-    cleantopo_br.mp().config.output.create_prototype_files()
     with rasterio_open(stac_path):
         pass
 
@@ -284,77 +276,18 @@ def test_stacta_equal():
         id="foo",
         tile_pyramid=BufferedTilePyramid("geodetic"),
         zoom_levels=ZoomLevels(0, 6),
-        item_metadata=dict(properties=dict(start_datetime="2021-01-01 00:00:00")),
+        item_metadata=dict(start_datetime="2021-01-01 00:00:00"),
     )
     second = STACTA.from_tile_pyramid(
         id="foo",
         tile_pyramid=BufferedTilePyramid("geodetic"),
         zoom_levels=ZoomLevels(0, 6),
-        item_metadata=dict(properties=dict(start_datetime="2021-01-01 00:00:00")),
+        item_metadata=dict(start_datetime="2021-01-01 00:00:00"),
     )
     assert first == second
 
     second.extend(zoom_levels=[7, 8])
     assert first != second
-
-
-# def test_make_stac_item_with_relative_paths(eox_stacta, eox_stacta_rel_paths):
-#     item_dict_from_json = make_stac_item_relative(eox_stacta.read_json())
-#     control_item_dict_from_json = eox_stacta_rel_paths.read_json()
-
-#     assert (
-#         item_dict_from_json["links"][0]["href"] == "2024-viewing-basic-epsg-4326.json"
-#     )
-#     assert item_dict_from_json["links"][0] == control_item_dict_from_json["links"][0]
-#     assert (
-#         item_dict_from_json["asset_templates"]["bands"]["href"]
-#         == control_item_dict_from_json["asset_templates"]["bands"]["href"]
-#     )
-
-#     item_dict = make_stac_item_relative(
-#         pystac.Item.from_file(str(eox_stacta)).to_dict()
-#     )
-#     for link in item_dict["links"]:
-#         assert "://" not in link
-#     assert (
-#         item_dict["asset_templates"]["bands"]["href"]
-#         == control_item_dict_from_json["asset_templates"]["bands"]["href"]
-#     )
-
-#     item = tile_directory_item_to_dict(
-#         pystac.Item.from_file(str(eox_stacta)), relative_paths=True
-#     )
-#     for link in item_dict["links"]:
-#         assert "://" not in link
-#     assert (
-#         item["asset_templates"]["bands"]["href"]
-#         == control_item_dict_from_json["asset_templates"]["bands"]["href"]
-#     )
-
-#     item = make_stac_item_relative(pystac.Item.from_file(str(eox_stacta)))
-#     for link in item.links:
-#         assert "://" not in link.href
-#     assert (
-#         item.to_dict()["asset_templates"]["bands"]["href"]
-#         == control_item_dict_from_json["asset_templates"]["bands"]["href"]
-#     )
-
-
-# def test_make_stac_item_relative_type_error():
-#     invalid_inputs = [
-#         "not a stac item",
-#         123,
-#         3.14,
-#         ["list", "of", "things"],
-#         None,
-#     ]
-
-#     for val in invalid_inputs:
-#         with pytest.raises(TypeError) as excinfo:
-#             make_stac_item_relative(val)
-#         assert "Input must be a pystac.Item, pystac.Collection, or a STAC dict" in str(
-#             excinfo.value
-#         )
 
 
 def test_stacta_item(stacta):

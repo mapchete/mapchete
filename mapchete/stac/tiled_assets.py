@@ -6,15 +6,19 @@ import datetime
 import logging
 from typing import Any, Dict, List, Optional
 
+import numpy as np
+import numpy.ma as ma
 from pystac import Item, get_stac_version
 from shapely.geometry import mapping
 
 from mapchete.bounds import Bounds
 from mapchete.config.base import get_hash
+from mapchete.io.raster.referenced_raster import ReferencedRaster
+from mapchete.io.raster.write import write_raster_window
 from mapchete.io.vector import reproject_geometry, to_shape
 from mapchete.path import MPath, MPathLike
 from mapchete.stac.models import TileMatrixSet
-from mapchete.tile import BufferedTilePyramid
+from mapchete.tile import BufferedTile, BufferedTilePyramid
 from mapchete.types import BoundsLike, ZoomLevelsLike
 from mapchete.zoom_levels import ZoomLevels
 
@@ -36,6 +40,7 @@ class STACTA:
     asset_template: str = field(default="{zoom}/{row}/{col}.tif")
     mime_type: str = field(default="image/tiff; application=geotiff")
     asset_template_name: str = field(default="bands")
+    href: Optional[MPath] = None
 
     @property
     def geometry(self) -> Dict[str, Any]:
@@ -61,8 +66,9 @@ class STACTA:
         out = {
             **self.item_metadata.get("properties", {}),
             "datetime": (
-                self.item_metadata.get("properties", {}).get("start_datetime")
-                or self.item_metadata.get("properties", {}).get("end_datetime")
+                self.item_metadata.get("datetime")
+                or self.item_metadata.get("start_datetime")
+                or self.item_metadata.get("end_datetime")
                 or str(datetime.datetime.now(datetime.timezone.utc))
             ),
             "collection": self.id,
@@ -178,6 +184,7 @@ class STACTA:
         item_metadata: Optional[Dict[str, Any]] = None,
         mime_type: str = "image/tiff; application=geotiff",
         asset_template_name: str = "bands",
+        href: Optional[MPath] = None,
     ) -> STACTA:
         return STACTA(
             id=id,
@@ -193,14 +200,18 @@ class STACTA:
             item_metadata=item_metadata or {},
             mime_type=mime_type,
             asset_template_name=asset_template_name,
+            href=href,
         )
 
     @staticmethod
     def from_file(path: MPathLike) -> STACTA:
-        return STACTA.from_item(Item.from_dict(MPath.from_inp(path).read_json()))
+        path = MPath.from_inp(path)
+        return STACTA.from_item(
+            Item.from_dict(path.read_json(), href=str(path)), item_href=path
+        )
 
     @staticmethod
-    def from_item(item: Item) -> STACTA:
+    def from_item(item: Item, item_href: Optional[MPath] = None) -> STACTA:
         tile_matrix_sets = item.properties.get("tiles:tile_matrix_sets", [])
         for values in tile_matrix_sets.values():
             # TODO: account for multiple tile matrix sets
@@ -231,6 +242,7 @@ class STACTA:
             asset_template=asset_template,
             mime_type=mime_type,
             asset_template_name=asset_template_name,
+            href=item_href,
         )
 
     def extend(
@@ -245,6 +257,85 @@ class STACTA:
                 self.bounds = Bounds.from_inp(bounds)
             else:
                 self.bounds = self.bounds.union(bounds)
+
+    def get_tile_path(self, tile: BufferedTile) -> MPath:
+        path = MPath(
+            self.asset_template.format(
+                TileMatrix=str(tile.zoom), TileRow=str(tile.row), TileCol=str(tile.col)
+            )
+        )
+        if path.is_absolute() or self.href is None:
+            return path
+        if self.href is not None:
+            return self.href.parent / path
+        else:
+            return path
+
+    def get_prototype_tiles(self) -> List[BufferedTile]:
+        self._stacta_bounds
+        left = (
+            self.tile_pyramid.left
+            if self._stacta_bounds.left < self.tile_pyramid.left
+            else self._stacta_bounds.left
+        )
+        top = (
+            self.tile_pyramid.top
+            if self._stacta_bounds.top > self.tile_pyramid.top
+            else self._stacta_bounds.top
+        )
+        return [
+            self.tile_pyramid.tile_from_xy(left, top, zoom, on_edge_use="rb")
+            for zoom in self.zoom_levels
+        ]
+
+    def get_prototype_files_paths(self) -> List[MPath]:
+        return [
+            self.get_tile_path(prototype_tile)
+            for prototype_tile in self.get_prototype_tiles()
+        ]
+
+    def create_prototype_files(self, out_profile: Dict[str, Any]):
+        for tile in self.get_prototype_tiles():
+            path = self.get_tile_path(tile)
+            # if tile exists, skip
+            if path.exists():
+                logger.debug("prototype tile %s already exists", path)
+                continue
+            # if not, write empty tile
+            logger.debug("create prototype tile %s", path)
+            path.parent.makedirs()
+            write_raster_window(
+                in_grid=tile,
+                in_data=ma.masked_array(
+                    data=np.full(
+                        (out_profile["count"],) + tile.shape,
+                        out_profile["nodata"],
+                        dtype=out_profile["dtype"],
+                    ),
+                    mask=True,
+                ),
+                out_profile=dict(
+                    out_profile,
+                    width=tile.width,
+                    height=tile.height,
+                    crs=tile.crs,
+                    transform=tile.transform,
+                ),
+                out_grid=tile,
+                out_path=path,
+                write_empty=True,
+            )
+
+    def remove_empty_prototype_files(self):
+        for tile in self.get_prototype_tiles():
+            path = self.get_tile_path(tile)
+            try:
+                if ReferencedRaster.from_file(path).masked_array().mask.all():
+                    logger.debug("removing empty prototype file %s", str(path))
+                    path.rm(ignore_errors=True)
+            except FileNotFoundError:
+                logger.debug("%s does not exist", str(path))
+                pass
 
     def to_file(
         self,
@@ -283,6 +374,7 @@ class STACTA:
         relative_paths: bool = True,
     ) -> Item:
         item_dict = self.to_item_dict()
+        self_href = self_href or self.href
 
         if not relative_paths or asset_basepath:
             # add basepath to all asset templates

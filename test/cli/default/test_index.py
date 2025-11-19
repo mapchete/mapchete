@@ -20,7 +20,7 @@ def test_geojson(cleantopo_br):
     with fiona_open(mp.config.output.path / "3.geojson") as src:
         for feature in src:
             assert "location" in feature["properties"]
-        assert len(list(src)) == 1
+        assert len(list(src)) == 2
 
 
 def test_geojson_fieldname(cleantopo_br):
@@ -46,7 +46,7 @@ def test_geojson_fieldname(cleantopo_br):
         with fiona_open(mp.config.output.path / "3.geojson") as src:
             for feature in src:
                 assert "new_fieldname" in feature["properties"]
-            assert len(list(src)) == 1
+            assert len(list(src)) == 2
 
 
 def test_geojson_basepath(cleantopo_br):
@@ -73,7 +73,7 @@ def test_geojson_basepath(cleantopo_br):
         with fiona_open(mp.config.output.path / "3.geojson") as src:
             for feature in src:
                 assert feature["properties"]["location"].startswith(basepath)
-            assert len(list(src)) == 1
+            assert len(list(src)) == 2
 
 
 def test_geojson_for_gdal(cleantopo_br):
@@ -101,7 +101,7 @@ def test_geojson_for_gdal(cleantopo_br):
                 assert feature["properties"]["location"].startswith(
                     "/vsicurl/" + basepath
                 )
-            assert len(list(src)) == 1
+            assert len(list(src)) == 2
 
 
 def test_geojson_tile(cleantopo_tl):
@@ -125,7 +125,7 @@ def test_geojson_tile(cleantopo_tl):
         files = mp.config.output.path.ls(absolute_paths=False)
         assert len(files) == 4
     with fiona_open(mp.config.output.path / "3.geojson") as src:
-        assert len(list(src)) == 1
+        assert len(list(src)) == 2
 
 
 def test_geojson_wkt_area(cleantopo_br, wkt_geom):
@@ -147,7 +147,7 @@ def test_geojson_wkt_area(cleantopo_br, wkt_geom):
 
     with mapchete.open(cleantopo_br.dict) as mp:
         files = mp.config.output.path.ls(absolute_paths=False)
-        assert len(files) == 8  # was 7 before doing the observer pattern
+        assert len(files) == 14  # was 7 before doing the observer pattern
         assert "3.geojson" in files
 
 
@@ -165,7 +165,7 @@ def test_gpkg(cleantopo_br):
     with fiona_open(mp.config.output.path / "5.gpkg") as src:
         for feature in src:
             assert "location" in feature["properties"]
-        assert len(list(src)) == 1
+        assert len(list(src)) == 2
 
     # write again and assert there is no new entry because there is already one
     run_cli(["index", cleantopo_br.path, "-z", "5", "--gpkg", "--debug"])
@@ -175,7 +175,7 @@ def test_gpkg(cleantopo_br):
     with fiona_open(mp.config.output.path / "5.gpkg") as src:
         for feature in src:
             assert "location" in feature["properties"]
-        assert len(list(src)) == 1
+        assert len(list(src)) == 2
 
 
 def test_shp(cleantopo_br):
@@ -192,7 +192,7 @@ def test_shp(cleantopo_br):
     with fiona_open(mp.config.output.path / "5.shp") as src:
         for feature in src:
             assert "location" in feature["properties"]
-        assert len(list(src)) == 1
+        assert len(list(src)) == 2
 
     # write again and assert there is no new entry because there is already one
     run_cli(["index", cleantopo_br.path, "-z", "5", "--shp", "--debug"])
@@ -202,7 +202,7 @@ def test_shp(cleantopo_br):
     with fiona_open(mp.config.output.path / "5.shp") as src:
         for feature in src:
             assert "location" in feature["properties"]
-        assert len(list(src)) == 1
+        assert len(list(src)) == 2
 
 
 def test_fgb(cleantopo_br):
@@ -219,7 +219,7 @@ def test_fgb(cleantopo_br):
     with fiona_open(mp.config.output.path / "5.fgb") as src:
         for feature in src:
             assert "location" in feature["properties"]
-        assert len(list(src)) == 1
+        assert len(list(src)) == 2
 
     # write again and assert there is no new entry because there is already one
     run_cli(["index", cleantopo_br.path, "-z", "5", "--fgb", "--debug"])
@@ -229,7 +229,7 @@ def test_fgb(cleantopo_br):
     with fiona_open(mp.config.output.path / "5.fgb") as src:
         for feature in src:
             assert "location" in feature["properties"]
-        assert len(list(src)) == 1
+        assert len(list(src)) == 2
 
 
 def test_text(cleantopo_br):
@@ -245,9 +245,12 @@ def test_text(cleantopo_br):
         assert "5.txt" in files
     with open(mp.config.output.path / "5.txt") as src:
         lines = list(src)
-        assert len(lines) == 1
+        assert len(lines) == 2
         for line in lines:
-            assert line.endswith("7.tif\n")
+            if line.endswith("7.tif\n"):
+                break
+        else:
+            raise ValueError("")
 
     # write again and assert there is no new entry because there is already one
     run_cli(["index", cleantopo_br.path, "-z", "5", "--txt", "--debug"])
@@ -256,9 +259,12 @@ def test_text(cleantopo_br):
         assert "5.txt" in files
     with open(mp.config.output.path / "5.txt") as src:
         lines = list(src)
-        assert len(lines) == 1
+        assert len(lines) == 2
         for line in lines:
-            assert line.endswith("7.tif\n")
+            if line.endswith("7.tif\n"):
+                break
+        else:
+            raise ValueError("")
 
 
 def test_errors(cleantopo_br):

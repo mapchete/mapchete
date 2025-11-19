@@ -19,7 +19,7 @@ def test_index_geojson(cleantopo_br):
     with fiona_open(mp.config.output.path / "3.geojson") as src:
         for feature in src:
             assert "location" in feature["properties"]
-        assert len(list(src)) == 1
+        assert len(list(src)) == 2
 
 
 def test_index_geojson_fieldname(cleantopo_br):
@@ -39,7 +39,7 @@ def test_index_geojson_fieldname(cleantopo_br):
     with fiona_open(mp.config.output.path / "3.geojson") as src:
         for feature in src:
             assert "new_fieldname" in feature["properties"]
-        assert len(list(src)) == 1
+        assert len(list(src)) == 2
 
 
 def test_index_geojson_basepath(cleantopo_br):
@@ -56,7 +56,7 @@ def test_index_geojson_basepath(cleantopo_br):
     with fiona_open(mp.config.output.path / "3.geojson") as src:
         for feature in src:
             assert feature["properties"]["location"].startswith(basepath)
-        assert len(list(src)) == 1
+        assert len(list(src)) == 2
 
 
 def test_index_geojson_for_gdal(cleantopo_br):
@@ -73,7 +73,7 @@ def test_index_geojson_for_gdal(cleantopo_br):
     with fiona_open(mp.config.output.path / "3.geojson") as src:
         for feature in src:
             assert feature["properties"]["location"].startswith("/vsicurl/" + basepath)
-        assert len(list(src)) == 1
+        assert len(list(src)) == 2
 
 
 def test_index_geojson_tile(cleantopo_tl):
@@ -88,7 +88,7 @@ def test_index_geojson_tile(cleantopo_tl):
         assert len(files) == 4
         assert "3.geojson" in files
     with fiona_open(mp.config.output.path / "3.geojson") as src:
-        assert len(list(src)) == 1
+        assert len(list(src)) == 2
 
 
 def test_index_geojson_wkt_area(cleantopo_tl, wkt_geom_tl):
@@ -117,7 +117,7 @@ def test_index_gpkg(cleantopo_br):
     with fiona_open(mp.config.output.path / "5.gpkg") as src:
         for feature in src:
             assert "location" in feature["properties"]
-        assert len(list(src)) == 1
+        assert len(list(src)) == 2
 
     # write again and assert there is no new entry because there is already one
     index(cleantopo_br.dict, zoom=5, gpkg=True)
@@ -128,7 +128,7 @@ def test_index_gpkg(cleantopo_br):
     with fiona_open(mp.config.output.path / "5.gpkg") as src:
         for feature in src:
             assert "location" in feature["properties"]
-        assert len(list(src)) == 1
+        assert len(list(src)) == 2
 
 
 def test_index_shp(cleantopo_br):
@@ -144,7 +144,7 @@ def test_index_shp(cleantopo_br):
     with fiona_open(mp.config.output.path / "5.shp") as src:
         for feature in src:
             assert "location" in feature["properties"]
-        assert len(list(src)) == 1
+        assert len(list(src)) == 2
 
     # write again and assert there is no new entry because there is already one
     index(cleantopo_br.dict, zoom=5, shp=True)
@@ -155,7 +155,7 @@ def test_index_shp(cleantopo_br):
     with fiona_open(mp.config.output.path / "5.shp") as src:
         for feature in src:
             assert "location" in feature["properties"]
-        assert len(list(src)) == 1
+        assert len(list(src)) == 2
 
 
 def test_index_fgb(cleantopo_br):
@@ -171,7 +171,7 @@ def test_index_fgb(cleantopo_br):
     with fiona_open(mp.config.output.path / "5.fgb") as src:
         for feature in src:
             assert "location" in feature["properties"]
-        assert len(list(src)) == 1
+        assert len(list(src)) == 2
 
     # write again and assert there is no new entry because there is already one
     index(cleantopo_br.dict, zoom=5, fgb=True)
@@ -182,7 +182,7 @@ def test_index_fgb(cleantopo_br):
     with fiona_open(mp.config.output.path / "5.fgb") as src:
         for feature in src:
             assert "location" in feature["properties"]
-        assert len(list(src)) == 1
+        assert len(list(src)) == 2
 
 
 def test_index_text(cleantopo_br):
@@ -197,9 +197,12 @@ def test_index_text(cleantopo_br):
         assert "5.txt" in files
     with open(mp.config.output.path / "5.txt") as src:
         lines = list(src)
-        assert len(lines) == 1
+        assert len(lines) == 2
         for line in lines:
-            assert line.endswith("7.tif\n")
+            if line.endswith("7.tif\n"):
+                break
+        else:
+            raise ValueError("")
 
     # write again and assert there is no new entry because there is already one
     index(cleantopo_br.dict, zoom=5, txt=True)
@@ -209,9 +212,12 @@ def test_index_text(cleantopo_br):
         assert "5.txt" in files
     with open(mp.config.output.path / "5.txt") as src:
         lines = list(src)
-        assert len(lines) == 1
+        assert len(lines) == 2
         for line in lines:
-            assert line.endswith("7.tif\n")
+            if line.endswith("7.tif\n"):
+                break
+        else:
+            raise ValueError("")
 
 
 def test_index_tiledir(cleantopo_br):
@@ -227,7 +233,7 @@ def test_index_tiledir(cleantopo_br):
     with fiona_open(mp.config.output.path / "5.gpkg") as src:
         for feature in src:
             assert "location" in feature["properties"]
-        assert len(list(src)) == 1
+        assert len(list(src)) == 2
 
     # write again and assert there is no new entry because there is already one
     index(cleantopo_br.dict, zoom=5, txt=True)
@@ -238,7 +244,7 @@ def test_index_tiledir(cleantopo_br):
     with fiona_open(mp.config.output.path / "5.gpkg") as src:
         for feature in src:
             assert "location" in feature["properties"]
-        assert len(list(src)) == 1
+        assert len(list(src)) == 2
 
 
 def test_index_errors(cleantopo_br):
