@@ -31,6 +31,7 @@ from mapchete.io.raster import (
 from mapchete.io.vector import read_vector_window
 from mapchete.path import MPath
 from mapchete.processing.tasks import Task
+from mapchete.stac.tiled_assets import STACTA
 from mapchete.tile import BufferedTile, BufferedTilePyramid
 from mapchete.types import CRSLike
 
@@ -273,6 +274,8 @@ class OutputSTACMixin:
 
     path: MPath
     output_params: dict
+    pyramid: BufferedTilePyramid
+    tile_path_schema: str
 
     @property
     def stac_path(self) -> MPath:
@@ -294,9 +297,25 @@ class OutputSTACMixin:
         return self.output_params.get("stac", {})
 
     @property
-    def stac_asset_type(self):  # pragma: no cover
+    def stac_asset_type(self):
         """Asset MIME type."""
-        raise ValueError("no MIME type set for this output")
+        return "image/tiff; application=geotiff"
+
+    @property
+    def stacta(self) -> STACTA:
+        try:
+            return STACTA.from_file(self.stac_path)
+        except FileNotFoundError:
+            return STACTA.from_tile_pyramid(
+                id=self.stac_item_id,
+                tile_pyramid=self.pyramid,
+                zoom_levels=self.output_params["delimiters"]["zoom"],
+                item_metadata=self.stac_item_metadata,
+                mime_type=self.stac_asset_type,
+                asset_template=self.tile_path_schema,
+            )
+
+    # def get_prototype_tiles(self) -> List[BufferedTile]:
 
 
 class OutputDataReader(OutputDataBase):

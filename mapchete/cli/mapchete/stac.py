@@ -1,20 +1,19 @@
-import json
 import logging
+from typing import Optional
 
 import click
-import fsspec
-import oyaml as yaml
 
 import mapchete
+from mapchete.bounds import Bounds
 from mapchete.cli import options
 from mapchete.config.parse import raw_conf, raw_conf_output_pyramid
 from mapchete.formats import read_output_metadata
 from mapchete.io import MPath
 from mapchete.stac import (
     create_prototype_files,
-    tile_directory_item_to_dict,
-    tile_directory_stac_item,
 )
+from mapchete.stac.tiled_assets import STACTA
+from mapchete.types import CRSLike
 from mapchete.zoom_levels import ZoomLevels
 
 logger = logging.getLogger(__name__)
@@ -31,12 +30,21 @@ def stac():
 @click.option(
     "--item-metadata",
     "-m",
-    type=click.Path(),
+    type=click.Path(path_type=MPath),
     help="Optional additional item metadata to be appended. Must be a YAML file.",
 )
 @options.opt_zoom
-@click.option("--item-path", "-p", type=click.Path(), help="Path of output STAC item.")
-@click.option("--asset-basepath", type=click.Path(), help="Alternative asset basepath.")
+@click.option(
+    "--item-path",
+    "-p",
+    type=click.Path(path_type=MPath),
+    help="Path of output STAC item.",
+)
+@click.option(
+    "--asset-basepath",
+    type=click.Path(path_type=MPath),
+    help="Alternative asset basepath.",
+)
 @click.option("--relative-paths", is_flag=True, help="Use relative paths.")
 @click.option(
     "--indent",
@@ -50,16 +58,16 @@ def stac():
 @options.opt_debug
 def create_item(
     input_,
-    item_id=None,
-    item_metadata=None,
-    asset_basepath=None,
-    zoom=None,
-    bounds=None,
-    bounds_crs=None,
-    item_path=None,
-    relative_paths=False,
-    indent=None,
-    force=None,
+    item_id: str,
+    item_metadata: Optional[MPath] = None,
+    asset_basepath: Optional[MPath] = None,
+    zoom: Optional[ZoomLevels] = None,
+    bounds: Optional[Bounds] = None,
+    bounds_crs: Optional[CRSLike] = None,
+    item_path: Optional[MPath] = None,
+    relative_paths: bool = False,
+    indent: int = 4,
+    force: bool = False,
     **kwargs,
 ):
     (
@@ -73,19 +81,18 @@ def create_item(
         band_asset_template,
     ) = output_info(input_)
 
-    if default_zoom:
-        zoom = zoom or default_zoom
-    zoom = ZoomLevels.from_inp(zoom)
-
     if relative_paths is False:
         default_basepath = default_basepath.absolute_path()
 
-    if zoom is None:  # pragma: no cover
+    if zoom:
+        zoom_levels = zoom
+    elif default_zoom:
+        zoom_levels = default_zoom
+    else:  # pragma: no cover
         raise ValueError("zoom must be set")
 
     if item_metadata:  # pragma: no cover
-        with fsspec.open(item_metadata) as src:
-            metadata = yaml.safe_load(src.read())
+        metadata = item_metadata.read_yaml()
     else:
         metadata = default_item_metadata or {}
 
@@ -98,28 +105,28 @@ def create_item(
 
     logger.debug("use item ID %s", item_id)
     item_path = item_path or MPath.from_inp(default_basepath) / f"{item_id}.json"
-    item = tile_directory_stac_item(
-        item_id=item_id,
-        item_metadata=metadata,
+    if bounds:
+        item_bounds = Bounds.from_inp(bounds, crs=bounds_crs or default_bounds_crs)
+    elif default_bounds:
+        item_bounds = Bounds.from_inp(default_bounds, crs=default_bounds_crs)
+    else:
+        item_bounds = None
+    item = STACTA.from_tile_pyramid(
+        id=item_id,
         tile_pyramid=tile_pyramid,
-        zoom_levels=zoom,
-        bounds=bounds or default_bounds,
-        bounds_crs=bounds_crs or default_bounds_crs,
-        item_path=item_path,
-        asset_basepath=asset_basepath,
+        zoom_levels=zoom_levels,
+        asset_template=band_asset_template,
+        bounds=item_bounds,
+        item_metadata=metadata,
+    ).to_item(
+        self_href=item_path,
         relative_paths=relative_paths,
-        band_asset_template=band_asset_template,
-        bands_type=None,
-        crs_unit_to_meter=1,
+        asset_basepath=asset_basepath,
     )
     logger.debug("item_path: %s", item_path)
-    item_json = json.dumps(
-        tile_directory_item_to_dict(item, relative_paths=relative_paths), indent=indent
-    )
-    click.echo(item_json)
+    click.echo(item.to_dict())
     if force or click.confirm(f"Write output to {item_path}?", abort=True):
-        with fsspec.open(item_path, "w") as dst:
-            dst.write(item_json)
+        item_path.write_json(item.to_dict())
 
 
 def output_info(inp):

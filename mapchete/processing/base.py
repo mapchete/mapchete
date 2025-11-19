@@ -25,9 +25,6 @@ from mapchete.processing.tasks import (
     TileTask,
     TileTaskBatch,
 )
-from mapchete.stac import (
-    STACTA,
-)
 from mapchete.tile import BatchBy, BufferedTile, count_tiles
 from mapchete.timer import Timer
 from mapchete.types import TileLike, ZoomLevelsLike
@@ -593,37 +590,21 @@ class Mapchete(object):
             output, TileDirectoryOutputWriter
         ):
             try:
-                # read existing STAC file
-                try:
-                    stacta_item = STACTA.from_file(output.stac_path)
-                    stacta_item.extend(
-                        id=output.stac_item_id,
-                        zoom_levels=self.config.init_zoom_levels,
-                        bounds=self.config.effective_bounds,
-                        item_metadata=output.stac_item_metadata,
-                        tile_pyramid=self.config.output_pyramid,
-                        bands_type=output.stac_asset_type,
-                        band_asset_template=output.tile_path_schema,
-                    )
-                except FileNotFoundError:
-                    stacta_item = STACTA.from_tile_pyramid(
-                        id=output.stac_item_id,
-                        tile_pyramid=self.config.output_pyramid,
-                        zoom_levels=self.config.init_zoom_levels,
-                        bounds=self.config.effective_bounds,
-                        item_metadata=output.stac_item_metadata,
-                        mime_type=output.stac_asset_type,
-                        asset_template=output.tile_path_schema,
-                    )
-                logger.debug("write STAC item JSON to %s", output.stac_path)
-                output.stac_path.write_json(
-                    stacta_item.to_item().to_dict(), indent=indent
+                # read existing STACTA file
+                stacta = output.stacta
+                # extend bounds
+                stacta.extend(
+                    zoom_levels=self.config.zoom_levels, bounds=self.config.bounds
                 )
+                # write STACTA file
+                # TODO: only write if values differ
+                stacta.to_file(output.stac_path)
             except ReprojectionFailed:  # pragma: no cover
                 logger.warning(
                     "cannot create STAC item because footprint cannot be reprojected into EPSG:4326"
                 )
             except Exception as exc:  # pragma: no cover
+                raise
                 logger.warning("cannot create or update STAC item: %s", str(exc))
 
     def _process_and_overwrite_output(self, tile, process_tile):

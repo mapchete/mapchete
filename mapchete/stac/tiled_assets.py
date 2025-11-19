@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import OrderedDict
 from dataclasses import dataclass, field
 import datetime
 import logging
@@ -354,7 +355,7 @@ class STACTA:
         eo_bands = self.item_metadata.get("eo:bands", None)
         if eo_bands:
             out["eo:bands"] = eo_bands
-        return out
+        return _cleanup_datetime(out)
 
     @property
     def asset_templates(self) -> Dict[str, Any]:
@@ -517,7 +518,7 @@ class STACTA:
             else:
                 self.bounds = self.bounds.union(bounds)
 
-    def write(
+    def to_file(
         self,
         path: MPathLike,
         indent: int = 4,
@@ -578,3 +579,15 @@ class STACTA:
             item.set_self_href(str(self_href))
 
         return item
+
+
+def _cleanup_datetime(d):
+    """Convert datetime objects in dictionary to strings."""
+    return OrderedDict(
+        (k, _cleanup_datetime(v))
+        if isinstance(v, dict)
+        else (k, str(v))
+        if isinstance(v, datetime.date)
+        else (k, v)
+        for k, v in d.items()
+    )
