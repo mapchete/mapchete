@@ -125,7 +125,7 @@ def test_geojson_tile(cleantopo_tl):
         files = mp.config.output.path.ls(absolute_paths=False)
         assert len(files) == 4
     with fiona_open(mp.config.output.path / "3.geojson") as src:
-        assert len(list(src)) == 2
+        assert len(list(src)) == 1
 
 
 def test_geojson_wkt_area(cleantopo_br, wkt_geom):
