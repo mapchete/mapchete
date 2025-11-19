@@ -322,7 +322,9 @@ class STACTA:
         for tile in self.get_prototype_tiles():
             path = self.get_tile_path(tile)
             try:
-                if ReferencedRaster.from_file(path).masked_array().mask.all():
+                if (
+                    ReferencedRaster.from_file(path).masked_array().mask.all()
+                ):  # pragma: no cover
                     logger.debug("removing empty prototype file %s", str(path))
                     path.rm(ignore_errors=True)
             except FileNotFoundError:  # pragma: no cover
@@ -373,7 +375,7 @@ class STACTA:
                 basepath = MPath.from_inp(asset_basepath).absolute_path()
             elif self_href:
                 basepath = MPath.from_inp(self_href).absolute_path().parent
-            else:
+            else:  # pragma: no cover
                 raise ValueError("either asset_basepath or self_href must be set")
             asset_templates = {}
             for asset_template_name, band_asset_template in item_dict[

@@ -308,7 +308,7 @@ class OutputSTACMixin:
             return STACTA.from_tile_pyramid(
                 id=self.stac_item_id,
                 tile_pyramid=self.pyramid,
-                zoom_levels=self.output_params["delimiters"]["zoom"],
+                zoom_levels=self.output_params["delimiters"]["process_zoom"],
                 item_metadata=self.stac_item_metadata,
                 mime_type=self.stac_asset_type,
                 asset_template=self.tile_path_schema,

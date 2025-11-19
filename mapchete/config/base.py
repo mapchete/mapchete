@@ -395,6 +395,7 @@ class MapcheteConfig(object):
     def _delimiters(self):
         return dict(
             zoom=self.init_zoom_levels,
+            process_zoom=self.zoom_levels,
             bounds=self.init_bounds,
             process_bounds=self.bounds,
             effective_bounds=self.effective_bounds,

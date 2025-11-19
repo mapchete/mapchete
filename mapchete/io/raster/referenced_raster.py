@@ -90,11 +90,7 @@ class ReferencedRaster(GridProtocol):
         }
 
     def masked_array(self) -> ma.MaskedArray:
-        if (
-            isinstance(self.data, ma.MaskedArray)
-            and self.data.dtype == self.dtype
-            and self.data.fill_value == self.nodata
-        ):
+        if isinstance(self.data, ma.MaskedArray):
             return self.data
         return prepare_array(
             self.data, masked=True, nodata=self.nodata, dtype=self.dtype
