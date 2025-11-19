@@ -294,3 +294,14 @@ def test_stacta_item(stacta):
     stacta_item = STACTA.from_file(stacta)
     assert stacta_item
     assert not shape(stacta_item).is_empty
+
+
+def test_tile_paths(stacta):
+    stacta = STACTA.from_file(stacta)
+    path = stacta.get_tile_path(stacta.tile_pyramid.tile(0, 0, 0))
+    assert path.is_absolute()
+    item = stacta.to_item()
+    item.set_self_href(None)
+    stacta = STACTA.from_item(item)
+    path = stacta.get_tile_path(stacta.tile_pyramid.tile(0, 0, 0))
+    assert not path.is_absolute()

@@ -325,9 +325,8 @@ class STACTA:
                 if ReferencedRaster.from_file(path).masked_array().mask.all():
                     logger.debug("removing empty prototype file %s", str(path))
                     path.rm(ignore_errors=True)
-            except FileNotFoundError:
+            except FileNotFoundError:  # pragma: no cover
                 logger.debug("%s does not exist", str(path))
-                pass
 
     def to_file(
         self,

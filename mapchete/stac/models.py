@@ -55,7 +55,7 @@ class BoundingBox(BaseModel):
 
     @staticmethod
     def from_bounds(bounds: Bounds) -> BoundingBox:
-        if bounds.crs is None:
+        if bounds.crs is None:  # pragma: no cover
             raise ValueError("bounds.crs must be set")
         return BoundingBox(
             crs=crs_to_uri(bounds.crs),
