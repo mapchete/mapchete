@@ -16,7 +16,7 @@ def test_geojson(cleantopo_br):
     run_cli(["index", cleantopo_br.path, "-z", "3", "--geojson", "--debug"])
     with mapchete.open(cleantopo_br.dict) as mp:
         files = mp.config.output.path.ls(absolute_paths=False)
-        assert len(files) == 4
+        assert len(files) == 9
     with fiona_open(mp.config.output.path / "3.geojson") as src:
         for feature in src:
             assert "location" in feature["properties"]
@@ -123,7 +123,7 @@ def test_geojson_tile(cleantopo_tl):
     run_cli(["index", cleantopo_tl.path, "-t", "3", "0", "0", "--geojson", "--debug"])
     with mapchete.open(cleantopo_tl.dict) as mp:
         files = mp.config.output.path.ls(absolute_paths=False)
-        assert len(files) == 4
+        assert len(files) == 9
     with fiona_open(mp.config.output.path / "3.geojson") as src:
         assert len(list(src)) == 1
 

@@ -14,7 +14,7 @@ def test_index_geojson(cleantopo_br):
 
     with mapchete.open(cleantopo_br.dict) as mp:
         files = mp.config.output.path.ls(absolute_paths=False)
-        assert len(files) == 4
+        assert len(files) == 9
         assert "3.geojson" in files
     with fiona_open(mp.config.output.path / "3.geojson") as src:
         for feature in src:
@@ -85,7 +85,7 @@ def test_index_geojson_tile(cleantopo_tl):
 
     with mapchete.open(cleantopo_tl.dict) as mp:
         files = mp.config.output.path.ls(absolute_paths=False)
-        assert len(files) == 4
+        assert len(files) == 9
         assert "3.geojson" in files
     with fiona_open(mp.config.output.path / "3.geojson") as src:
         assert len(list(src)) == 1
