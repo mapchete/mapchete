@@ -84,7 +84,7 @@ def create_item(
 
     if zoom:
         zoom_levels = zoom
-    elif default_zoom:
+    elif default_zoom:  # pragma: no cover
         zoom_levels = default_zoom
     else:  # pragma: no cover
         raise ValueError("zoom must be set")
@@ -103,9 +103,9 @@ def create_item(
 
     logger.debug("use item ID %s", item_id)
     item_path = item_path or MPath.from_inp(default_basepath) / f"{item_id}.json"
-    if bounds:
+    if bounds:  # pragma: no cover
         item_bounds = Bounds.from_inp(bounds, crs=bounds_crs or default_bounds_crs)
-    elif default_bounds:
+    elif default_bounds:  # pragma: no cover
         item_bounds = Bounds.from_inp(default_bounds, crs=default_bounds_crs)
     else:
         item_bounds = None

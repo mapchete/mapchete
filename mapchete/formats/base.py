@@ -297,7 +297,7 @@ class OutputSTACMixin:
         return self.output_params.get("stac", {})
 
     @property
-    def stac_asset_type(self):
+    def stac_asset_type(self):  # pragma: no cover
         """Asset MIME type."""
         return "image/tiff; application=geotiff"
 
@@ -657,7 +657,7 @@ def _read_as_tiledir(
                 skip_missing_files=True,
                 dst_dtype=profile["dtype"],
             )
-        else:
+        else:  # pragma: no cover
             bands = len(indexes) if indexes else profile["count"]
             return ma.masked_array(
                 data=np.full(

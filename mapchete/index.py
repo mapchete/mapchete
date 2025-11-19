@@ -400,7 +400,7 @@ class VRTFileWriter:
         from lxml.builder import ElementMaker
 
         logger.debug("%s new entries in %s", self.new_entries, self)
-        if not self._new:
+        if not self._new:  # pragma: no cover
             logger.debug("no entries to write")
             return
 

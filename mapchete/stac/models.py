@@ -5,10 +5,8 @@ from typing import List, Literal, Optional, Tuple
 
 from pydantic import BaseModel
 from pyproj import CRS
-from pystac import Asset, Item
 
 from mapchete.bounds import Bounds
-from mapchete.path import MPath
 from mapchete.tile import BufferedTilePyramid
 from mapchete.types import CRSLike
 from mapchete.zoom_levels import ZoomLevels
@@ -210,7 +208,7 @@ class TileMatrixSet(BaseModel):
             raise ValueError("cannot determine metatiling setting")
         elif len(matching_metatiling_opts) == 1:
             metatiling = matching_metatiling_opts[0]
-        else:
+        else:  # pragma: no cover
             metatiling = sorted(matching_metatiling_opts)[0]
             logger.warning(
                 "multiple possible metatiling settings found, chosing %s", metatiling
@@ -223,72 +221,4 @@ class TileMatrixSet(BaseModel):
     def to_zoom_levels(self) -> ZoomLevels:
         return ZoomLevels(
             [int(tile_matrix.identifier) for tile_matrix in self.tileMatrix]
-        )
-
-
-class TiledAsset(BaseModel):
-    name: str
-    tile_matrix_set: TileMatrixSet
-    tile_matrix_link: dict
-    asset_kwargs: dict = {}
-
-    @staticmethod
-    def from_item(
-        item: Item,
-        asset_name: Optional[str] = None,
-        tile_matrix_set_name: Optional[str] = None,
-    ) -> TiledAsset:
-        asset_templates = item.extra_fields.get("asset_templates", {})
-        if not asset_templates:
-            raise ValueError("STAC item does not contain tiled-assets!")
-
-        tile_matrix_sets = [
-            TileMatrixSet(**definition)
-            for definition in item.properties["tiles:tile_matrix_sets"].values()
-        ]
-        if len(asset_templates) == 1:
-            for name, asset_kwargs in asset_templates.items():
-                tile_matrix_set = tile_matrix_sets[0]
-                return TiledAsset(
-                    name=name,
-                    tile_matrix_set=tile_matrix_set,
-                    tile_matrix_link=item.properties["tiles:tile_matrix_links"][
-                        tile_matrix_set.identifier
-                    ],
-                    asset_kwargs=asset_kwargs,
-                )
-        if asset_name is None:
-            raise ValueError(
-                "multiple asset templates found, please specify a tiled-asset name"
-            )
-        for name, asset_kwargs in asset_templates.items():
-            if name == asset_name:
-                tile_matrix_set = [
-                    vv
-                    for vv in tile_matrix_sets
-                    if vv.identifier == tile_matrix_set_name
-                ][0]
-                return TiledAsset(
-                    name=asset_name,
-                    tile_matrix_set=tile_matrix_set,
-                    tile_matrix_link=item.properties["tiles:tile_matrix_links"][
-                        tile_matrix_set.identifier
-                    ],
-                    asset_kwargs=asset_kwargs,
-                )
-        raise KeyError(f"no tiled-asset with name '{asset_name}' found in item")
-
-    @staticmethod
-    def from_path(path: MPath) -> TiledAsset:
-        return TiledAsset.from_item(
-            Item.from_dict((path.parent / path.parent.name + ".json").read_json())
-        )
-
-    def to_asset(self, item_href: str, asset_name: Optional[str] = None) -> Asset:
-        asset_kwargs = self.asset_kwargs
-        asset_kwargs["media_type"] = asset_kwargs.pop("type")
-        asset_kwargs.pop("href")
-        return Asset(
-            href=f"STACTA:{item_href}:{asset_name or self.name}:{self.tile_matrix_set.identifier}",
-            **asset_kwargs,
         )

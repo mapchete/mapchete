@@ -184,6 +184,11 @@ def test_bounds_intersect_custom(intersecting):
     assert shape(bounds1).intersects(shape(bounds2))
 
 
+def test_bounds_intersection():
+    intersection = Bounds(0, 1, 2, 3).intersection(Bounds(1, 2, 3, 4))
+    assert intersection == (1, 2, 2, 3)
+
+
 def test_bounds_equal():
     assert Bounds(1, 2, 3, 4) == Bounds(1, 2, 3, 4)
     assert Bounds(1, 2, 3, 4) == Bounds(1.0, 2.0, 3.0, 4.0)

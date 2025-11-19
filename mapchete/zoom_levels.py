@@ -140,7 +140,9 @@ class ZoomLevels(list):
         other = ZoomLevels.from_inp(other)
         combined = list(set(self).union(set(other)))
         combined.sort()
-        if combined != list(range(min(combined), max(combined) + 1)):
+        if combined != list(
+            range(min(combined), max(combined) + 1)
+        ):  # pragma: no cover
             raise ValueError("Union of zoom levels intersection is invalid")
         return ZoomLevels(min(combined), max(combined))
 

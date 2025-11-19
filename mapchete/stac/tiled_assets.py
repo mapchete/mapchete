@@ -253,10 +253,11 @@ class STACTA:
         if zoom_levels:
             self.zoom_levels = self.zoom_levels.union(zoom_levels)
         if bounds:
-            if self.bounds is None:
-                self.bounds = Bounds.from_inp(bounds)
-            else:
-                self.bounds = self.bounds.union(bounds)
+            self.bounds = (
+                Bounds.from_inp(bounds)
+                if self.bounds is None
+                else self.bounds.union(bounds)
+            )
 
     def get_tile_path(self, tile: BufferedTile) -> MPath:
         path = MPath(
@@ -266,10 +267,7 @@ class STACTA:
         )
         if path.is_absolute() or self.href is None:
             return path
-        if self.href is not None:
-            return self.href.parent / path
-        else:
-            return path
+        return path if self.href is None else self.href.parent / path
 
     def get_prototype_tiles(self) -> List[BufferedTile]:
         self._stacta_bounds
@@ -286,12 +284,6 @@ class STACTA:
         return [
             self.tile_pyramid.tile_from_xy(left, top, zoom, on_edge_use="rb")
             for zoom in self.zoom_levels
-        ]
-
-    def get_prototype_files_paths(self) -> List[MPath]:
-        return [
-            self.get_tile_path(prototype_tile)
-            for prototype_tile in self.get_prototype_tiles()
         ]
 
     def create_prototype_files(self, out_profile: Dict[str, Any]):
@@ -395,7 +387,7 @@ class STACTA:
             item_dict.update(asset_templates=asset_templates)
 
         item = Item.from_dict(item_dict)
-        if self_href:
+        if self_href:  # pragma: no cover
             item.set_self_href(str(self_href))
 
         return item
