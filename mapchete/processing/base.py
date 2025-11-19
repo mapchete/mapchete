@@ -591,7 +591,7 @@ class Mapchete(object):
         ):
             try:
                 # read existing STACTA file
-                stacta = output.stacta
+                stacta = output.stacta()
                 # extend bounds
                 stacta.extend(
                     zoom_levels=self.config.zoom_levels, bounds=self.config.bounds
@@ -604,8 +604,8 @@ class Mapchete(object):
                     "cannot create STAC item because footprint cannot be reprojected into EPSG:4326"
                 )
             except Exception as exc:  # pragma: no cover
-                raise
                 logger.warning("cannot create or update STAC item: %s", str(exc))
+                raise
 
     def _process_and_overwrite_output(self, tile, process_tile):
         if self.with_cache:

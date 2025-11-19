@@ -301,7 +301,6 @@ class OutputSTACMixin:
         """Asset MIME type."""
         return "image/tiff; application=geotiff"
 
-    @property
     def stacta(self) -> STACTA:
         try:
             return STACTA.from_file(self.stac_path)

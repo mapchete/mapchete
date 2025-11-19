@@ -3,7 +3,9 @@ from functools import partial
 
 from fiona.transform import transform as fiona_transform
 from rasterio.crs import CRS
+from shapely import GEOSException
 
+from mapchete.errors import ReprojectionFailed
 from mapchete.geometry.transform import custom_transform
 from mapchete.types import CoordArrays, Geometry
 from mapchete.types import CRSLike
@@ -82,4 +84,7 @@ def transform_to_latlon(
             )
         return (out_x_coords, out_y_coords)
 
-    return custom_transform(geometry, transform_shift_coords)
+    try:
+        return custom_transform(geometry, transform_shift_coords)
+    except GEOSException as exception:
+        raise ReprojectionFailed from exception
