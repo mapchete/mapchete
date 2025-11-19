@@ -8,10 +8,8 @@ from mapchete.bounds import Bounds
 from mapchete.cli import options
 from mapchete.config.parse import raw_conf, raw_conf_output_pyramid
 from mapchete.formats import read_output_metadata
+from mapchete.formats.base import OutputSTACMixin
 from mapchete.io import MPath
-from mapchete.stac import (
-    create_prototype_files,
-)
 from mapchete.stac.tiled_assets import STACTA
 from mapchete.types import CRSLike
 from mapchete.zoom_levels import ZoomLevels
@@ -168,4 +166,8 @@ def prototype_files(
     **kwargs,
 ):
     with mapchete.open(input_, mode="readonly") as mp:
-        create_prototype_files(mp)
+        output = mp.config.output
+        if isinstance(output, OutputSTACMixin):
+            output.create_prototype_files()
+        else:  # pragma: no cover
+            click.echo("output does not support STACTA")

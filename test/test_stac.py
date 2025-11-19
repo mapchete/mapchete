@@ -15,7 +15,6 @@ from mapchete.io import rasterio_open
 from mapchete.geometry import reproject_geometry
 from mapchete.stac import (
     STACTA,
-    create_prototype_files,
 )
 from mapchete.tile import BufferedTilePyramid
 
@@ -257,7 +256,7 @@ def test_create_prototype_file(cleantopo_br):
             pass
 
     # create prototype file and assert reading is possible
-    create_prototype_files(cleantopo_br.mp())
+    cleantopo_br.mp().config.output.create_prototype_files()
     with rasterio_open(stac_path):
         pass
 
@@ -275,9 +274,28 @@ def test_create_prototype_file_exists(cleantopo_tl):
     assert stac_path.exists()
 
     # create prototype file and assert reading is possible
-    create_prototype_files(cleantopo_tl.mp())
+    cleantopo_tl.mp().config.output.create_prototype_files()
     with rasterio_open(stac_path):
         pass
+
+
+def test_stacta_equal():
+    first = STACTA.from_tile_pyramid(
+        id="foo",
+        tile_pyramid=BufferedTilePyramid("geodetic"),
+        zoom_levels=ZoomLevels(0, 6),
+        item_metadata=dict(properties=dict(start_datetime="2021-01-01 00:00:00")),
+    )
+    second = STACTA.from_tile_pyramid(
+        id="foo",
+        tile_pyramid=BufferedTilePyramid("geodetic"),
+        zoom_levels=ZoomLevels(0, 6),
+        item_metadata=dict(properties=dict(start_datetime="2021-01-01 00:00:00")),
+    )
+    assert first == second
+
+    second.extend(zoom_levels=[7, 8])
+    assert first != second
 
 
 # def test_make_stac_item_with_relative_paths(eox_stacta, eox_stacta_rel_paths):

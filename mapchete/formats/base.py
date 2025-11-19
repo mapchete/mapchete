@@ -28,6 +28,7 @@ from mapchete.io.raster import (
     prepare_array,
     read_raster_window,
 )
+from mapchete.io.raster.write import write_raster_window
 from mapchete.io.vector import read_vector_window
 from mapchete.path import MPath
 from mapchete.processing.tasks import Task
@@ -301,7 +302,7 @@ class OutputSTACMixin:
         """Asset MIME type."""
         return "image/tiff; application=geotiff"
 
-    def stacta(self) -> STACTA:
+    def get_stacta(self) -> STACTA:
         try:
             return STACTA.from_file(self.stac_path)
         except FileNotFoundError:
@@ -314,7 +315,34 @@ class OutputSTACMixin:
                 asset_template=self.tile_path_schema,
             )
 
-    # def get_prototype_tiles(self) -> List[BufferedTile]:
+    def create_prototype_files(self):
+        # for each zoom level get tile output for 0/0
+        for zoom in self.output_params["delimiters"]["zoom"]:
+            prototype_tile = self.pyramid.tile(zoom, 0, 0)
+            tile_path = self.get_path(prototype_tile)  # type: ignore
+            # if tile exists, skip
+            if tile_path.exists():
+                logger.debug("prototype tile %s already exists", tile_path)
+            # if not, write empty tile
+            else:
+                logger.debug("creating prototype tile %s", tile_path)
+                out_profile = self.profile(prototype_tile)  # type: ignore
+                tile_path.parent.makedirs()
+                write_raster_window(
+                    in_grid=prototype_tile,
+                    in_data=ma.masked_array(
+                        data=np.full(
+                            (out_profile["count"],) + prototype_tile.shape,
+                            out_profile["nodata"],
+                            dtype=out_profile["dtype"],
+                        ),
+                        mask=True,
+                    ),
+                    out_profile=out_profile,
+                    out_grid=prototype_tile,
+                    out_path=tile_path,
+                    write_empty=True,
+                )
 
 
 class OutputDataReader(OutputDataBase):

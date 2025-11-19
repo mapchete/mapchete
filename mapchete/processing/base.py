@@ -591,21 +591,21 @@ class Mapchete(object):
         ):
             try:
                 # read existing STACTA file
-                stacta = output.stacta()
-                # extend bounds
-                stacta.extend(
+                new_stacta = output.get_stacta()
+                # extend bounds and zoom levels
+                new_stacta.extend(
                     zoom_levels=self.config.zoom_levels, bounds=self.config.bounds
                 )
-                # write STACTA file
-                # TODO: only write if values differ
-                stacta.to_file(output.stac_path)
+                # only write if values differ
+                if new_stacta != output.get_stacta():
+                    # write STACTA file
+                    new_stacta.to_file(output.stac_path)
             except ReprojectionFailed:  # pragma: no cover
                 logger.warning(
                     "cannot create STAC item because footprint cannot be reprojected into EPSG:4326"
                 )
             except Exception as exc:  # pragma: no cover
                 logger.warning("cannot create or update STAC item: %s", str(exc))
-                raise
 
     def _process_and_overwrite_output(self, tile, process_tile):
         if self.with_cache:
