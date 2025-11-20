@@ -3,6 +3,23 @@ Changelog
 #########
 
 
+2025.11.0 - 2025-11-20
+----------------------
+
+* core
+
+  * `commands.execute()`:
+
+    * only report `Status.done` if all context managers closed successfully (#709)
+    * cancel all remaining futures in between retries (#709)
+
+  * `TileDirectory` outputs: always create and update STACTA file as well as prototype files (required by GDAL) (#710)
+  * `bounds.Bounds`: added `intersection()` and `union()` methods (#710)
+  * `zoom_levels.ZoomLevels`: added `union()` method (#710)
+  * `io.raster.referenced_raster.ReferencedRaster.masked_array()`: return internal `.data` if it already is a masked array instead of always recreating it (#710)
+  * added `stac.tiled_assets` and `stac.models` submodules (#710)
+
+
 2025.10.1 - 2025-10-10
 ----------------------
 
