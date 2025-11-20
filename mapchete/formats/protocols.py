@@ -187,6 +187,8 @@ class FileSystemOutputDataReaderProtocol:  # pragma: no cover
 
 
 class OutputDataWriterProtocol(OutputDataReaderProtocol):  # pragma: no cover
+    use_stac: bool = False
+
     def write(self, process_tile: BufferedTile, data: Any) -> None: ...
 
     def output_is_valid(self, process_data: Any) -> bool: ...

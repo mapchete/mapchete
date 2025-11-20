@@ -1,6 +1,5 @@
 """Main module managing processes."""
 
-import json
 import logging
 import os
 import threading
@@ -8,7 +7,6 @@ from contextlib import ExitStack
 from typing import Any, Generator, Iterator, List, Optional, Tuple, Union
 
 from cachetools import LRUCache
-from pystac import Item
 from shapely.geometry import Polygon, base
 from shapely.ops import unary_union
 
@@ -17,6 +15,7 @@ from mapchete.enums import Concurrency, ProcessingMode
 from mapchete.errors import MapcheteNodataTile, ReprojectionFailed
 from mapchete.executor import Executor, ExecutorBase, MFuture
 from mapchete.executor.types import Profiler
+from mapchete.formats.base import OutputSTACMixin, TileDirectoryOutputWriter
 from mapchete.path import batch_sort_property, tiles_exist
 from mapchete.processing.execute import batches, dask_graph, single_batch
 from mapchete.processing.tasks import (
@@ -26,7 +25,6 @@ from mapchete.processing.tasks import (
     TileTask,
     TileTaskBatch,
 )
-from mapchete.stac import tile_directory_item_to_dict, update_tile_directory_stac_item
 from mapchete.tile import BatchBy, BufferedTile, count_tiles
 from mapchete.timer import Timer
 from mapchete.types import TileLike, ZoomLevelsLike
@@ -167,8 +165,10 @@ class Mapchete(object):
 
     def skip_tiles(
         self,
-        tiles: Optional[Iterator[BufferedTile]] = None,
-        tiles_batches: Optional[Iterator[Iterator[BufferedTile]]] = None,
+        tiles: Optional[Generator[BufferedTile, None, None]] = None,
+        tiles_batches: Optional[
+            Generator[Generator[BufferedTile, None, None], None, None]
+        ] = None,
     ) -> Iterator[Tuple[BufferedTile, bool]]:
         """
         Quickly determine whether tiles can be skipped for processing.
@@ -584,33 +584,39 @@ class Mapchete(object):
             ProcessingMode.MEMORY,
         ]:
             return
-        # read existing STAC file
-        try:
-            item = Item.from_dict(self.config.output.stac_path.read_json())
-        except FileNotFoundError:
-            item = None
-        try:
-            item = update_tile_directory_stac_item(
-                item=item,
-                item_path=str(self.config.output.stac_path),
-                item_id=self.config.output.stac_item_id,
-                zoom_levels=self.config.init_zoom_levels,
-                bounds=self.config.effective_bounds,
-                item_metadata=self.config.output.stac_item_metadata,
-                tile_pyramid=self.config.output_pyramid,
-                bands_type=self.config.output.stac_asset_type,
-                band_asset_template=self.config.output.tile_path_schema,
-            )
-            logger.debug("write STAC item JSON to %s", self.config.output.stac_path)
-            self.config.output.stac_path.parent.makedirs()
-            with self.config.output.stac_path.open("w") as dst:
-                dst.write(json.dumps(tile_directory_item_to_dict(item), indent=indent))
-        except ReprojectionFailed:  # pragma: no cover
-            logger.warning(
-                "cannot create STAC item because footprint cannot be reprojected into EPSG:4326"
-            )
-        except Exception as exc:  # pragma: no cover
-            logger.warning("cannot create or update STAC item: %s", str(exc))
+        # only if output is a TileDirectory and STAC is activated
+        output = self.config.output
+        if isinstance(output, OutputSTACMixin) and isinstance(
+            output, TileDirectoryOutputWriter
+        ):
+            try:
+                new_stacta = output.get_stacta()
+                if output.stac_path.exists():
+                    # preserve old stacta data
+                    old_stacta = output.get_stacta()
+
+                    # extend bounds and zoom levels
+                    new_stacta.extend(
+                        zoom_levels=self.config.zoom_levels, bounds=self.config.bounds
+                    )
+
+                    # if nothing changed, just quit
+                    if new_stacta == old_stacta:
+                        return
+
+                    # remove now deprecated prototype files
+                    old_stacta.remove_empty_prototype_files()
+
+                # write STACTA file
+                new_stacta.to_file(output.stac_path)
+                # write prototype files
+                new_stacta.create_prototype_files(out_profile=output.profile())  # type: ignore
+            except ReprojectionFailed:  # pragma: no cover
+                logger.warning(
+                    "cannot create STAC item because footprint cannot be reprojected into EPSG:4326"
+                )
+            except Exception as exc:  # pragma: no cover
+                logger.warning("cannot create or update STAC item: %s", str(exc))
 
     def _process_and_overwrite_output(self, tile, process_tile):
         if self.with_cache:

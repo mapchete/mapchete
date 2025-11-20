@@ -31,6 +31,7 @@ from mapchete.io.raster import (
 from mapchete.io.vector import read_vector_window
 from mapchete.path import MPath
 from mapchete.processing.tasks import Task
+from mapchete.stac.tiled_assets import STACTA
 from mapchete.tile import BufferedTile, BufferedTilePyramid
 from mapchete.types import CRSLike
 
@@ -273,6 +274,8 @@ class OutputSTACMixin:
 
     path: MPath
     output_params: dict
+    pyramid: BufferedTilePyramid
+    tile_path_schema: str
 
     @property
     def stac_path(self) -> MPath:
@@ -296,7 +299,24 @@ class OutputSTACMixin:
     @property
     def stac_asset_type(self):  # pragma: no cover
         """Asset MIME type."""
-        raise ValueError("no MIME type set for this output")
+        return "image/tiff; application=geotiff"
+
+    def get_stacta(self) -> STACTA:
+        try:
+            return STACTA.from_file(self.stac_path)
+        except FileNotFoundError:
+            return STACTA.from_tile_pyramid(
+                id=self.stac_item_id,
+                tile_pyramid=self.pyramid,
+                zoom_levels=self.output_params["delimiters"]["process_zoom"],
+                item_metadata=self.stac_item_metadata,
+                mime_type=self.stac_asset_type,
+                asset_template=self.tile_path_schema,
+                href=self.stac_path,
+            )
+
+    def create_prototype_files(self):
+        self.get_stacta().create_prototype_files(out_profile=self.profile())  # type: ignore
 
 
 class OutputDataReader(OutputDataBase):
@@ -637,7 +657,7 @@ def _read_as_tiledir(
                 skip_missing_files=True,
                 dst_dtype=profile["dtype"],
             )
-        else:
+        else:  # pragma: no cover
             bands = len(indexes) if indexes else profile["count"]
             return ma.masked_array(
                 data=np.full(

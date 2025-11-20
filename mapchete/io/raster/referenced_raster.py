@@ -90,9 +90,11 @@ class ReferencedRaster(GridProtocol):
         }
 
     def masked_array(self) -> ma.MaskedArray:
+        if isinstance(self.data, ma.MaskedArray):
+            return self.data
         return prepare_array(
             self.data, masked=True, nodata=self.nodata, dtype=self.dtype
-        )  # type: ignore
+        )  # type: ignore # pragma: no cover
 
     def read(
         self,

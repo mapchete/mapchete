@@ -216,9 +216,18 @@ class Bounds(list):
             "top": self.top,
         }
 
+    def _shared_crs(self, other: BoundsLike) -> CRS:
+        other = Bounds.from_inp(other)
+        if self.crs and other.crs and (self.crs != other.crs):  # pragma: no cover
+            raise ValueError("CRSes of both bounds cannot be different")
+        return self.crs or other.crs
+
     def intersects(self, other: BoundsLike) -> bool:
         """Indicate whether bounds intersect spatially."""
-        other = other if isinstance(other, Bounds) else Bounds.from_inp(other)
+        # just to make sure CRSes do not differ:
+        self._shared_crs(other)
+
+        other = Bounds.from_inp(other)
         horizontal = (
             # partial overlap
             self.left <= other.left <= self.right
@@ -238,6 +247,28 @@ class Bounds(list):
             or self.bottom <= other.bottom < other.top <= self.top
         )
         return horizontal and vertical
+
+    def intersection(self, other: BoundsLike) -> Bounds:
+        other = Bounds.from_inp(other)
+        if not self.intersects(other):  # pragma: no cover
+            raise ValueError("bounds do not intersect")
+        return Bounds(
+            left=max([self.left, other.left]),
+            bottom=max([self.bottom, other.bottom]),
+            right=min([self.right, other.right]),
+            top=min([self.top, other.top]),
+            crs=self._shared_crs(other),
+        )
+
+    def union(self, other: BoundsLike) -> Bounds:
+        other = Bounds.from_inp(other)
+        return Bounds(
+            left=min([self.left, other.left]),
+            bottom=min([self.bottom, other.bottom]),
+            right=max([self.right, other.right]),
+            top=max([self.top, other.top]),
+            crs=self._shared_crs(other),
+        )
 
 
 def bounds_intersect(
