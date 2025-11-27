@@ -1084,6 +1084,15 @@ def tile_path_schema(mp_tmpdir):
 
 
 @pytest.fixture
+def inp_gdal_options_mapchete(mp_tmpdir):
+    """Fixture for inp_gdal_options.mapchete."""
+    with ProcessFixture(
+        TESTDATA_DIR / "inp_gdal_options.mapchete", output_tempdir=mp_tmpdir
+    ) as example:
+        yield example
+
+
+@pytest.fixture
 def s3_example_tile(gtiff_s3):
     """Example tile for fixture."""
     return (5, 15, 32)

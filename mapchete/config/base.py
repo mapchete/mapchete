@@ -865,33 +865,33 @@ def initialize_inputs(
     readonly: bool = False,
 ) -> OrderedDict:
     initalized_inputs = OrderedDict()
-    for k, v in raw_inputs.items():
+    for key, value in raw_inputs.items():
         # for files and tile directories
-        if isinstance(v, (str, MPath)):
-            logger.debug("load input reader for simple input %s", v)
+        if isinstance(value, (str, MPath)):
+            logger.debug("load input reader for simple input %s", value)
             try:
                 reader = load_input_reader(
                     dict(
-                        path=absolute_path(path=v, base_dir=config_dir),
+                        path=absolute_path(path=value, base_dir=config_dir),
                         pyramid=pyramid,
                         pixelbuffer=pyramid.pixelbuffer,
                         delimiters=delimiters,
                     ),
                     readonly=readonly,
-                    input_key=k,
+                    input_key=key,
                 )
             except Exception as e:
                 logger.exception(e)
                 raise MapcheteDriverError(
-                    "error when loading input %s: %s" % (v, e)
+                    "error when loading input %s: %s" % (value, e)
                 ) from e
-            logger.debug("input reader for simple input %s is %s", v, reader)
+            logger.debug("input reader for simple input %s is %s", value, reader)
 
         # for abstract inputs
-        elif isinstance(v, dict):
-            logger.debug("load input reader for abstract input %s", v)
+        elif isinstance(value, dict):
+            logger.debug("load input reader for abstract input %s", value)
             try:
-                abstract = deepcopy(v)
+                abstract = deepcopy(value)
                 # make path absolute and add filesystem options
                 if "path" in abstract:
                     abstract.update(
@@ -906,17 +906,19 @@ def initialize_inputs(
                         conf_dir=config_dir,
                     ),
                     readonly=readonly,
-                    input_key=k,
+                    input_key=key,
                 )
             except Exception as e:
                 logger.exception(e)
-                raise MapcheteDriverError("error when loading input %s: %s" % (v, e))
-            logger.debug("input reader for abstract input %s is %s", v, reader)
+                raise MapcheteDriverError(
+                    "error when loading input %s: %s" % (value, e)
+                )
+            logger.debug("input reader for abstract input %s is %s", value, reader)
         else:  # pragma: no cover
-            raise MapcheteConfigError("invalid input type %s", type(v))
+            raise MapcheteConfigError("invalid input type %s", type(value))
         # trigger bbox creation
         reader.bbox(out_crs=pyramid.crs)
-        initalized_inputs[k] = reader
+        initalized_inputs[key] = reader
 
     logger.debug(
         "initialized inputs: %s",
