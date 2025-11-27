@@ -241,3 +241,8 @@ def test_tile_path_schema_stac_json(tile_path_schema):
     template = stac_json.get("asset_templates")["bands"]["href"]
     assert template.split("/")[-2] == "{TileCol}"
     assert template.split("/")[-1] == "{TileRow}.tif"
+
+
+def test_inp_gdal_options(inp_gdal_options_mapchete):
+    for inp in inp_gdal_options_mapchete.mp().config.inputs.values():
+        assert inp.path.gdal_env_params()["CPL_VSIL_CURL_CACHE_SIZE"] == 0
