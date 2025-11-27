@@ -41,7 +41,7 @@ from mapchete.protocols import ObserverProtocol
 from mapchete.settings import GDALHTTPOptions, IORetrySettings, mapchete_options
 from mapchete.tile import BatchBy, BufferedTile
 from mapchete.timer import Timer
-from mapchete.types import MPathDict, MPathLike, Progress
+from mapchete.types import MPathLike, Progress
 
 logger = logging.getLogger(__name__)
 
@@ -137,7 +137,7 @@ class MPath(os.PathLike):
         self._info = info_dict
 
     @staticmethod
-    def from_dict(dictionary: MPathDict) -> MPath:
+    def from_dict(dictionary: dict) -> MPath:
         path_str = dictionary.get("path")
         if not path_str:
             raise ValueError(

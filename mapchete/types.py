@@ -70,13 +70,7 @@ GeoJSONLikeFeature = TypedDict(
 )
 
 
-class MPathDict(TypedDict):
-    path: str
-    storage_options: Optional[Dict[str, Any]]
-    gdal_options: Optional[Dict[str, Any]]
-
-
-MPathLike = Union[str, os.PathLike, MPathDict]
+MPathLike = Union[str, os.PathLike]
 BoundsLike = Union[List[float], Tuple[float, float, float, float], dict, Polygon]
 ShapeLike = Union[Shape, List[int], Tuple[int, int]]
 ZoomLevelsLike = Union[List[int], int, dict]
