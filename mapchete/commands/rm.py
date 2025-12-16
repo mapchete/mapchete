@@ -70,8 +70,12 @@ def rm(
         raise ValueError(
             "either a tile directory or a list of paths has to be provided"
         )
-    total = len(paths)
-    all_observers.notify(progress=Progress(total=total))
+
+    if not paths:
+        logger.debug("no paths to delete")
+        return
+
+    all_observers.notify(progress=Progress(total=len(paths)))
     logger.debug("got %s path(s)", len(paths))
 
     # s3fs enables multiple paths as input, so let's use this:
@@ -81,7 +85,7 @@ def rm(
             msg = f"deleted {path}"
             logger.debug(msg)
             all_observers.notify(
-                progress=Progress(current=ii, total=total), message=msg
+                progress=Progress(current=ii, total=len(paths)), message=msg
             )
 
     # otherwise, just iterate through the paths
@@ -91,7 +95,7 @@ def rm(
             msg = f"deleted {path}"
             logger.debug(msg)
             all_observers.notify(
-                progress=Progress(current=ii, total=total), message=msg
+                progress=Progress(current=ii, total=len(paths)), message=msg
             )
 
     all_observers.notify(message=f"{len(paths)} tiles deleted")
