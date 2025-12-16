@@ -1,7 +1,7 @@
 """Remove tiles from Tile Directory."""
 
 import logging
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Union, Dict, Any
 
 from rasterio.crs import CRS
 from shapely.geometry.base import BaseGeometry
@@ -10,21 +10,22 @@ import mapchete
 from mapchete.commands.observer import ObserverProtocol, Observers
 from mapchete.io import tiles_exist
 from mapchete.path import MPath
-from mapchete.types import MPathLike, Progress
+from mapchete.types import MPathLike, Progress, BoundsLike
+from mapchete.tile import BufferedTile
 
 logger = logging.getLogger(__name__)
 
 
 def rm(
     tiledir: Optional[MPathLike] = None,
-    paths: List[MPath] = None,
-    zoom: Union[int, List[int]] = None,
+    paths: Optional[List[MPath]] = None,
+    zoom: Optional[Union[int, List[int]]] = None,
     area: Union[BaseGeometry, str, dict] = None,
     area_crs: Union[CRS, str] = None,
-    bounds: Tuple[float] = None,
+    bounds: Optional[BoundsLike] = None,
     bounds_crs: Union[CRS, str] = None,
     workers: Optional[int] = None,
-    fs_opts: dict = None,
+    fs_opts: Optional[Dict[str, Any]] = None,
     observers: Optional[List[ObserverProtocol]] = None,
 ):
     """
@@ -63,50 +64,52 @@ def rm(
             bounds_crs=bounds_crs,
             workers=workers,
         )
-        fs = tiledir.fs
     elif isinstance(paths, list):
-        fs = MPath.from_inp(paths[0]).fs
+        pass
     else:  # pragma: no cover
         raise ValueError(
             "either a tile directory or a list of paths has to be provided"
         )
 
-    total = len(paths)
-    all_observers.notify(progress=Progress(total=total))
-    logger.debug("got %s path(s) on %s", len(paths), fs)
+    if not paths:
+        logger.debug("no paths to delete")
+        return
+
+    all_observers.notify(progress=Progress(total=len(paths)))
+    logger.debug("got %s path(s)", len(paths))
 
     # s3fs enables multiple paths as input, so let's use this:
-    if "s3" in fs.protocol:
-        fs.rm(paths)
+    if "s3" in paths[0].protocols:
+        paths[0].fs.rm(paths)
         for ii, path in enumerate(paths, 1):
             msg = f"deleted {path}"
             logger.debug(msg)
             all_observers.notify(
-                progress=Progress(current=ii, total=total), message=msg
+                progress=Progress(current=ii, total=len(paths)), message=msg
             )
 
     # otherwise, just iterate through the paths
     else:
         for ii, path in enumerate(paths, 1):
-            fs.rm(path)
+            path.rm()
             msg = f"deleted {path}"
             logger.debug(msg)
             all_observers.notify(
-                progress=Progress(current=ii, total=total), message=msg
+                progress=Progress(current=ii, total=len(paths)), message=msg
             )
 
     all_observers.notify(message=f"{len(paths)} tiles deleted")
 
 
 def existing_paths(
-    tiledir: Optional[MPathLike] = None,
-    zoom: Union[int, List[int]] = None,
+    tiledir: MPathLike,
+    zoom: Optional[Union[int, List[int]]] = None,
     area: Union[BaseGeometry, str, dict] = None,
     area_crs: Union[CRS, str] = None,
-    bounds: Tuple[float] = None,
+    bounds: Optional[BoundsLike] = None,
     bounds_crs: Union[CRS, str] = None,
     workers: Optional[int] = None,
-) -> dict:
+) -> List[MPath]:
     with mapchete.open(
         tiledir,
         zoom=zoom,
@@ -117,19 +120,19 @@ def existing_paths(
         mode="readonly",
     ) as mp:
         tp = mp.config.output_pyramid
-        tiles = {}
+        tiles: Dict[Union[int, List[int], None], List[BufferedTile]] = {}
         for zoom in mp.config.init_zoom_levels:
             tiles[zoom] = []
             # check which source tiles exist
             logger.debug("looking for existing source tiles in zoom %s...", zoom)
             for tile, exists in tiles_exist(
                 config=mp.config,
-                output_tiles=[
-                    t
-                    for t in tp.tiles_from_geom(mp.config.area_at_zoom(zoom), zoom)
+                output_tiles=(
+                    tile_
+                    for tile_ in tp.tiles_from_geom(mp.config.area_at_zoom(zoom), zoom)
                     # this is required to omit tiles touching the config area
-                    if mp.config.area_at_zoom(zoom).intersection(t.bbox).area
-                ],
+                    if mp.config.area_at_zoom(zoom).intersection(tile_.bbox).area
+                ),
                 workers=workers,
             ):
                 if exists:
