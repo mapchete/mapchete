@@ -90,13 +90,14 @@ class MPath(os.PathLike):
     """
 
     storage_options: dict = {"asynchronous": False, "timeout": None}
-    _gdal_options: dict
+    gdal_options: dict
 
     def __init__(
         self,
         path: Union[str, os.PathLike, MPath],
         fs: Optional[AbstractFileSystem] = None,
         storage_options: Union[dict, None] = None,
+        gdal_options: Union[dict, None] = None,
         info_dict: Union[dict, None] = None,
         **kwargs,
     ):
@@ -128,9 +129,12 @@ class MPath(os.PathLike):
         self.storage_options = dict(
             self.storage_options, **self._kwargs.get("storage_options") or {}
         )
+        self.gdal_options = dict(
+            gdal_options or {}, **self._kwargs.get("gdal_options") or {}
+        )
+        self._kwargs.update(gdal_options=gdal_options)
         self._fs = fs
         self._info = info_dict
-        self._gdal_options = dict()
 
     @staticmethod
     def from_dict(dictionary: dict) -> MPath:
@@ -142,11 +146,12 @@ class MPath(os.PathLike):
         return MPath(
             path_str,
             storage_options=dictionary.get("storage_options", {}),
+            gdal_options=dictionary.get("gdal_options", {}),
             fs=dictionary.get("fs"),
         )
 
     @staticmethod
-    def from_inp(inp: Union[dict, MPathLike], **kwargs) -> MPath:
+    def from_inp(inp: MPathLike, **kwargs) -> MPath:
         if isinstance(inp, dict):
             return MPath.from_dict(inp)
         elif isinstance(inp, str):
@@ -701,7 +706,7 @@ class MPath(os.PathLike):
         -------
         dictionary
         """
-        user_opts = {} if opts is None else dict(**opts)
+        user_opts = dict(opts or {}, **self.gdal_options)
 
         # for remote paths, we need some special settings
         if self.is_remote():
@@ -740,7 +745,7 @@ class MPath(os.PathLike):
             if self._endpoint_url:
                 gdal_opts.update(
                     AWS_VIRTUAL_HOSTING=False,
-                    AWS_HTTPS=self._gdal_options.get("aws_https", False),
+                    AWS_HTTPS=self.gdal_options.get("aws_https", False),
                 )
 
             # merge everything with user options
@@ -759,7 +764,7 @@ class MPath(os.PathLike):
         # endpoint
         endpoint_url = getattr(self.fs, "endpoint_url", None)
         if endpoint_url:
-            self._gdal_options.update(aws_https=endpoint_url.startswith("https://"))
+            self.gdal_options.update(aws_https=endpoint_url.startswith("https://"))
             # strip final "/", otherwise fiona would throw an error
             return (
                 endpoint_url.replace("http://", "").replace("https://", "").rstrip("/")

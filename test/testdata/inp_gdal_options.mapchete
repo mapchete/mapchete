@@ -1,0 +1,25 @@
+process: ../example_process.py
+zoom_levels:
+    min: 0
+    max: 5
+pyramid:
+    grid: geodetic
+    pixelbuffer: 20
+    metatiling: 8
+input:
+    file1:
+        format: raster_file
+        path: cleantopo_br.tif
+        gdal_options:
+            CPL_VSIL_CURL_CACHE_SIZE: 0
+    file2:
+        format: vector_file
+        path: aoi_br.geojson
+        gdal_options:
+            CPL_VSIL_CURL_CACHE_SIZE: 0
+output:
+    dtype: uint16
+    bands: 1
+    format: GTiff
+    path: tmp/cleantopo_br
+    pixelbuffer: 20

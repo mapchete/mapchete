@@ -68,6 +68,8 @@ CoordArrays = Tuple[Iterable[float], Iterable[float]]
 GeoJSONLikeFeature = TypedDict(
     "GeoJSONLikeFeature", {"geometry": dict, "properties": Dict[str, Any]}
 )
+
+
 MPathLike = Union[str, os.PathLike]
 BoundsLike = Union[List[float], Tuple[float, float, float, float], dict, Polygon]
 ShapeLike = Union[Shape, List[int], Tuple[int, int]]
