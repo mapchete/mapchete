@@ -1403,7 +1403,7 @@ vrt = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aiobotocore", marker = "extra == 'complete'", specifier = ">=1.1.2" },
+    { name = "aiobotocore", marker = "extra == 'complete'", specifier = ">=1.1.2,<3.0.0" },
     { name = "aiobotocore", marker = "extra == 's3'", specifier = ">=1.1.2,<3.0.0" },
     { name = "aiohttp" },
     { name = "aiohttp", marker = "extra == 'complete'" },
