@@ -3,6 +3,21 @@ Changelog
 #########
 
 
+2025.12.0 - 2025-12-16
+----------------------
+
+* core
+
+  * `commands.rm()`: fix typing (#712)
+  * `path.MPath`: add `gdal_options` (#711)
+  * allow `gdal_options` to be defined in mapchete configuration similar to `storage_options` (#711)
+
+* packaging
+
+  * limit `aiobotocore` to `<3.0.0` (#712)
+  * add `test` extra to install test dependencies (#712)
+
+
 2025.11.0 - 2025-11-20
 ----------------------
 
