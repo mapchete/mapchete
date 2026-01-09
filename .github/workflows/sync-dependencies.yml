@@ -1,0 +1,64 @@
+name: sync-dependencies
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  pull_request:
+    paths:
+      - "pyproject.toml"
+  workflow_dispatch:
+
+jobs:
+  sync-dependencies:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref || github.ref }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Sync and Upgrade
+        run: |
+          # The "Nuclear" fix: if the lockfile is corrupted (tomli error), nuke and rebuild
+          uv lock || (rm uv.lock && uv lock)
+          uv lock --upgrade
+
+      - name: Sync Conda Recipe
+        run: |
+          uvx pyproject2conda yaml \
+            -f pyproject.toml \
+            --output conda/meta.yaml \
+            --python-include infer
+            
+      - name: Push to Existing PR
+        if: github.event_name == 'pull_request'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add uv.lock conda/meta.yaml
+          git commit -m "chore: sync uv.lock and conda recipe for PR" || echo "No changes to commit"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
+
+      - name: Create New Pull Request
+        if: github.event_name != 'pull_request'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: update uv.lock and conda recipe"
+          title: "chore(deps): sync uv and conda dependencies"
+          body: "Automated daily sync of `uv.lock` and `conda/meta.yaml`."
+          branch: "automated-dependency-sync"
+          delete-branch: true
+          assignees: ungarj
+          reviewers: Scartography
+          labels: |
+            dependencies
+            automated-pr
