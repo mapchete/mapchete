@@ -57,7 +57,7 @@ jobs:
           CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
           GDAL_CONFIG: /usr/bin/gdal-config
         run: |
-          uv sync --extra complete --group test
+          uv sync --extra complete --extra test
 
       - name: run 
         env:
