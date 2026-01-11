@@ -59,6 +59,9 @@ jobs:
         run: |
           uv sync --extra complete --extra test
 
+      - name: Start containers
+        run: docker compose -f "test/docker-compose.yml" up -d
+
       - name: run 
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
