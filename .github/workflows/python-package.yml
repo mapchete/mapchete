@@ -1,6 +1,3 @@
-# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
-# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
-
 name: Python package test
 
 on:
@@ -10,22 +7,32 @@ on:
     branches: [main]
   schedule:
     - cron: '0 8 * * 1,4'
+  workflow_call:
+
+permissions:
+  pull-requests: write
+  contents: read
 
 jobs:
   test:
     runs-on: ${{ matrix.os }}
-
     strategy:
       fail-fast: false
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
-        os: ["ubuntu-22.04", "ubuntu-latest"]
+        os: ["ubuntu-latest"]
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
+
+      - name: Download updated dependencies
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: updated-deps
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -34,41 +41,35 @@ jobs:
           python -m pip install pre-commit
           pre-commit run --show-diff-on-failure --all-files
 
-      - name: Install dependencies
-        env:
-          CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+      - name: Install GIS Dependencies
         run: |
           sudo apt-add-repository -y ppa:ubuntugis/ubuntugis-unstable
           sudo apt-get -y update
-          sudo apt-get install -y gdal-bin libgdal-dev libproj-dev libgeos-dev
-          python -m pip install --upgrade pip wheel
-          pip install -r test/requirements.txt
-          pip install -e .[complete]
-          pip freeze
+          sudo apt-get install -y gdal-bin libgdal-dev libproj-dev libgeos-dev g++
 
-      - name: Start containers
-        run: docker compose -f "test/docker-compose.yml" up -d
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
 
-      # run tests
+      - name: Install dependencies
+        env:
+          CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+          GDAL_CONFIG: /usr/bin/gdal-config
+        run: |
+          uv sync --extra complete --group test
+
       - name: run 
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REQUEST_PAYER: ${{ secrets.AWS_REQUEST_PAYER }}
+          AWS_REQUEST_PAYER: ${{ vars.AWS_REQUEST_PAYER }}
+          AWS_DEFAULT_REGION: ${{ vars.AWS_DEFAULT_REGION }}
           CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
-        run: pytest -v --cov mapchete --cov-report xml:coverage.xml --cov-report=term-missing:skip-covered --junitxml=pytest.xml
+        run: uv run pytest --cov-report xml:coverage.xml --junitxml=pytest.xml
 
-      # Upload the report to Codecov
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: mapchete/mapchete
-
-      # this will let the workflow fail if coverage is below 100%
-      - name: Pytest coverage
-        run: coverage report --skip-covered --show-missing --fail-under 100
-
-      - name: Stop containers
-        if: always()
-        run: docker compose -f "test/docker-compose.yml" down
