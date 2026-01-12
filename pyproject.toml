@@ -5,6 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "mapchete"
 dynamic = ["version"]
+requires-python = ">=3.10"
 description = "Tile-based geodata processing using rasterio & Fiona"
 readme = "README.rst"
 license = "MIT"
@@ -170,3 +171,21 @@ include = [
 
 [tool.ruff]
 exclude = ["test/testdata/syntax_error.py"]
+
+[tool.pyproject2conda]
+channels = ["conda-forge"]
+# Maps PyPI names to Conda-Forge names if they differ
+map_deps = { "opencv-python-headless" = "opencv", "pystac-client" = "python-pystac-client" }
+
+[tool.pytest.ini_options]
+markers = [
+    "aws_s3: marks tests which need to acces the AWS S3 test bucket (deselect with '-m \"not aws_s3\"')",
+    "integration: marks tests which require the running docker containers from test/docker-compose.yml (deselect with '-m \"not integration\"')"
+]
+
+env = [
+    "D:AK1=foo",
+    "D:AK2=bar",
+    "D:FILE1=dummy2.tif"
+]
+addopts = "--durations 20 --verbose --nf --cov=mapchete --cov-report=term-missing:skip-covered"

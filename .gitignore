@@ -16,3 +16,5 @@ dask-worker-space/
 *.minio.sys/
 coverage.xml
 pytest.xml
+.ruff_cache/
+.venv

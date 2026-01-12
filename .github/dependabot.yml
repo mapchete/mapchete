@@ -1,46 +1,6 @@
-# To get started with Dependabot version updates, you'll need to specify which
-# package ecosystems to update and where the package manifests are located.
-# Please see the documentation for all configuration options:
-# https://help.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
-
 version: 2
 updates:
-  - package-ecosystem: "pip"
+  - package-ecosystem: "uv"
     directory: "/"
     schedule:
       interval: "daily"
-    allow:
-      - dependency-name: "aiohttp"
-        dependency-type: "direct"
-      - dependency-name: "aiobotocore"
-        dependency-type: "direct"
-      - dependency-name: "boto3"
-        dependency-type: "direct"
-      - dependency-name: "dask"
-        dependency-type: "direct"
-      - dependency-name: "distributed"
-        dependency-type: "direct"
-      - dependency-name: "Flask"
-        dependency-type: "direct"
-      - dependency-name: "Flask"
-        dependency-type: "direct"
-      - dependency-name: "fsspec"
-        dependency-type: "direct"
-      - dependency-name: "lxml"
-        dependency-type: "direct"
-      - dependency-name: "matplotlib"
-        dependency-type: "direct"
-      - dependency-name: "memray"
-        dependency-type: "direct"
-      - dependency-name: "pystac"
-        dependency-type: "direct"
-      - dependency-name: "requests"
-        dependency-type: "direct"
-      - dependency-name: "rtree"
-        dependency-type: "direct"
-      - dependency-name: "s3fs"
-        dependency-type: "direct"
-      - dependency-name: "tilebench"
-        dependency-type: "direct"
-      - dependency-name: "werkzeug"
-        dependency-type: "direct"
