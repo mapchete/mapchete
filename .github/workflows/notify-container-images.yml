@@ -1,0 +1,39 @@
+name: notify container-images
+
+on:
+  push:
+    branches: ['**'] 
+    tags: ['[0-9][0-9][0-9][0-9].*']
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Determine Image Flavor
+        id: vars
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+            echo "type=version" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == refs/heads/main ]]; then
+            echo "tag=latest" >> $GITHUB_OUTPUT
+            echo "type=rolling" >> $GITHUB_OUTPUT
+          else
+            # Any other branch (feature/fix/dev) is tagged as 'dev'
+            echo "tag=dev" >> $GITHUB_OUTPUT
+            echo "type=rolling" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Repository Dispatch
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.MAPCHETE_PAT_CONTAINER_IMAGES_TOKEN }} 
+          repository: mapchete/container-images
+          event-type: source_update
+          client-payload: |
+            {
+              "source_repo": "${{ github.event.repository.name }}",
+              "image_tag": "${{ steps.vars.outputs.tag }}",
+              "type": "${{ steps.vars.outputs.type }}",
+              "sha": "${{ github.sha }}"
+            }
