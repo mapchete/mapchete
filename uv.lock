@@ -19,7 +19,7 @@ wheels = [
 
 [[package]]
 name = "aiobotocore"
-version = "2.26.0"
+version = "3.1.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -28,11 +28,12 @@ dependencies = [
     { name = "jmespath" },
     { name = "multidict" },
     { name = "python-dateutil" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
     { name = "wrapt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/4d/f8/99fa90d9c25b78292899fd4946fce97b6353838b5ecc139ad8ba1436e70c/aiobotocore-2.26.0.tar.gz", hash = "sha256:50567feaf8dfe2b653570b4491f5bc8c6e7fb9622479d66442462c021db4fadc", size = 122026, upload-time = "2025-11-28T07:54:59.956Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/bd/5c/f898e42fbdfc88780104881a05173f1d65a84437d99faf5771fcd09f38b1/aiobotocore-3.1.0.tar.gz", hash = "sha256:5897bde0a47b21e6f7bd00942527b099728ac5c6c6d1dcc34e999de24f3c8872", size = 122488, upload-time = "2026-01-02T20:28:30.328Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b7/58/3bf0b7d474607dc7fd67dd1365c4e0f392c8177eaf4054e5ddee3ebd53b5/aiobotocore-2.26.0-py3-none-any.whl", hash = "sha256:a793db51c07930513b74ea7a95bd79aaa42f545bdb0f011779646eafa216abec", size = 87333, upload-time = "2025-11-28T07:54:58.457Z" },
+    { url = "https://files.pythonhosted.org/packages/e4/b3/923e0bc13669f06459c39a037ca7f5c1661ce252e141798a32803288c410/aiobotocore-3.1.0-py3-none-any.whl", hash = "sha256:4801f7b996f37a48faed017d23d8eae71e5fe0c3ec6bf0d9c5ce4f4d1853fce8", size = 87661, upload-time = "2026-01-02T20:28:28.817Z" },
 ]
 
 [[package]]
@@ -1816,8 +1817,8 @@ vrt = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aiobotocore", marker = "extra == 'complete'", specifier = ">=1.1.2,<3.0.0" },
-    { name = "aiobotocore", marker = "extra == 's3'", specifier = ">=1.1.2,<3.0.0" },
+    { name = "aiobotocore", marker = "extra == 'complete'", specifier = ">=1.1.2,<4.0.0" },
+    { name = "aiobotocore", marker = "extra == 's3'", specifier = ">=1.1.2,<4.0.0" },
     { name = "aiohttp" },
     { name = "aiohttp", marker = "extra == 'complete'" },
     { name = "aiohttp", marker = "extra == 'http'" },
