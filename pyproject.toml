@@ -106,7 +106,7 @@ test = [
     "minio",
     "morecantile>=5.0.0",
     "pystac",
-    "pytest>=5.4.1,<8",
+    "pytest>=5.4.1,<10",
     "pytest-cov>=2.8.1",
     "pytest-env",
     "pytest-flask>=1.0.0",
