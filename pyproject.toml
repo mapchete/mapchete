@@ -129,6 +129,7 @@ index = "mapchete.cli.mapchete.index:index"
 processes = "mapchete.cli.mapchete.processes:processes"
 rm = "mapchete.cli.mapchete.rm:rm"
 serve = "mapchete.cli.mapchete.serve:serve"
+show-env = "mapchete.cli.mapchete.show_env:show_env"
 stac = "mapchete.cli.mapchete.stac:stac"
 
 [project.entry-points."mapchete.cli.mpath_commands"]
