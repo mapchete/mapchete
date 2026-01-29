@@ -15,6 +15,9 @@ def show_env():
         env_prefix = setting_model.model_config.get("env_prefix", "")
         for field_name, field_info in setting_model.model_fields.items():
             if field_name == "exceptions":
+                click.echo(
+                    f"{env_prefix}{field_name.upper()} (not able to be set via environment!)"
+                )
                 continue
             # field_info contains metadata like annotation (type) and default
             annotation = field_info.annotation
