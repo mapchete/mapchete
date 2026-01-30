@@ -84,8 +84,8 @@ class MapcheteOptions(BaseSettings):
     reproject_geometry_engine: Literal["pyproj", "fiona"] = "pyproj"
     execute_retries: NonNegativeInt = 0
     execute_delay: NonNegativeFloat = 0
-    raster_remote_write_store: Literal["memory", "tempfile", "auto"]
-    raster_remote_write_memory_threshold = int(
+    raster_remote_write_store: Literal["memory", "tempfile", "auto"] = "auto"
+    raster_remote_write_memory_threshold: int = int(
         os.environ.get("MP_IN_MEMORY_THRESHOLD", 20000 * 20000)
     )
 
