@@ -491,10 +491,14 @@ class GTiffSingleFileOutputWriter(
         # if this wasn't set upon initialization explicitly, use the global settings:
         if self.in_memory is None:
             # memory
-            if mapchete_options.raster_remote_write_store == "memory":
+            if (
+                mapchete_options.raster_remote_write_store == "memory"
+            ):  # pragma: no cover
                 self.in_memory = True
             # tempfile
-            elif mapchete_options.raster_remote_write_store == "tempfile":
+            elif (
+                mapchete_options.raster_remote_write_store == "tempfile"
+            ):  # pragma: no cover
                 self.in_memory = False
             # auto
             else:
