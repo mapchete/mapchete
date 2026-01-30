@@ -60,6 +60,7 @@ from mapchete.io.raster import (
     read_raster_no_crs,
     write_raster_window,
 )
+from mapchete.settings import mapchete_options
 from mapchete.tile import BufferedTile
 from mapchete.types import to_resampling
 from mapchete.validate import deprecated_kwargs, validate_values
@@ -68,7 +69,6 @@ logger = logging.getLogger(__name__)
 
 
 METADATA = {"driver_name": "GTiff", "data_type": "raster", "mode": "rw"}
-IN_MEMORY_THRESHOLD = int(os.environ.get("MP_IN_MEMORY_THRESHOLD", 20000 * 20000))
 
 
 class OutputDataReader:
@@ -402,7 +402,7 @@ class GTiffSingleFileOutputWriter(
             raise ValueError("single file output only works with one zoom level")
         self.zoom = output_params["delimiters"]["zoom"][0]
         self.cog = output_params.get("cog", False)
-        self.in_memory = output_params.get("in_memory", True)
+        self.in_memory = output_params.get("in_memory", None)
 
     @property
     def stac_asset_type(self):  # pragma: no cover
@@ -488,11 +488,20 @@ class GTiffSingleFileOutputWriter(
         else:
             self.overviews = False
 
-        self.in_memory = (
-            self.in_memory
-            if self.in_memory is False
-            else height * width < IN_MEMORY_THRESHOLD
-        )
+        # if this wasn't set upon initialization explicitly, use the global settings:
+        if self.in_memory is None:
+            # memory
+            if mapchete_options.raster_remote_write_store == "memory":
+                self.in_memory = True
+            # tempfile
+            elif mapchete_options.raster_remote_write_store == "tempfile":
+                self.in_memory = False
+            # auto
+            else:
+                self.in_memory = (
+                    height * width
+                    < mapchete_options.raster_remote_write_memory_threshold
+                )
 
         # set up rasterio
         if path_exists(self.path):

@@ -2,6 +2,7 @@
 Combine default values with environment variable values.
 """
 
+import os
 from typing import Literal, Tuple, Type, Union
 
 from aiohttp import ClientPayloadError, ClientResponseError
@@ -83,6 +84,10 @@ class MapcheteOptions(BaseSettings):
     reproject_geometry_engine: Literal["pyproj", "fiona"] = "pyproj"
     execute_retries: NonNegativeInt = 0
     execute_delay: NonNegativeFloat = 0
+    raster_remote_write_store: Literal["memory", "tempfile", "auto"]
+    raster_remote_write_memory_threshold = int(
+        os.environ.get("MP_IN_MEMORY_THRESHOLD", 20000 * 20000)
+    )
 
     # read from environment
     model_config = SettingsConfigDict(env_prefix="MAPCHETE_")
