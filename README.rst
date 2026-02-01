@@ -42,11 +42,19 @@ Key Features
 Installation
 ------------
 
-We highly recommend installing mapchete and its dependencies from PyPI using ``pip``:
+We highly recommend installing mapchete and its dependencies from PyPI using ``pip`` or `uv <https://github.com/astral-sh/uv>`_:
 
 .. code-block:: bash
 
     pip install mapchete
+    # or
+    uv pip install mapchete
+
+For a complete installation including all optional dependencies (like S3 support, SQL support, etc.), use the ``[complete]`` extra:
+
+.. code-block:: bash
+
+    pip install mapchete[complete]
 
 Alternatively, it can be installed from the ``conda-forge`` channel using ``conda`` or ``mamba``:
 
@@ -151,6 +159,48 @@ Use the ``serve`` command to inspect your results on an interactive map.
 .. code-block:: bash
 
     mapchete serve hillshade.mapchete
+
+
+Managing Dependencies
+---------------------
+
+Mapchete uses `uv <https://github.com/astral-sh/uv>`_ for dependency management and locking. The primary source of truth for dependencies is ``pyproject.toml``.
+
+Utilizing ``uv``
+~~~~~~~~~~~~~~
+
+For local development, it is recommended to use ``uv`` to manage your virtual environment and dependencies:
+
+.. code-block:: bash
+
+    # Create a virtual environment and install dependencies
+    uv sync --all-extras
+
+    # Run mapchete or tests within the environment
+    uv run mapchete --help
+    uv run pytest
+
+Sync Workflow
+~~~~~~~~~~~~~
+
+A GitHub Action workflow named ``sync-dependencies`` ensures that the project's dependencies remain up-to-date and consistent across different environments. It runs automatically on a daily basis and on every push to the ``main`` branch.
+
+The workflow performs the following steps:
+
+1. **Update Locks**: Runs ``uv lock --upgrade`` to refresh the ``uv.lock`` file with the latest compatible dependency versions.
+2. **Sync Conda Recipe**: Automatically updates the Conda recipe in ``conda/meta.yaml`` to match the requirements defined in ``pyproject.toml``.
+3. **Automated Testing**: Runs the full test suite to ensure that any dependency updates don't break existing functionality.
+4. **Pull Request Creation**: If changes are detected, it automatically creates a Pull Request for review.
+
+**Note on ``uv lock`` vs ``uv sync``:**
+
+* ``uv lock`` resolves dependencies and updates the ``uv.lock`` file without installing any packages. It is used in the workflow to refresh the lock file before testing.
+* ``uv sync`` updates the virtual environment to match the lock file (and updates the lock file if necessary). This is what you'll typically use for local development to ensure your environment is up-to-date.
+
+Conda Recipe
+~~~~~~~~~~~~
+
+The ``conda/meta.yaml`` file is a derivative of ``pyproject.toml`` and is generated using `pyproject2conda <https://dg0612.github.io/pyproject2conda/>`_. To maintain consistency, **do not edit ``conda/meta.yaml`` manually**; instead, update the dependencies in ``pyproject.toml`` and the sync workflow will handle the rest.
 
 
 Documentation
