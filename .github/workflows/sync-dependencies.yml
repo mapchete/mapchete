@@ -15,26 +15,22 @@ jobs:
   sync-and-prepare:
     runs-on: ubuntu-latest
     outputs:
-      changed: ${{ steps.check.outputs.changed }}
+      any_changed: ${{ steps.changed-files.outputs.any_changed }}
+      sync_needed: ${{ steps.check.outputs.changed }}
     steps:
       - uses: actions/checkout@v4
         with:
+          # Fetch more than 1 commit so the action can compare branches
+          fetch-depth: 0 
           ref: ${{ github.event.pull_request.head.ref || github.ref }}
 
-      - name: Path Filter Check
-        id: filter
-        run: |
-          # If it's a PR, check if pyproject.toml or uv.lock changed
-          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }} HEAD)
-          if echo "$CHANGED_FILES" | grep -E 'pyproject.toml|uv.lock'; then
-            echo "should_run=true" >> $GITHUB_OUTPUT
-          else
-            echo "should_run=false" >> $GITHUB_OUTPUT
-          fi
-          else
-            # Always run on push/schedule/dispatch
-            echo "should_run=true" >> $GITHUB_OUTPUT
-          fi          
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v45
+        with:
+          files: |
+            pyproject.toml
+            uv.lock  
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
@@ -48,12 +44,16 @@ jobs:
         run: |
           uvx pyproject2conda yaml -f pyproject.toml --output conda/meta.yaml --python-include infer
 
-      - name: Check for changes
+      - name: Check for Changes
         id: check
+        # Only evaluate changes if we actually ran the sync steps above
+        if: github.event_name != 'pull_request' || steps.changed-files.outputs.any_changed == 'true'
         run: |
           if [ -n "$(git status --porcelain)" ]; then
             echo "changed=true" >> $GITHUB_OUTPUT
-          fi
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi                
 
       - name: Upload artifacts for testing
         if: steps.check.outputs.changed == 'true'
@@ -66,9 +66,7 @@ jobs:
 
   run-tests:
     needs: sync-and-prepare
-    if: |
-      needs.sync-and-prepare.outputs.should_run == 'true' && 
-      needs.sync-and-prepare.outputs.changed == 'true'
+    if: needs.sync-and-prepare.outputs.sync_needed == 'true'
     uses: ./.github/workflows/python-package.yml
     secrets: inherit
 
