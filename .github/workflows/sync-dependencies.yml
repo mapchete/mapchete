@@ -46,13 +46,10 @@ jobs:
           uv lock --upgrade
 
       - name: Submit Dependency Snapshot
-        # This uses the official GitHub tool to send the data to the Security tab
-        uses: actions/dependency-submission@v0.0.1
+        uses: microsoft/setup-python-dependency-graph@v1
         with:
-          # We use uv to generate a 'snapshot' of the lockfile in CycloneDX JSON format
-          snapshot-generator: uv export --format cyclonedx1.5 --output-file -
-          # This tells GitHub what type of dependencies these are
-          correlator: ${{ github.workflow }}-${{ github.job }}
+          # This points the tool to your single source of truth
+          pyproject-toml-path: 'pyproject.toml'
 
       - name: Sync Conda Recipe
         run: |
