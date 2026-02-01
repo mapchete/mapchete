@@ -45,8 +45,14 @@ jobs:
           uv lock || (rm uv.lock && uv lock)
           uv lock --upgrade
 
-      - name: Generate Dependency Graph
-        uses: initializ-buildpacks/github-dependency-report@v1
+      - name: Submit Dependency Snapshot
+        # This uses the official GitHub tool to send the data to the Security tab
+        uses: actions/dependency-submission@v0.0.1
+        with:
+          # We use uv to generate a 'snapshot' of the lockfile in CycloneDX JSON format
+          snapshot-generator: uv export --format cyclonedx1.5 --output-file -
+          # This tells GitHub what type of dependencies these are
+          correlator: ${{ github.workflow }}-${{ github.job }}
 
       - name: Sync Conda Recipe
         run: |
