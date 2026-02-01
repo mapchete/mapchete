@@ -36,11 +36,17 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
 
       - name: Sync and Upgrade
         run: |
           uv lock || (rm uv.lock && uv lock)
           uv lock --upgrade
+
+      - name: Generate Dependency Graph
+        uses: initializ-buildpacks/github-dependency-report@v1
 
       - name: Sync Conda Recipe
         run: |
