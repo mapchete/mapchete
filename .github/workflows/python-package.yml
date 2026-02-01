@@ -15,7 +15,6 @@ permissions:
 
 jobs:
   setup:
-    # PREVENT DOUBLE RUNS: 
     # Skip the direct PR run if we are already being called by the sync workflow
     if: |
       github.event_name != 'pull_request' || 
