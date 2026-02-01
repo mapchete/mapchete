@@ -45,12 +45,6 @@ jobs:
           uv lock || (rm uv.lock && uv lock)
           uv lock --upgrade
 
-      - name: Submit Dependency Snapshot
-        uses: microsoft/setup-python-dependency-graph@v1
-        with:
-          # This points the tool to your single source of truth
-          pyproject-toml-path: 'pyproject.toml'
-
       - name: Sync Conda Recipe
         run: |
           uvx pyproject2conda yaml -f pyproject.toml --output conda/meta.yaml --python-include infer
