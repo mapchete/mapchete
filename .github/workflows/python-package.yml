@@ -14,7 +14,7 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  setup:
     # PREVENT DOUBLE RUNS: 
     # Skip the direct PR run if we are already being called by the sync workflow
     if: |
@@ -69,6 +69,46 @@ jobs:
           # uv will automatically use the uv.lock downloaded from the artifact
           uv sync --extra complete --extra test
 
+  test:
+    needs: setup
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        os: ["ubuntu-latest"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download updated dependencies
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: updated-deps
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install GIS Dependencies
+        run: |
+          sudo apt-add-repository -y ppa:ubuntugis/ubuntugis-unstable
+          sudo apt-get -y update
+          sudo apt-get install -y gdal-bin libgdal-dev libproj-dev libgeos-dev g++
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        env:
+          CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+          GDAL_CONFIG: /usr/bin/gdal-config
+        run: uv sync --extra complete --extra test
+
       - name: Start containers
         run: docker compose -f "test/docker-compose.yml" up -d
 
@@ -81,6 +121,23 @@ jobs:
           CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
         run: uv run pytest --cov-report xml:coverage.xml --junitxml=pytest.xml
 
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report-${{ matrix.python-version }}
+          path: coverage.xml
+
+  finalize:
+    needs: test
+    if: always() && needs.test.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download coverage artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-report-*
+          merge-multiple: true
+
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
         with:
@@ -89,7 +146,7 @@ jobs:
 
   test-summary:
     name: Final Summary
-    needs: test
+    needs: [setup, test, finalize]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -108,9 +165,11 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Job | Result |" >> $GITHUB_STEP_SUMMARY
           echo "| :--- | :--- |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Setup** | $(get_status_msg ${{ needs.setup.result }}) |" >> $GITHUB_STEP_SUMMARY
           echo "| **Test Matrix** | $(get_status_msg ${{ needs.test.result }}) |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Finalize (Codecov)** | $(get_status_msg ${{ needs.finalize.result }}) |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          if [[ "${{ needs.test.result }}" == "failure" ]]; then
+          if [[ "${{ needs.setup.result }}" == "failure" || "${{ needs.test.result }}" == "failure" ]]; then
             exit 1
           fi
