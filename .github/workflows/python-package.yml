@@ -7,7 +7,7 @@ on:
     branches: [main]
   schedule:
     - cron: '0 8 * * 1,4'
-  workflow_call:
+  workflow_call: # This allows the sync-dependencies workflow to call this
 
 permissions:
   pull-requests: write
@@ -15,6 +15,12 @@ permissions:
 
 jobs:
   test:
+    # PREVENT DOUBLE RUNS: 
+    # Skip the direct PR run if we are already being called by the sync workflow
+    if: |
+      github.event_name != 'pull_request' || 
+      (github.event_name == 'pull_request' && github.actor != 'github-actions[bot]')
+    
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -25,6 +31,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # This step is the "bridge" between the sync job and these tests
       - name: Download updated dependencies
         uses: actions/download-artifact@v4
         continue-on-error: true
@@ -37,6 +44,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Lint
+        # Skip linting if we're just doing a dependency sync test to save time
+        if: github.event_name != 'workflow_call'
         run: |
           python -m pip install pre-commit
           pre-commit run --show-diff-on-failure --all-files
@@ -57,6 +66,7 @@ jobs:
           CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
           GDAL_CONFIG: /usr/bin/gdal-config
         run: |
+          # uv will automatically use the uv.lock downloaded from the artifact
           uv sync --extra complete --extra test
 
       - name: Start containers
@@ -76,3 +86,22 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: mapchete/mapchete
+
+  test-summary:
+      name: Final Test Result
+      needs: test
+      if: always()
+      runs-on: ubuntu-latest
+      steps:
+        - name: Consolidate Various Tests Results
+          run: |
+            # If 'test' was skipped entirely (because of the job-level 'if'), this is fine.
+            # If 'test' failed or was cancelled, this job should fail.
+            RESULT="${{ needs.test.result }}"
+            if [[ "$RESULT" == "success" || "$RESULT" == "skipped" ]]; then
+              echo "Tests passed or were intentionally skipped."
+              exit 0
+            else
+              echo "One or more matrix jobs failed (Result: $RESULT)."
+              exit 1
+            fi
