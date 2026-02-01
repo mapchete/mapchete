@@ -2,7 +2,7 @@ from contextlib import contextmanager
 from test.commands import TaskCounter
 
 import pytest
-from pytest_lazyfixture import lazy_fixture
+from pytest_lazy_fixtures import lf as lazy_fixture
 from shapely.geometry import box
 from tilematrix import TilePyramid
 
