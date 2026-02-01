@@ -88,20 +88,27 @@ jobs:
           slug: mapchete/mapchete
 
   test-summary:
-      name: Final Test Result
-      needs: test
-      if: always()
-      runs-on: ubuntu-latest
-      steps:
-        - name: Consolidate Various Tests Results
-          run: |
-            # If 'test' was skipped entirely (because of the job-level 'if'), this is fine.
-            # If 'test' failed or was cancelled, this job should fail.
-            RESULT="${{ needs.test.result }}"
-            if [[ "$RESULT" == "success" || "$RESULT" == "skipped" ]]; then
-              echo "Tests passed or were intentionally skipped."
-              exit 0
-            else
-              echo "One or more matrix jobs failed (Result: $RESULT)."
-              exit 1
-            fi
+    name: Final Test Result
+    needs: test
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Consolidate Various Tests Results
+        run: |
+          echo "### Test Workflow Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Result |" >> $GITHUB_STEP_SUMMARY
+          echo "| :--- | :--- |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Test Matrix** | ${{ needs.test.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # If 'test' was skipped entirely (because of the job-level 'if'), this is fine.
+          # If 'test' failed or was cancelled, this job should fail.
+          RESULT="${{ needs.test.result }}"
+          if [[ "$RESULT" == "success" || "$RESULT" == "skipped" ]]; then
+            echo "Tests passed or were intentionally skipped."
+            exit 0
+          else
+            echo "One or more matrix jobs failed (Result: $RESULT)."
+            exit 1
+          fi
