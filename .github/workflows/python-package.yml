@@ -15,7 +15,6 @@ permissions:
 
 jobs:
   test:
-    # PREVENT DOUBLE RUNS: 
     # Skip the direct PR run if we are already being called by the sync workflow
     if: |
       github.event_name != 'pull_request' || 
@@ -62,16 +61,24 @@ jobs:
           # uv will automatically use the uv.lock downloaded from the artifact
           uv sync --extra complete --extra test
 
-      - name: Start containers and run tests
+      - name: Lint
+        # Skip linting if we're just doing a dependency sync test to save time
+        if: github.event_name != 'workflow_call'
+        run: |
+          python -m pip install pre-commit
+          pre-commit run --show-diff-on-failure --all-files
+
+      - name: Start containers
+        run: docker compose -f "test/docker-compose.yml" up -d
+
+      - name: Run tests
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REQUEST_PAYER: ${{ vars.AWS_REQUEST_PAYER }}
           AWS_DEFAULT_REGION: ${{ vars.AWS_DEFAULT_REGION }}
           CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
-        run: |
-          docker compose -f "test/docker-compose.yml" up -d
-          uv run pytest --cov-report xml:coverage.xml --junitxml=pytest.xml
+        run: uv run pytest --cov-report xml:coverage.xml --junitxml=pytest.xml
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
