@@ -118,23 +118,31 @@ jobs:
           labels: dependencies, automated-pr
 
   summary:
-    name: Workflow Summary
+    name: Final Summary
     needs: [sync-and-prepare, run-tests, finalize]
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - name: Pipeline Status
+      - name: Report Status
         run: |
-          echo "### Sync Workflow Summary" >> $GITHUB_STEP_SUMMARY
+          function get_status_msg() {
+            case "$1" in
+              success) echo "✅ success" ;;
+              failure) echo "❌ failure" ;;
+              skipped) echo "⏭️ skipped" ;;
+              *) echo "🚫 $1" ;;
+            esac
+          }
+
+          echo "### 🚀 Sync Workflow Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Job | Result |" >> $GITHUB_STEP_SUMMARY
           echo "| :--- | :--- |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Sync and Prepare** | ${{ needs.sync-and-prepare.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Run Tests** | ${{ needs.run-tests.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Finalize (Push/PR)** | ${{ needs.finalize.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Sync and Prepare** | $(get_status_msg ${{ needs.sync-and-prepare.result }}) |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Run Tests** | $(get_status_msg ${{ needs.run-tests.result }}) |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Finalize (Push/PR)** | $(get_status_msg ${{ needs.finalize.result }}) |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           if [[ "${{ needs.sync-and-prepare.result }}" == "failure" || "${{ needs.run-tests.result }}" == "failure" || "${{ needs.finalize.result }}" == "failure" ]]; then
-            echo "One or more jobs failed."
             exit 1
           fi

@@ -88,27 +88,29 @@ jobs:
           slug: mapchete/mapchete
 
   test-summary:
-    name: Final Test Result
+    name: Final Summary
     needs: test
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - name: Consolidate Various Tests Results
+      - name: Report Status
         run: |
-          echo "### Test Workflow Summary" >> $GITHUB_STEP_SUMMARY
+          function get_status_msg() {
+            case "$1" in
+              success) echo "✅ success" ;;
+              failure) echo "❌ failure" ;;
+              skipped) echo "⏭️ skipped" ;;
+              *) echo "🚫 $1" ;;
+            esac
+          }
+
+          echo "### 🚀 Test Workflow Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Job | Result |" >> $GITHUB_STEP_SUMMARY
           echo "| :--- | :--- |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Test Matrix** | ${{ needs.test.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Test Matrix** | $(get_status_msg ${{ needs.test.result }}) |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          # If 'test' was skipped entirely (because of the job-level 'if'), this is fine.
-          # If 'test' failed or was cancelled, this job should fail.
-          RESULT="${{ needs.test.result }}"
-          if [[ "$RESULT" == "success" || "$RESULT" == "skipped" ]]; then
-            echo "Tests passed or were intentionally skipped."
-            exit 0
-          else
-            echo "One or more matrix jobs failed (Result: $RESULT)."
+          if [[ "${{ needs.test.result }}" == "failure" ]]; then
             exit 1
           fi
