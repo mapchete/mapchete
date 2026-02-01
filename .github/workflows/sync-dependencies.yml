@@ -2,6 +2,8 @@ name: sync-dependencies
 
 on:
   push:
+    branches:
+      - main
     paths-ignore:
       - "docs/**"
       - "README.rst"
