@@ -2,7 +2,7 @@ import pickle
 from datetime import datetime
 
 import pytest
-from pytest_lazyfixture import lazy_fixture
+from pytest_lazy_fixtures import lf as lazy_fixture
 
 from mapchete.config import get_hash
 from mapchete.io.raster.referenced_raster import ReferencedRaster

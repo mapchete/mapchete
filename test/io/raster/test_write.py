@@ -1,7 +1,7 @@
 import numpy as np
 import numpy.ma as ma
 import pytest
-from pytest_lazyfixture import lazy_fixture
+from pytest_lazy_fixtures import lf as lazy_fixture
 
 from mapchete.io.profiles import COGDeflateProfile
 from mapchete.io.raster.open import rasterio_open

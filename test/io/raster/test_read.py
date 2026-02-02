@@ -5,7 +5,7 @@ import tempfile
 import numpy as np
 import numpy.ma as ma
 import pytest
-from pytest_lazyfixture import lazy_fixture
+from pytest_lazy_fixtures import lf as lazy_fixture
 from rasterio.enums import Compression
 from shapely import MultiPoint, box, convex_hull
 

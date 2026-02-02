@@ -7,7 +7,7 @@ on:
     branches: [main]
   schedule:
     - cron: '0 8 * * 1,4'
-  workflow_call:
+  workflow_call: # This allows the sync-dependencies workflow to call this
 
 permissions:
   pull-requests: write
@@ -15,9 +15,14 @@ permissions:
 
 jobs:
   test:
+    # Skip the direct PR run if we are already being called by the sync workflow
+    if: |
+      github.event_name != 'pull_request' || 
+      (github.event_name == 'pull_request' && github.actor != 'github-actions[bot]')
+    
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
         os: ["ubuntu-latest"]
@@ -25,6 +30,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # This step is the "bridge" between the sync job and these tests
       - name: Download updated dependencies
         uses: actions/download-artifact@v4
         continue-on-error: true
@@ -36,11 +42,6 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Lint
-        run: |
-          python -m pip install pre-commit
-          pre-commit run --show-diff-on-failure --all-files
-
       - name: Install GIS Dependencies
         run: |
           sudo apt-add-repository -y ppa:ubuntugis/ubuntugis-unstable
@@ -51,18 +52,27 @@ jobs:
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
+          cache-dependency-glob: "uv.lock"
 
       - name: Install dependencies
         env:
           CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
           GDAL_CONFIG: /usr/bin/gdal-config
         run: |
+          # uv will automatically use the uv.lock downloaded from the artifact
           uv sync --extra complete --extra test
+
+      - name: Lint
+        # Skip linting if we're just doing a dependency sync test to save time
+        if: github.event_name != 'workflow_call'
+        run: |
+          python -m pip install pre-commit
+          pre-commit run --show-diff-on-failure --all-files
 
       - name: Start containers
         run: docker compose -f "test/docker-compose.yml" up -d
 
-      - name: run 
+      - name: Run tests
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -71,8 +81,54 @@ jobs:
           CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
         run: uv run pytest --cov-report xml:coverage.xml --junitxml=pytest.xml
 
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report-${{ matrix.python-version }}
+          path: coverage.xml
+
+  finalize:
+    needs: test
+    if: always() && needs.test.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download coverage artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-report-*
+          merge-multiple: true
+
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: mapchete/mapchete
+
+  test-summary:
+    name: Final Summary
+    needs: [test, finalize]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report Status
+        run: |
+          function get_status_msg() {
+            case "$1" in
+              success) echo "✅ success" ;;
+              failure) echo "❌ failure" ;;
+              skipped) echo "⏭️ skipped" ;;
+              *) echo "🚫 $1" ;;
+            esac
+          }
+
+          echo "### 🚀 Test Workflow Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Result |" >> $GITHUB_STEP_SUMMARY
+          echo "| :--- | :--- |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Test Matrix** | $(get_status_msg ${{ needs.test.result }}) |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Finalize (Codecov)** | $(get_status_msg ${{ needs.finalize.result }}) |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [[ "${{ needs.test.result }}" == "failure" ]]; then
+            exit 1
+          fi

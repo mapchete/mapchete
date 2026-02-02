@@ -1,7 +1,7 @@
 import json
 
 import pytest
-from pytest_lazyfixture import lazy_fixture
+from pytest_lazy_fixtures import lf as lazy_fixture
 from shapely import box
 from shapely.geometry import shape
 
