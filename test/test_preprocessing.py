@@ -1,5 +1,5 @@
 import pytest
-from pytest_lazyfixture import lazy_fixture
+from pytest_lazy_fixtures import lf as lazy_fixture
 
 import mapchete
 from mapchete.io import fs_from_path, rasterio_open

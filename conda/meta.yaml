@@ -26,8 +26,8 @@ dependencies:
   - importlib-resources
   - numpy!=2.0.1,>=1.16
   - oyaml
+  - pydantic-settings>=2.0.0
   - pydantic>=2.3.0
-  - pydantic_settings>=2.0.0
   - pyproj
   - pystac-client>=0.7.2
   - pystac>=1.8.2

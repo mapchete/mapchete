@@ -1,6 +1,6 @@
 import pytest
 from fiona.crs import CRS  # type: ignore
-from pytest_lazyfixture import lazy_fixture
+from pytest_lazy_fixtures import lf as lazy_fixture
 
 from mapchete.geometry.latlon import (
     latlon_to_utm_crs,

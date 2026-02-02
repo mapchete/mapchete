@@ -1,7 +1,7 @@
 from test.cli.default import run_cli
 
 import pytest
-from pytest_lazyfixture import lazy_fixture
+from pytest_lazy_fixtures import lf as lazy_fixture
 
 from mapchete.cli.mpath import mpath
 from mapchete.testing import ProcessFixture

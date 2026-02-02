@@ -5,7 +5,7 @@ from copy import deepcopy
 import oyaml as yaml
 import pytest
 from pydantic import ValidationError
-from pytest_lazyfixture import lazy_fixture
+from pytest_lazy_fixtures import lf as lazy_fixture
 from shapely import wkt
 from shapely.errors import WKTReadingError
 from shapely.geometry import Polygon, box, mapping, shape

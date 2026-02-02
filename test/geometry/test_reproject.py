@@ -1,6 +1,6 @@
 import pytest
 from fiona.crs import CRS  # type: ignore
-from pytest_lazyfixture import lazy_fixture
+from pytest_lazy_fixtures import lf as lazy_fixture
 from shapely import wkt
 from shapely.geometry import Point, Polygon, box
 
