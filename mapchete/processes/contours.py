@@ -4,6 +4,7 @@ import logging
 from typing import Generator, List, Optional
 
 import numpy as np
+from shapely.errors import GEOSException
 from shapely.geometry import LineString, mapping, shape
 from shapely.ops import unary_union
 
@@ -141,25 +142,31 @@ def generate_contours(
 ) -> Generator[dict, None, None]:
     import matplotlib.pyplot as plt
 
-    elevations = (
-        get_contour_values(array.min(), array.max(), interval=interval, base=base) or []
+    contours = plt.contour(
+        array,
+        get_contour_values(array.min(), array.max(), interval=interval, base=base)
+        or [],
     )
-    for elevation, contours in zip(
-        elevations, plt.contour(array, elevations).collections
-    ):
-        for path in contours.get_paths():
-            out_coords = [
-                (
-                    tile.left + (y * tile.pixel_x_size),
-                    tile.top - (x * tile.pixel_y_size),
-                )
-                for x, y in np.asarray(path.vertices)
-            ]
-            if len(out_coords) >= 2:
-                yield dict(
-                    properties={field: elevation},
-                    geometry=mapping(LineString(out_coords)),
-                )
+    for elevation, path in zip(contours.levels, contours.get_paths()):
+        try:
+            yield dict(
+                properties={field: elevation},
+                geometry=mapping(path_to_linestring(path, tile)),
+            )
+        except GEOSException:
+            continue
+
+
+def path_to_linestring(path, tile: BufferedTile) -> LineString:
+    return LineString(
+        (
+            (
+                tile.left + (y * tile.pixel_x_size),
+                tile.top - (x * tile.pixel_y_size),
+            )
+            for x, y in np.asarray(path.vertices)
+        )
+    )
 
 
 def get_contour_values(
