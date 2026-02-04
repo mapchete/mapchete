@@ -3,6 +3,28 @@ Changelog
 #########
 
 
+2026.2.0 - 2026-02-04
+---------------------
+
+* CLI
+
+  * `mapchete`: add `show-env` command (#723)
+
+* core
+
+  * `processes.contours`: respect newer matplotlib API; make sure transformed coordinates do not get materialized in memory (#720)
+  * `settings.MapcheteOptions`:
+  
+    * added `raster_remote_write_store` settings with the options `memory`, `tempfile` and `auto` (#723)
+    * added `raster_remote_write_memory_threshold` setting which will replace the `MP_IN_MEMORY_THRESHOLD` env setting (#723)
+
+* packaging
+
+  * release the `aiobotocore<3.0.0` constraint
+  * replace `pytest-lazy-fixture` with `pytest-lazy-fixtures` dependency
+  * CI: automatically sync dependencies
+
+
 2025.12.0 - 2025-12-16
 ----------------------
 
