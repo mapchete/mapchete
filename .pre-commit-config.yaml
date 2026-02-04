@@ -1,7 +1,13 @@
 repos:
+- repo: https://github.com/hoefling/pre-commit-rst-lint
+  rev: '0ea7c4e56416e3d38012dfcccecd35a7d95bd1dd'  # Use the sha / tag you want to point at
+  hooks:
+  - id: rst-lint
+    additional_dependencies: [pygments]
+    exclude: ^doc/.*\.rst$
 - repo: https://github.com/astral-sh/ruff-pre-commit
   # Ruff version.
-  rev: v0.6.4
+  rev: v0.15.0
   hooks:
     # Run the linter.
     - id: ruff

@@ -86,8 +86,8 @@ def test_s3_dirpath(path_str):
     "path_str",
     [
         "http://foo/bar",
-        "http://foo/bar/" "https://foo/bar",
-        "https://foo/bar/" "/vsicurl/https://foo/bar",
+        "http://foo/bar/https://foo/bar",
+        "https://foo/bar//vsicurl/https://foo/bar",
         "/vsicurl/https://foo/bar/",
     ],
 )
@@ -100,7 +100,7 @@ def test_parse_remote_dirpath(path_str):
     assert path.suffix == ""
 
 
-@pytest.mark.parametrize("path_str", ["/foo/bar", "/foo/bar/" "foo/bar", "foo/bar/"])
+@pytest.mark.parametrize("path_str", ["/foo/bar", "/foo/bar/foo/bar", "foo/bar/"])
 def test_parse_local_dirpath(path_str):
     path = MPath(path_str)
     assert not path.exists()

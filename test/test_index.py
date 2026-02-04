@@ -96,7 +96,7 @@ def test_vrt(mp_tmpdir, cleantopo_br):
 
     # generate a VRT using GDAL and compare
     temp_vrt = mp.config.output.path / zoom + "_gdal.vrt"
-    gdalbuildvrt = f"gdalbuildvrt {str(temp_vrt)} {' '.join([str(mp.config.output.path/ str(zoom) / str(tile.row) / str(tile.col) + '.tif') for tile in output_tiles])} > /dev/null"
+    gdalbuildvrt = f"gdalbuildvrt {str(temp_vrt)} {' '.join([str(mp.config.output.path / str(zoom) / str(tile.row) / str(tile.col) + '.tif') for tile in output_tiles])} > /dev/null"
     exitcode = os.system(gdalbuildvrt)
     if exitcode != 0:
         raise RuntimeError(f"command failed: {gdalbuildvrt}")
@@ -172,7 +172,7 @@ def test_vrt_mercator(cleantopo_br_mercator):
 
     # generate a VRT using GDAL and compare
     temp_vrt = mp.config.output.path / zoom + "_gdal.vrt"
-    gdalbuildvrt = f"gdalbuildvrt {str(temp_vrt)} {' '.join([str(mp.config.output.path/ str(zoom) / str(tile.row) / str(tile.col) + '.tif') for tile in output_tiles])} > /dev/null"
+    gdalbuildvrt = f"gdalbuildvrt {str(temp_vrt)} {' '.join([str(mp.config.output.path / str(zoom) / str(tile.row) / str(tile.col) + '.tif') for tile in output_tiles])} > /dev/null"
     exitcode = os.system(gdalbuildvrt)
     if exitcode != 0:
         raise RuntimeError(f"command failed: {gdalbuildvrt}")

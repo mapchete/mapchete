@@ -167,7 +167,7 @@ Managing Dependencies
 Mapchete uses `uv <https://github.com/astral-sh/uv>`_ for dependency management and locking. The primary source of truth for dependencies is ``pyproject.toml``.
 
 Utilizing ``uv``
-~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~
 
 For local development, it is recommended to use ``uv`` to manage your virtual environment and dependencies:
 
