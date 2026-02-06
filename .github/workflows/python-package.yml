@@ -68,10 +68,17 @@ jobs:
         with:
           name: ${{ inputs.override-deps-artifact }}          
       
-      - name: ⚡ Install uv
+      - name: ⚡ Install uv, Docker Compose & git
         run: |
-          apt-get update && apt-get install -y curl git gpg docker-compose-plugin
+          apt-get update && apt-get install -y curl git gpg
+
+          curl -SL https://github.com/docker/compose/releases/download/v2.24.6/docker-compose-linux-x86_64 -o /usr/local/bin/docker-compose
+          chmod +x /usr/local/bin/docker-compose
+
           curl -LsSf https://astral.sh/uv/install.sh | BINDIR=/usr/local/bin sh
+
+          docker-compose --version
+          uv --version
 
       - name: 🏗️ Restore Native Env
         run: |
