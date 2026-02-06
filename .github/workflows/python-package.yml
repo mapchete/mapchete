@@ -117,6 +117,14 @@ jobs:
           flags: py${{ matrix.python-version }}-split${{ matrix.split }}
           fail_ci_if_error: true
 
+      - name: 📤 Upload Coverage Chunk
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-chunk-${{ matrix.split }}
+          path: .coverage.${{ matrix.split }}
+          include-hidden-files: true
+          retention-days: 1
+
       - name: 📤 Archive JUnit Results
         if: always()
         uses: actions/upload-artifact@v4
@@ -126,31 +134,59 @@ jobs:
           retention-days: 1
 
   summary:
-    name: "📊 Final Summary"
+    name: "📊 Final Summary & Coverage"
     needs: test
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - name: 📥 Download All Results
+      - uses: actions/checkout@v4 # Needed for coverage to see source files
+
+      - name: ⚡ Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: 📥 Download Artifacts
         uses: actions/download-artifact@v4
         with:
           path: all-results
-          pattern: results-*
+          pattern: "*-*" 
           merge-multiple: true
-      - name: 📊 Results of the Test Suite
+
+      - name: 📊 Check Tests & Coverage
         run: |
-          echo "### 🧪 Test Results Summary" >> $GITHUB_STEP_SUMMARY
+          echo "### 🧪 Test & Coverage Summary" >> $GITHUB_STEP_SUMMARY
           
-          # Count XML files
-          COUNT=$(ls all-results/*.xml 2>/dev/null | wc -l || echo "0")
-          
-          if [[ "${{ needs.test.result }}" == "success" ]]; then
-            echo "✅ **All tests passed!**" >> $GITHUB_STEP_SUMMARY
-            echo "Successfully collected and verified $COUNT test report files." >> $GITHUB_STEP_SUMMARY
-            exit 0
-          else
-            echo "❌ **Some test splits failed.**" >> $GITHUB_STEP_SUMMARY
-            echo "Review the 'test' matrix for specific logs. Collected $COUNT reports before failure." >> $GITHUB_STEP_SUMMARY
-            echo "Check the 'Artifacts' section below to download individual JUnit XML reports." >> $GITHUB_STEP_SUMMARY
+          # 1. CHECK TEST STATUS
+          if [[ "${{ needs.test.result }}" != "success" ]]; then
+            echo "❌ **Test Suite Failed**" >> $GITHUB_STEP_SUMMARY
+            echo "Coverage check skipped because tests failed." >> $GITHUB_STEP_SUMMARY
             exit 1
+          fi
+          
+          echo "✅ **Test Suite Passed**" >> $GITHUB_STEP_SUMMARY
+
+          # 2. COMBINE COVERAGE
+          # Install coverage tool
+          uv tool install coverage
+          
+          # Move artifacts to root so 'coverage combine' finds them
+          mv all-results/.coverage.* .
+          
+          echo "Merging coverage files..."
+          uv tool run coverage combine
+          
+          # 3. GENERATE REPORT & FAIL IF < 100%
+          # We capture output to display it in the summary before failing
+          OUTPUT=$(uv tool run coverage report --show-missing --fail-under=100 2>&1)
+          EXIT_CODE=$?
+          
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "$OUTPUT" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "❌ **Coverage Failed:** Project coverage is below 100%." >> $GITHUB_STEP_SUMMARY
+            exit 1
+          else
+            echo "✅ **Coverage Passed:** 100% coverage achieved." >> $GITHUB_STEP_SUMMARY
+            exit 0
           fi
