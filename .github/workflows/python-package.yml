@@ -101,7 +101,7 @@ jobs:
           AWS_REQUEST_PAYER: ${{ vars.AWS_REQUEST_PAYER }}
           AWS_DEFAULT_REGION: ${{ vars.AWS_DEFAULT_REGION }}
           CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
-          COVERAGE_FILE: .coverage.${{ matrix.split }}
+          COVERAGE_FILE: .coverage.python.${{ matrix.python-version }}.test.split.${{ matrix.split }}
         run: |
             uv run pytest -v \
             --splits 4 \
@@ -118,11 +118,12 @@ jobs:
           flags: py${{ matrix.python-version }}-split${{ matrix.split }}
           fail_ci_if_error: true
 
-      - name: 📤 Upload Coverage Chunk
+      - name: 📤 Upload Coverage Chunk (Latest Only)
+        if: matrix.python-version == '3.13'
         uses: actions/upload-artifact@v4
         with:
           name: coverage-chunk-${{ matrix.split }}
-          path: .coverage.${{ matrix.split }}
+          path: .coverage.python.${{ matrix.python-version }}.test.split.${{ matrix.split }}
           include-hidden-files: true
           retention-days: 1
 
@@ -156,27 +157,25 @@ jobs:
         run: |
           echo "### 🧪 Test & Coverage Summary" >> $GITHUB_STEP_SUMMARY
           
-          # 1. CHECK TEST STATUS
+          # 1. CHECK OVERALL TEST STATUS
           if [[ "${{ needs.test.result }}" != "success" ]]; then
             echo "❌ **Test Suite Failed**" >> $GITHUB_STEP_SUMMARY
             echo "Coverage check skipped because tests failed." >> $GITHUB_STEP_SUMMARY
             exit 1
           fi
-          
           echo "✅ **Test Suite Passed**" >> $GITHUB_STEP_SUMMARY
 
-          # 2. COMBINE COVERAGE
-          # Install coverage tool
+          # 2. COMBINE COVERAGE (Only 3.13 files exist here)
           uv tool install coverage
           
-          # Move artifacts to root so 'coverage combine' finds them
-          mv all-results/.coverage.* .
+          # Move the specific 3.13 files to root
+          # The pattern matches .coverage.3.13.1, .coverage.3.13.2, etc.
+          mv all-results/.coverage* .
           
           echo "Merging coverage files..."
           uv tool run coverage combine
           
-          # 3. GENERATE REPORT & FAIL IF < 100%
-          # We capture output to display it in the summary before failing
+          # 3. ENFORCE 100%
           OUTPUT=$(uv tool run coverage report --show-missing --fail-under=100 2>&1)
           EXIT_CODE=$?
           
@@ -185,9 +184,9 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
           
           if [ $EXIT_CODE -ne 0 ]; then
-            echo "❌ **Coverage Failed:** Project coverage is below 100%." >> $GITHUB_STEP_SUMMARY
+            echo "❌ **Coverage Failed:** Python 3.13 coverage is below 100%." >> $GITHUB_STEP_SUMMARY
             exit 1
           else
-            echo "✅ **Coverage Passed:** 100% coverage achieved." >> $GITHUB_STEP_SUMMARY
+            echo "✅ **Coverage Passed:** 100% coverage achieved (Py3.13)." >> $GITHUB_STEP_SUMMARY
             exit 0
           fi
