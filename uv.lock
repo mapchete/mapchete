@@ -19,7 +19,7 @@ wheels = [
 
 [[package]]
 name = "aiobotocore"
-version = "3.1.1"
+version = "3.1.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -31,9 +31,9 @@ dependencies = [
     { name = "typing-extensions", marker = "python_full_version < '3.11'" },
     { name = "wrapt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f6/bc/00ac3f44a66661fb28f2425b056d5bd202c2269a686ab0a683bb0e0516f0/aiobotocore-3.1.1.tar.gz", hash = "sha256:a19a36b930a041aa21553d67ae8a6bc464e107806eee60af3c71502f1009826c", size = 122530, upload-time = "2026-01-20T17:00:29.067Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a3/86/6b22e645d2f340b6c0f7164e57641bd926b9c08d73428e4962fb0f3ae71b/aiobotocore-3.1.2.tar.gz", hash = "sha256:d9b5bfff63df96a0ba78f7e5d10a063ab2dd8497e9c15ecf9d9660dafb853172", size = 122621, upload-time = "2026-02-05T10:21:37.434Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/67/84/d844b79acd9fe15ded60b614b7df04a12fad854ee1fbb8415d726ab1beeb/aiobotocore-3.1.1-py3-none-any.whl", hash = "sha256:a4e12a3bd099cd19dc2b2e9fe01a807131b46ebd0f83f509bda3cb243e988c32", size = 87667, upload-time = "2026-01-20T17:00:27.869Z" },
+    { url = "https://files.pythonhosted.org/packages/cd/22/4d16dca3bd1d6475a53063eb72150269cea1a0a201b55288b3402f61f119/aiobotocore-3.1.2-py3-none-any.whl", hash = "sha256:1141cec16c47cc3e466d89fcccc5c57291a3751a15488fe7fbaea8550f94f468", size = 87701, upload-time = "2026-02-05T10:21:36.183Z" },
 ]
 
 [[package]]
@@ -296,30 +296,30 @@ wheels = [
 
 [[package]]
 name = "boto3"
-version = "1.42.30"
+version = "1.42.42"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "botocore" },
     { name = "jmespath" },
     { name = "s3transfer" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/42/79/2dac8b7cb075cfa43908ee9af3f8ee06880d84b86013854c5cca8945afac/boto3-1.42.30.tar.gz", hash = "sha256:ba9cd2f7819637d15bfbeb63af4c567fcc8a7dcd7b93dd12734ec58601169538", size = 112809, upload-time = "2026-01-16T20:37:23.636Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c8/ac/9ef2cc431e00ecbf1ac197938ddea120e75b516b4c57028a1fd517d3e882/boto3-1.42.42.tar.gz", hash = "sha256:8c2537156f5ccd72bbbfe4fc27a8a80bf3e4f80523f306417f3fb6023d13edda", size = 112831, upload-time = "2026-02-04T20:28:45.494Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/52/b3/2c0d828c9f668292e277ca5232e6160dd5b4b660a3f076f20dd5378baa1e/boto3-1.42.30-py3-none-any.whl", hash = "sha256:d7e548bea65e0ae2c465c77de937bc686b591aee6a352d5a19a16bc751e591c1", size = 140573, upload-time = "2026-01-16T20:37:22.089Z" },
+    { url = "https://files.pythonhosted.org/packages/5e/0a/3966f239e1d9da93cb755dc0213835ce4e9ed93645192878d0a055ecdc31/boto3-1.42.42-py3-none-any.whl", hash = "sha256:8c78169ef47dc29863ebb11ba99134b1b418d3dfdd836419830f22552f8afe43", size = 140599, upload-time = "2026-02-04T20:28:43.056Z" },
 ]
 
 [[package]]
 name = "botocore"
-version = "1.42.30"
+version = "1.42.42"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jmespath" },
     { name = "python-dateutil" },
     { name = "urllib3" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/44/38/23862628a0eb044c8b8b3d7a9ad1920b3bfd6bce6d746d5a871e8382c7e4/botocore-1.42.30.tar.gz", hash = "sha256:9bf1662b8273d5cc3828a49f71ca85abf4e021011c1f0a71f41a2ea5769a5116", size = 14891439, upload-time = "2026-01-16T20:37:13.77Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/7d/96/4eca9755ca444402c46c73cc8ff252c8eb73ab0ccf35ca76d89e7b7820ac/botocore-1.42.42.tar.gz", hash = "sha256:cb75639f5ba7bf73b83ac18bcd87f07b7f484f302748da974dad2801a83a1d60", size = 14926585, upload-time = "2026-02-04T20:28:33.66Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3d/8d/6d7b016383b1f74dd93611b1c5078bbaddaca901553ab886dcda87cae365/botocore-1.42.30-py3-none-any.whl", hash = "sha256:97070a438cac92430bb7b65f8ebd7075224f4a289719da4ee293d22d1e98db02", size = 14566340, upload-time = "2026-01-16T20:37:10.94Z" },
+    { url = "https://files.pythonhosted.org/packages/e6/51/aac7e419521d5519e13087a7198623655648c939822bd7f4bdc9ccbe07f9/botocore-1.42.42-py3-none-any.whl", hash = "sha256:1c9df5fc31e9073a9aa956271c4007d72f5d342cafca5f4154ea099bc6f83085", size = 14600186, upload-time = "2026-02-04T20:28:29.268Z" },
 ]
 
 [[package]]
@@ -968,17 +968,18 @@ wheels = [
 
 [[package]]
 name = "fastapi"
-version = "0.128.0"
+version = "0.128.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "annotated-doc" },
     { name = "pydantic" },
     { name = "starlette" },
     { name = "typing-extensions" },
+    { name = "typing-inspection" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/52/08/8c8508db6c7b9aae8f7175046af41baad690771c9bcde676419965e338c7/fastapi-0.128.0.tar.gz", hash = "sha256:1cc179e1cef10a6be60ffe429f79b829dce99d8de32d7acb7e6c8dfdf7f2645a", size = 365682, upload-time = "2025-12-27T15:21:13.714Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/4f/6e/45fb5390d46d7918426ea1c1ec4b06c1d3fd70be4a47a690ccb4f1f9438a/fastapi-0.128.2.tar.gz", hash = "sha256:7db9eb891866ac3a08e03f844b99e343a2c1cc41247e68e006c90b38d2464ea1", size = 376129, upload-time = "2026-02-05T19:48:33.957Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5c/05/5cbb59154b093548acd0f4c7c474a118eda06da25aa75c616b72d8fcd92a/fastapi-0.128.0-py3-none-any.whl", hash = "sha256:aebd93f9716ee3b4f4fcfe13ffb7cf308d99c9f3ab5622d8877441072561582d", size = 103094, upload-time = "2025-12-27T15:21:12.154Z" },
+    { url = "https://files.pythonhosted.org/packages/c1/f2/80df24108572630bb2adef3d97f1e774b18ec25bfbab5528f36cba6478c0/fastapi-0.128.2-py3-none-any.whl", hash = "sha256:55bfd9490ca0125707d80e785583c2dc57840bb66e3a0bbc087d20c364964dc0", size = 104032, upload-time = "2026-02-05T19:48:32.118Z" },
 ]
 
 [[package]]
@@ -1235,11 +1236,11 @@ wheels = [
 
 [[package]]
 name = "fsspec"
-version = "2026.1.0"
+version = "2026.2.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/d5/7d/5df2650c57d47c57232af5ef4b4fdbff182070421e405e0d62c6cdbfaa87/fsspec-2026.1.0.tar.gz", hash = "sha256:e987cb0496a0d81bba3a9d1cee62922fb395e7d4c3b575e57f547953334fe07b", size = 310496, upload-time = "2026-01-09T15:21:35.562Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/51/7c/f60c259dcbf4f0c47cc4ddb8f7720d2dcdc8888c8e5ad84c73ea4531cc5b/fsspec-2026.2.0.tar.gz", hash = "sha256:6544e34b16869f5aacd5b90bdf1a71acb37792ea3ddf6125ee69a22a53fb8bff", size = 313441, upload-time = "2026-02-05T21:50:53.743Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/01/c9/97cc5aae1648dcb851958a3ddf73ccd7dbe5650d95203ecb4d7720b4cdbf/fsspec-2026.1.0-py3-none-any.whl", hash = "sha256:cb76aa913c2285a3b49bdd5fc55b1d7c708d7208126b60f2eb8194fe1b4cbdcc", size = 201838, upload-time = "2026-01-09T15:21:34.041Z" },
+    { url = "https://files.pythonhosted.org/packages/e6/ab/fb21f4c939bb440104cc2b396d3be1d9b7a9fd3c6c2a53d98c45b3d7c954/fsspec-2026.2.0-py3-none-any.whl", hash = "sha256:98de475b5cb3bd66bedd5c4679e87b4fdfe1a3bf4d707b151b3c07e58c9a2437", size = 202505, upload-time = "2026-02-05T21:50:51.819Z" },
 ]
 
 [package.optional-dependencies]
@@ -1801,7 +1802,7 @@ test = [
     { name = "flake8" },
     { name = "minio" },
     { name = "morecantile", version = "6.2.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "morecantile", version = "7.0.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "morecantile", version = "7.0.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "pystac" },
     { name = "pytest" },
     { name = "pytest-cov" },
@@ -2180,7 +2181,7 @@ wheels = [
 
 [[package]]
 name = "morecantile"
-version = "7.0.2"
+version = "7.0.3"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.14'",
@@ -2193,9 +2194,9 @@ dependencies = [
     { name = "pydantic", marker = "python_full_version >= '3.11'" },
     { name = "pyproj", version = "3.7.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/03/91/4305a53bc20785ec882c9066528d8bbd82782b3a8ec30d4d5f6bc9c9d148/morecantile-7.0.2.tar.gz", hash = "sha256:83aaffab29e63d39a88d78931aaad3659ab5355d500ec843ea136eef976dc717", size = 43076, upload-time = "2026-01-05T20:59:55.844Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ab/44/fa4f0685481b51e5ce33089ca84e821453593d34f306738515a937934751/morecantile-7.0.3.tar.gz", hash = "sha256:b44419c83f310b411b1f547df2d07c115dc6d194ab7c8a4c318a154490e938c1", size = 43104, upload-time = "2026-02-04T23:03:26.423Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f1/c3/cb8db47ed1a28b43d498e91b629d69886778ad5d9e91dcb953d411052728/morecantile-7.0.2-py3-none-any.whl", hash = "sha256:f873e435a057e1b61ea91613c297e5a76b2ae854b5ec2ccc8b0c561f9cdde534", size = 50857, upload-time = "2026-01-05T20:59:54.435Z" },
+    { url = "https://files.pythonhosted.org/packages/98/1a/f9edb1c167bd8ad214dc87e9ae17fb208d08f7a05e724f74ce29e375c8de/morecantile-7.0.3-py3-none-any.whl", hash = "sha256:747c6b8f3a8029ddaadb04d96c834f10d2796d1898ad893bed47c896a058ddc7", size = 50885, upload-time = "2026-02-04T23:03:27.463Z" },
 ]
 
 [[package]]
@@ -3646,7 +3647,7 @@ resolution-markers = [
 ]
 dependencies = [
     { name = "click", marker = "python_full_version >= '3.11'" },
-    { name = "morecantile", version = "7.0.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "morecantile", version = "7.0.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "pydantic", marker = "python_full_version >= '3.11'" },
     { name = "rasterio", version = "1.4.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
     { name = "rasterio", version = "1.5.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
@@ -3695,7 +3696,7 @@ dependencies = [
     { name = "cachetools", marker = "python_full_version >= '3.11'" },
     { name = "color-operations", marker = "python_full_version >= '3.11'" },
     { name = "httpx", marker = "python_full_version >= '3.11'" },
-    { name = "morecantile", version = "7.0.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "morecantile", version = "7.0.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "numexpr", marker = "python_full_version >= '3.11'" },
     { name = "numpy", version = "2.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "pydantic", marker = "python_full_version >= '3.11'" },
@@ -3849,16 +3850,16 @@ wheels = [
 
 [[package]]
 name = "s3fs"
-version = "2026.1.0"
+version = "2026.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiobotocore" },
     { name = "aiohttp" },
     { name = "fsspec" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/97/f2/d6e725d4a037fe65fe341d3c16e7b6f3e69a198d6115c77b0c45dffaebe7/s3fs-2026.1.0.tar.gz", hash = "sha256:b7a352dfb9553a2263b7ea4575d90cd3c64eb76cfc083b99cb90b36b31e9d09d", size = 81224, upload-time = "2026-01-09T15:29:49.025Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/fa/be/392c8c5e0da9bfa139e41084690dd49a5e3e931099f78f52d3f6070105c6/s3fs-2026.2.0.tar.gz", hash = "sha256:91cb2a9f76e35643b76eeac3f47a6165172bb3def671f76b9111c8dd5779a2ac", size = 84152, upload-time = "2026-02-05T21:57:57.968Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/93/cf/0af92a4d3f36dd9ff675e0419e7efc48d7808641ac2b2ce2c1f09a9dc632/s3fs-2026.1.0-py3-none-any.whl", hash = "sha256:c1f4ad1fca6dd052ffaa104a293ba209772f4a60c164818382833868e1b1597d", size = 30713, upload-time = "2026-01-09T15:29:47.418Z" },
+    { url = "https://files.pythonhosted.org/packages/57/e1/64c264db50b68de8a438b60ceeb921b2f22da3ebb7ad6255150225d0beac/s3fs-2026.2.0-py3-none-any.whl", hash = "sha256:65198835b86b1d5771112b0085d1da52a6ede36508b1aaa6cae2aedc765dfe10", size = 31328, upload-time = "2026-02-05T21:57:56.532Z" },
 ]
 
 [[package]]
