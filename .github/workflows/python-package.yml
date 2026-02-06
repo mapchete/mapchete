@@ -87,7 +87,9 @@ jobs:
           uv pip install -e ".[test]" --no-deps
 
       - name: 🐳 Start containers
-        run: docker-compose -f "test/docker-compose.yml" up -d          
+        working-directory: test
+        run: |
+          docker-compose up -d
 
       - name: 🧪 Run Split
         env:
