@@ -111,6 +111,7 @@ test = [
     "pytest-env",
     "pytest-flask>=1.0.0",
     "pytest-lazy-fixtures",
+    "pytest-split",
     "rio-cogeo>=5.0.0",
 ]
 
@@ -188,7 +189,17 @@ env = [
     "D:AK2=bar",
     "D:FILE1=dummy2.tif"
 ]
-addopts = "--durations 20 --verbose --nf --cov=mapchete --cov-report=term-missing:skip-covered"
+addopts = [
+    "--durations=20",
+    "--verbose",
+    "--splitting-algorithm", "least_duration",
+    "--durations-path", "test/.test_duration",
+    "--nf",
+    "--cov=mapchete",
+    "--cov-report=term-missing:skip-covered",
+    "--cov-append"
+]
+testpaths = ["test"]
 
 [tool.unidep]
 channels = ["conda-forge"]

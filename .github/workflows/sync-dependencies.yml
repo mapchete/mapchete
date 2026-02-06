@@ -1,58 +1,42 @@
 name: sync-dependencies
 
 on:
-  push:
-    branches:
-      - main
-    paths-ignore:
-      - "docs/**"
-      - "README.rst"
-      - "conda/meta.yaml"
   schedule:
     - cron: '0 0 * * *'
-  pull_request:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - "pyproject.toml"
+  push:
+    branches: [main]
+    paths:
+      - "pyproject.toml"
 
 jobs:
   sync-and-prepare:
     runs-on: ubuntu-latest
     outputs:
-      any_changed: ${{ steps.changed-files.outputs.any_changed }}
       sync_needed: ${{ steps.check.outputs.changed }}
     steps:
       - uses: actions/checkout@v4
         with:
-          # Fetch more than 1 commit so the action can compare branches
-          fetch-depth: 0 
+          fetch-depth: 0
           ref: ${{ github.event.pull_request.head.ref || github.ref }}
 
-      - name: Get changed files
-        id: changed-files
-        uses: tj-actions/changed-files@v45
-        with:
-          files: |
-            pyproject.toml
-            uv.lock  
-
-      - name: Install uv
+      - name: ⚡ Setup uv
         uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-          cache-dependency-glob: "uv.lock"
 
-      - name: Sync and Upgrade
+      - name: 🛠️ Upgrade & Sync
         run: |
+          # Robust repair: if the lockfile is out of sync/corrupted, fix it, then upgrade everything
           uv lock || (rm uv.lock && uv lock)
           uv lock --upgrade
-
-      - name: Sync Conda Recipe
-        run: |
+          
+          # Sync the conda recipe
           uvx pyproject2conda yaml -f pyproject.toml --output conda/meta.yaml --python-include infer
 
-      - name: Check for Changes
+      - name: 📋 Check for Changes
         id: check
-        # Only evaluate changes if we actually ran the sync steps above
-        if: github.event_name != 'pull_request' || steps.changed-files.outputs.any_changed == 'true'
         run: |
           if [ -n "$(git status --porcelain)" ]; then
             echo "changed=true" >> $GITHUB_OUTPUT
@@ -60,7 +44,7 @@ jobs:
             echo "changed=false" >> $GITHUB_OUTPUT
           fi                
 
-      - name: Upload artifacts for testing
+      - name: 📤 Upload Updated Deps
         if: steps.check.outputs.changed == 'true'
         uses: actions/upload-artifact@v4
         with:
@@ -73,14 +57,15 @@ jobs:
     needs: sync-and-prepare
     if: needs.sync-and-prepare.outputs.sync_needed == 'true'
     uses: ./.github/workflows/python-package.yml
+    with:
+      override-deps-artifact: updated-deps
     secrets: inherit
 
   finalize:
     needs: [sync-and-prepare, run-tests]
     if: |
       always() && 
-      (needs.run-tests.result == 'success' || needs.run-tests.result == 'skipped') &&
-      needs.sync-and-prepare.result == 'success' &&
+      needs.run-tests.result == 'success' &&
       needs.sync-and-prepare.outputs.sync_needed == 'true'
     runs-on: ubuntu-latest
     permissions:
@@ -89,63 +74,39 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           ref: ${{ github.event.pull_request.head.ref || github.ref }}
 
-      - name: Download updated files
+      - name: 📥 Download Verified Artifacts
         uses: actions/download-artifact@v4
         with:
           name: updated-deps
 
-      - name: Push to Existing PR
+      - name: ⬆️ Push to Existing PR
         if: github.event_name == 'pull_request'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git pull --rebase origin ${{ github.event.pull_request.head.ref }}
           git add uv.lock conda/meta.yaml
-          git commit -m "chore: sync uv.lock and conda recipe (tests passed)" || echo "No changes"
+          git commit -m "chore: sync uv.lock and conda (tests passed)" || echo "No changes"
           git push origin HEAD:${{ github.event.pull_request.head.ref }}
 
-      - name: Create New Pull Request
+      - name: ➕ Create New Pull Request
         if: github.event_name != 'pull_request'
         uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: "chore: update uv.lock and conda recipe"
           title: "chore(deps): sync uv and conda"
-          body: "Automated daily sync."
+          body: |
+            ## 🤖 Automated Dependency Sync
+            This PR updates `uv.lock` and `conda/meta.yaml` to match `pyproject.toml`.
+            
+            ✅ **Verification:** The full parallelized test suite passed with these new versions.
           branch: "automated-dependency-sync"
           delete-branch: true
           assignees: ungarj
           reviewers: Scartography
-          labels: dependencies, automated-pr
-
-  summary:
-    name: Final Summary
-    needs: [sync-and-prepare, run-tests, finalize]
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Report Status
-        run: |
-          function get_status_msg() {
-            case "$1" in
-              success) echo "✅ success" ;;
-              failure) echo "❌ failure" ;;
-              skipped) echo "⏭️ skipped" ;;
-              *) echo "🚫 $1" ;;
-            esac
-          }
-
-          echo "### 🚀 Sync Workflow Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Job | Result |" >> $GITHUB_STEP_SUMMARY
-          echo "| :--- | :--- |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Sync and Prepare** | $(get_status_msg ${{ needs.sync-and-prepare.result }}) |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Run Tests** | $(get_status_msg ${{ needs.run-tests.result }}) |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Finalize (Push/PR)** | $(get_status_msg ${{ needs.finalize.result }}) |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          if [[ "${{ needs.sync-and-prepare.result }}" == "failure" || "${{ needs.run-tests.result }}" == "failure" || "${{ needs.finalize.result }}" == "failure" ]]; then
-            exit 1
-          fi
+          labels: |
+            dependencies
+            automated-pr

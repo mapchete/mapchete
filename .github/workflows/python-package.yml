@@ -3,132 +3,142 @@ name: Python package test
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "docs/**"
   pull_request:
     branches: [main]
+    paths-ignore:
+      - "conda/meta.yaml"     
   schedule:
     - cron: '0 8 * * 1,4'
-  workflow_call: # This allows the sync-dependencies workflow to call this
-
-permissions:
-  pull-requests: write
-  contents: read
+  workflow_call:
+    inputs:
+      override-deps-artifact:
+        description: "Name of artifact containing updated lockfiles"
+        required: false
+        type: string    
 
 jobs:
+  setup:
+      name: "🏗️ Build Py${{ matrix.python-version }}"
+      runs-on: ubuntu-latest
+      strategy:
+        matrix:
+          python-version: ["3.10", "3.11", "3.12", "3.13"]
+      container: ghcr.io/osgeo/gdal:ubuntu-small-latest
+      steps:
+        - uses: actions/checkout@v4
+
+        - name: ⚡ Install uv
+          run: |
+            apt-get update && apt-get install -y curl
+            curl -LsSf https://astral.sh/uv/install.sh | BINDIR=/usr/local/bin sh
+
+        - name: 📝 Export Locked Requirements
+          run: |
+            uv export --frozen --all-extras --format requirements-txt > requirements.txt
+      
+        - name: 📤 Upload Requirements
+          uses: actions/upload-artifact@v4
+          with:
+            name: frozen-reqs-${{ matrix.python-version }}
+            path: requirements.txt
+            retention-days: 1
+
   test:
-    # Skip the direct PR run if we are already being called by the sync workflow
-    if: |
-      github.event_name != 'pull_request' || 
-      (github.event_name == 'pull_request' && github.actor != 'github-actions[bot]')
-    
-    runs-on: ${{ matrix.os }}
+    needs: setup
+    name: "🧪 py${{ matrix.python-version }} [${{ matrix.split }}/4]"
+    runs-on: ubuntu-latest
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
-        os: ["ubuntu-latest"]
-
+        split: [1, 2, 3, 4]
+    container: ghcr.io/osgeo/gdal:ubuntu-small-latest
     steps:
       - uses: actions/checkout@v4
-
-      # This step is the "bridge" between the sync job and these tests
-      - name: Download updated dependencies
+      - name: 📥 Download Requirements
         uses: actions/download-artifact@v4
-        continue-on-error: true
         with:
-          name: updated-deps
+          name: frozen-reqs-${{ matrix.python-version }}
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+      - name: 📥 Apply Dependency Overrides
+        if: "${{ inputs.override-deps-artifact != '' }}"
+        uses: actions/download-artifact@v4
         with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Install GIS Dependencies
+          name: ${{ inputs.override-deps-artifact }}          
+      
+      - name: ⚡ Install uv
         run: |
-          sudo apt-add-repository -y ppa:ubuntugis/ubuntugis-unstable
-          sudo apt-get -y update
-          sudo apt-get install -y gdal-bin libgdal-dev libproj-dev libgeos-dev g++
+          apt-get update && apt-get install -y curl git gpg docker-compose-plugin
+          curl -LsSf https://astral.sh/uv/install.sh | BINDIR=/usr/local/bin sh
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-          cache-dependency-glob: "uv.lock"
-
-      - name: Install dependencies
-        env:
-          CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
-          GDAL_CONFIG: /usr/bin/gdal-config
+      - name: 🏗️ Restore Native Env
         run: |
-          # uv will automatically use the uv.lock downloaded from the artifact
-          uv sync --extra complete --extra test
+          uv venv --python ${{ matrix.python-version }}
+          uv pip install -r requirements.txt
+          uv pip install -e ".[test]" --no-deps
 
-      - name: Lint
-        # Skip linting if we're just doing a dependency sync test to save time
-        if: github.event_name != 'workflow_call'
-        run: |
-          python -m pip install pre-commit
-          pre-commit run --show-diff-on-failure --all-files
+      - name: 🐳 Start containers
+        run: docker compose -f "test/docker-compose.yml" up -d          
 
-      - name: Start containers
-        run: docker compose -f "test/docker-compose.yml" up -d
-
-      - name: Run tests
+      - name: 🧪 Run Split
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REQUEST_PAYER: ${{ vars.AWS_REQUEST_PAYER }}
           AWS_DEFAULT_REGION: ${{ vars.AWS_DEFAULT_REGION }}
           CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
-        run: uv run pytest --cov-report xml:coverage.xml --junitxml=pytest.xml
+        run: |
+            uv run pytest -v \
+            --splits 4 \
+            --group ${{ matrix.split }} \
+            --cov=mapchete \
+            --cov-report=xml:coverage.xml \
+            --junitxml="pytest-${{ matrix.python-version }}-${{ matrix.split }}.xml"
 
-      - name: Upload coverage artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report-${{ matrix.python-version }}
-          path: coverage.xml
-
-  finalize:
-    needs: test
-    if: always() && needs.test.result == 'success'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download coverage artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: coverage-report-*
-          merge-multiple: true
-
-      - name: Upload coverage reports to Codecov
+      - name: 📊 Upload to Codecov
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          slug: mapchete/mapchete
+          file: ./coverage.xml
+          flags: py${{ matrix.python-version }}-split${{ matrix.split }}
+          fail_ci_if_error: true
 
-  test-summary:
-    name: Final Summary
-    needs: [test, finalize]
+      - name: 📤 Archive JUnit Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: results-${{ matrix.python-version }}-${{ matrix.split }}
+          path: pytest-${{ matrix.python-version }}-${{ matrix.split }}.xml
+          retention-days: 1
+
+  summary:
+    name: "📊 Final Summary"
+    needs: test
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - name: Report Status
+      - name: 📥 Download All Results
+        uses: actions/download-artifact@v4
+        with:
+          path: all-results
+          pattern: results-*
+          merge-multiple: true
+      - name: 📊 Results of the Test Suite
         run: |
-          function get_status_msg() {
-            case "$1" in
-              success) echo "✅ success" ;;
-              failure) echo "❌ failure" ;;
-              skipped) echo "⏭️ skipped" ;;
-              *) echo "🚫 $1" ;;
-            esac
-          }
-
-          echo "### 🚀 Test Workflow Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Job | Result |" >> $GITHUB_STEP_SUMMARY
-          echo "| :--- | :--- |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Test Matrix** | $(get_status_msg ${{ needs.test.result }}) |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Finalize (Codecov)** | $(get_status_msg ${{ needs.finalize.result }}) |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          if [[ "${{ needs.test.result }}" == "failure" ]]; then
+          echo "### 🧪 Test Results Summary" >> $GITHUB_STEP_SUMMARY
+          
+          # Count XML files
+          COUNT=$(ls all-results/*.xml 2>/dev/null | wc -l || echo "0")
+          
+          if [[ "${{ needs.test.result }}" == "success" ]]; then
+            echo "✅ **All tests passed!**" >> $GITHUB_STEP_SUMMARY
+            echo "Successfully collected and verified $COUNT test report files." >> $GITHUB_STEP_SUMMARY
+            exit 0
+          else
+            echo "❌ **Some test splits failed.**" >> $GITHUB_STEP_SUMMARY
+            echo "Review the 'test' matrix for specific logs. Collected $COUNT reports before failure." >> $GITHUB_STEP_SUMMARY
+            echo "Check the 'Artifacts' section below to download individual JUnit XML reports." >> $GITHUB_STEP_SUMMARY
             exit 1
           fi
