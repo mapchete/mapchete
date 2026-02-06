@@ -71,7 +71,7 @@ jobs:
       - name: ⚡ Install uv, Docker Compose & git
         run: |
           apt-get update && apt-get install -y curl git gpg
-          
+
           curl -fsSL https://get.docker.com -o get-docker.sh
           sh get-docker.sh
 
@@ -92,44 +92,33 @@ jobs:
       - name: 🐳 Start containers (CI Patch; !Gemini made this!)
         working-directory: test
         run: |
-          # 1. 🩹 PATCH: Safely remove 'volumes' using Python/PyYAML
-          #    This prevents the "invalid mount config" error in CI
+          # --- [Existing Python Patch Script] ---
           uv run --with pyyaml python -c "
           import yaml
           with open('docker-compose.yml') as f:
               data = yaml.safe_load(f)
-          
-          # If the volumes key exists, delete it
           if 'volumes' in data['services'].get('nginx', {}):
               del data['services']['nginx']['volumes']
-          
           with open('docker-compose.yml', 'w') as f:
               yaml.dump(data, f)
           "
           
-          # 2. 🚀 START: Launch containers (now using default config)
+          # Start & Inject
           docker-compose up -d
-
-          # 3. 📦 INJECT: Manually copy config files
-          #    (Replaces: - ./nginx.conf:/etc/nginx/nginx.conf)
           docker-compose cp nginx.conf nginx:/etc/nginx/nginx.conf
           docker-compose cp .htpasswd nginx:/etc/nginx/.htpasswd
-          
-          # 4. 📂 INJECT: Manually copy directory data
-          #    We copy to /tmp first to cleanly distribute it inside
           docker-compose cp testdata nginx:/tmp/testdata
-          
-          #    (Replaces: - ./testdata:/usr/share/nginx/html)
-          #    (Replaces: - ./testdata:/usr/share/nginx/html_secure)
-          docker-compose exec -T nginx sh -c "\
-            cp -r /tmp/testdata/. /usr/share/nginx/html/ && \
-            cp -r /tmp/testdata /usr/share/nginx/html_secure"
-
-          # 5. 🔄 RESTART: Apply the new configuration
+          docker-compose exec -T nginx sh -c "cp -r /tmp/testdata/. /usr/share/nginx/html/ && cp -r /tmp/testdata /usr/share/nginx/html_secure"
           docker-compose restart nginx
 
-          # 🔌 NETWORK FIX: Connect THIS container to the Minio network
+          # 2️⃣ FIX: Connect to Network & Wait
+          echo "🔌 Connecting to Docker Network..."
           docker network connect test_default $(hostname)
+
+          echo "⏳ Waiting for Nginx..."
+          # Loop until we get a 200 OK from the service name 'nginx'
+          timeout 30s sh -c 'until curl -s -o /dev/null -w "%{http_code}" http://nginx:80/index.html | grep -q "200"; do sleep 1; done'
+          echo "✅ Nginx is reachable!"
 
       - name: 🧪 Run Split
         env:
