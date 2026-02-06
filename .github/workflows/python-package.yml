@@ -69,9 +69,11 @@ jobs:
       
       - name: ⚡ Install uv, Docker Compose & git
         run: |
-          apt-get update && apt-get install -y curl git gpg gdal-bin libgdal-dev libproj-dev libgeos-dev g++
+          sudo apt-add-repository -y ppa:ubuntugis/ubuntugis-unstable
+          sudo apt-get update
+          sudo apt-get install -y curl git gpg gdal-bin libgdal-dev libproj-dev libgeos-dev g++
           
-          docker-compose --version
+          docker compose --version
           uv --version
 
       - name: 🏗️ Restore Native Env
