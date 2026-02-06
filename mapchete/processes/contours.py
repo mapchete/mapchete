@@ -153,7 +153,7 @@ def generate_contours(
                 properties={field: elevation},
                 geometry=mapping(path_to_linestring(path, tile)),
             )
-        except GEOSException:
+        except GEOSException:  # pragma: no cover
             continue
 
 
