@@ -84,15 +84,13 @@ jobs:
           uv pip install -r requirements.txt
           uv pip install -e ".[test]" --no-deps
 
-      - name: Lint
-        # Skip linting if we're just doing a dependency sync test to save time
+      - name: 📝 Lint
         if: github.event_name != 'workflow_call'
         run: |
           uv pip install pre-commit
           uv run pre-commit run --show-diff-on-failure --all-files          
 
-      - name: 🐳 Start containers (CI Patch; !Gemini made this!)
-        working-directory: test
+      - name: 🐳 Start containers (MinIO & Nginx)
         run: |
           docker compose -f "test/docker-compose.yml" up -d
           
