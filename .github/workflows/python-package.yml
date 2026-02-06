@@ -107,7 +107,7 @@ jobs:
             --splits 4 \
             --group ${{ matrix.split }} \
             --cov=mapchete \
-            --cov-report= \
+            --cov-report=xml:coverage.xml \
             --junitxml="pytest-${{ matrix.python-version }}-${{ matrix.split }}.xml"
 
       - name: 📊 Upload to Codecov

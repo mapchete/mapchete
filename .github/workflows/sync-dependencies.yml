@@ -38,26 +38,40 @@ jobs:
       - name: 📋 Check for Changes
         id: check
         run: |
-          # Check git status
-          if [ -n "$(git status --porcelain)" ]; then
-            # 🚨 CASE 1: Changes found
+          # 1. Capture ALL changes (for the commit logic)
+          RAW_STATUS=$(git status --porcelain)
+          
+          # 2. Filter for USER-FACING changes (for the summary)
+          #    We only care about uv.lock or pyproject.toml for the report
+          VISIBLE_CHANGES=$(echo "$RAW_STATUS" | grep -E 'uv.lock|pyproject.toml' || true)
+
+          if [ -n "$RAW_STATUS" ]; then
+            # ✅ TRIGGER: We always commit if anything changed (even just conda)
             echo "changed=true" >> $GITHUB_OUTPUT
             
-            # Write to Job Summary
-            echo "### ⚠️ Dependencies Updated" >> $GITHUB_STEP_SUMMARY
-            echo "New versions were found. The following files changed:" >> $GITHUB_STEP_SUMMARY
-            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-            git status --porcelain >> $GITHUB_STEP_SUMMARY
-            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-            echo "🚀 **Action:** Triggering full test suite and PR generation." >> $GITHUB_STEP_SUMMARY
+            # 📝 SUMMARY LOGIC
+            if [ -n "$VISIBLE_CHANGES" ]; then
+              # Case A: Important stuff changed (Lockfile or pyproject)
+              echo "### ⚠️ Dependencies Updated" >> $GITHUB_STEP_SUMMARY
+              echo "The following primary files were updated:" >> $GITHUB_STEP_SUMMARY
+              echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+              echo "$VISIBLE_CHANGES" >> $GITHUB_STEP_SUMMARY
+              echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+              echo "*(Conda recipe was automatically synced in the background)*" >> $GITHUB_STEP_SUMMARY
+              echo "🚀 **Action:** Triggering full test suite and PR generation." >> $GITHUB_STEP_SUMMARY
+            else
+              # Case B: Only 'conda/meta.yaml' changed (Noise)
+              echo "### 🔄 Metadata Sync Only" >> $GITHUB_STEP_SUMMARY
+              echo "No core dependencies changed, but conda metadata was refreshed." >> $GITHUB_STEP_SUMMARY
+              echo "🚀 **Action:** Triggering PR to keep repo consistent." >> $GITHUB_STEP_SUMMARY
+            fi
             
           else
-            # ✅ CASE 2: No changes (Everything is up to date)
+            # 💤 CASE 3: Absolutely nothing changed
             echo "changed=false" >> $GITHUB_OUTPUT
             
-            # Write to Job Summary
             echo "### ✅ Everything is Up-to-Date" >> $GITHUB_STEP_SUMMARY
-            echo "No changes detected in \`uv.lock\` or \`conda/meta.yaml\`." >> $GITHUB_STEP_SUMMARY
+            echo "No changes detected in \`uv.lock\`." >> $GITHUB_STEP_SUMMARY
             echo "💤 **Action:** Skipping tests and PR creation." >> $GITHUB_STEP_SUMMARY
           fi
 
