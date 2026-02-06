@@ -38,11 +38,28 @@ jobs:
       - name: 📋 Check for Changes
         id: check
         run: |
+          # Check git status
           if [ -n "$(git status --porcelain)" ]; then
+            # 🚨 CASE 1: Changes found
             echo "changed=true" >> $GITHUB_OUTPUT
+            
+            # Write to Job Summary
+            echo "### ⚠️ Dependencies Updated" >> $GITHUB_STEP_SUMMARY
+            echo "New versions were found. The following files changed:" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            git status --porcelain >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            echo "🚀 **Action:** Triggering full test suite and PR generation." >> $GITHUB_STEP_SUMMARY
+            
           else
+            # ✅ CASE 2: No changes (Everything is up to date)
             echo "changed=false" >> $GITHUB_OUTPUT
-          fi                
+            
+            # Write to Job Summary
+            echo "### ✅ Everything is Up-to-Date" >> $GITHUB_STEP_SUMMARY
+            echo "No changes detected in \`uv.lock\` or \`conda/meta.yaml\`." >> $GITHUB_STEP_SUMMARY
+            echo "💤 **Action:** Skipping tests and PR creation." >> $GITHUB_STEP_SUMMARY
+          fi
 
       - name: 📤 Upload Updated Deps
         if: steps.check.outputs.changed == 'true'
@@ -90,6 +107,9 @@ jobs:
           git add uv.lock conda/meta.yaml
           git commit -m "chore: sync uv.lock and conda (tests passed)" || echo "No changes"
           git push origin HEAD:${{ github.event.pull_request.head.ref }}
+          
+          echo "### 🚀 PR Updated" >> $GITHUB_STEP_SUMMARY
+          echo "Pushed verified changes to existing PR." >> $GITHUB_STEP_SUMMARY
 
       - name: ➕ Create New Pull Request
         if: github.event_name != 'pull_request'
