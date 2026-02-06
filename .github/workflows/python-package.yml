@@ -101,12 +101,13 @@ jobs:
           AWS_REQUEST_PAYER: ${{ vars.AWS_REQUEST_PAYER }}
           AWS_DEFAULT_REGION: ${{ vars.AWS_DEFAULT_REGION }}
           CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+          COVERAGE_FILE: .coverage.${{ matrix.split }}
         run: |
             uv run pytest -v \
             --splits 4 \
             --group ${{ matrix.split }} \
             --cov=mapchete \
-            --cov-report=xml:coverage.xml \
+            --cov-report= \
             --junitxml="pytest-${{ matrix.python-version }}-${{ matrix.split }}.xml"
 
       - name: 📊 Upload to Codecov
