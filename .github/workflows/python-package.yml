@@ -72,6 +72,8 @@ jobs:
           sudo apt-add-repository -y ppa:ubuntugis/ubuntugis-unstable
           sudo apt-get update
           sudo apt-get install -y curl git gpg gdal-bin libgdal-dev libproj-dev libgeos-dev g++
+
+          curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR="/usr/local/bin" sh          
           
           docker compose --version
           uv --version
