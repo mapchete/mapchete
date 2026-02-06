@@ -54,7 +54,6 @@ jobs:
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
         split: [1, 2, 3, 4]
-    container: ghcr.io/osgeo/gdal:ubuntu-small-latest
     steps:
       - uses: actions/checkout@v4
       - name: 📥 Download Requirements
@@ -70,16 +69,8 @@ jobs:
       
       - name: ⚡ Install uv, Docker Compose & git
         run: |
-          apt-get update && apt-get install -y curl git gpg
-
-          curl -fsSL https://get.docker.com -o get-docker.sh
-          sh get-docker.sh
-
-          curl -SL https://github.com/docker/compose/releases/download/v2.24.6/docker-compose-linux-x86_64 -o /usr/local/bin/docker-compose
-          chmod +x /usr/local/bin/docker-compose
-
-          curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR="/usr/local/bin" sh
-
+          apt-get update && apt-get install -y curl git gpg gdal-bin libgdal-dev libproj-dev libgeos-dev g++
+          
           docker-compose --version
           uv --version
 
@@ -89,60 +80,18 @@ jobs:
           uv pip install -r requirements.txt
           uv pip install -e ".[test]" --no-deps
 
+      - name: Lint
+        # Skip linting if we're just doing a dependency sync test to save time
+        if: github.event_name != 'workflow_call'
+        run: |
+          uv pip install pre-commit
+          uv run pre-commit run --show-diff-on-failure --all-files          
+
       - name: 🐳 Start containers (CI Patch; !Gemini made this!)
         working-directory: test
         run: |
-          # --- [Existing Python Patch Script] ---
-          uv run --with pyyaml python -c "
-          import yaml
-          with open('docker-compose.yml') as f:
-              data = yaml.safe_load(f)
-          if 'volumes' in data['services'].get('nginx', {}):
-              del data['services']['nginx']['volumes']
-          with open('docker-compose.yml', 'w') as f:
-              yaml.dump(data, f)
-          "
+          docker compose -f "test/docker-compose.yml" up -d
           
-          # Start & Inject
-          docker-compose up -d
-          docker-compose cp nginx.conf nginx:/etc/nginx/nginx.conf
-          docker-compose cp .htpasswd nginx:/etc/nginx/.htpasswd
-          docker-compose cp testdata nginx:/tmp/testdata
-          docker-compose exec -T nginx sh -c "cp -r /tmp/testdata/. /usr/share/nginx/html/ && cp -r /tmp/testdata /usr/share/nginx/html_secure"
-          docker-compose restart nginx
-
-          # 2️⃣ FIX: Connect to Network & Wait
-          echo "🔌 Connecting to Docker Network..."
-          docker network connect test_default $(hostname)
-
-          echo "⏳ Waiting for Nginx..."
-          # Retry loop with explicit output
-          # We accept 200 (OK), 403 (Forbidden), or 404 (Not Found) as "Alive"
-          # (Because even a 404 means the server is reachable and running!)
-          count=0
-          while [ $count -lt 30 ]; do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://nginx:80/ || echo "000")
-            
-            if [[ "$STATUS" == "200" || "$STATUS" == "403" || "$STATUS" == "404" ]]; then
-              echo "✅ Nginx is up! (Status: $STATUS)"
-              break
-            fi
-            
-            echo "zzz... (Status: $STATUS)"
-            sleep 2
-            count=$((count+2))
-          done
-
-          # 🚨 DEBUG: If we timed out, show us why!
-          if [ $count -ge 30 ]; then
-            echo "❌ Timed out waiting for Nginx."
-            echo "--- DOCKER PS ---"
-            docker-compose ps -a
-            echo "--- NGINX LOGS ---"
-            docker-compose logs nginx
-            exit 1
-          fi
-
       - name: 🧪 Run Split
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
