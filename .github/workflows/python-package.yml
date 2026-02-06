@@ -116,9 +116,32 @@ jobs:
           docker network connect test_default $(hostname)
 
           echo "⏳ Waiting for Nginx..."
-          # Loop until we get a 200 OK from the service name 'nginx'
-          timeout 30s sh -c 'until curl -s -o /dev/null -w "%{http_code}" http://nginx:80/index.html | grep -q "200"; do sleep 1; done'
-          echo "✅ Nginx is reachable!"
+          # Retry loop with explicit output
+          # We accept 200 (OK), 403 (Forbidden), or 404 (Not Found) as "Alive"
+          # (Because even a 404 means the server is reachable and running!)
+          count=0
+          while [ $count -lt 30 ]; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://nginx:80/ || echo "000")
+            
+            if [[ "$STATUS" == "200" || "$STATUS" == "403" || "$STATUS" == "404" ]]; then
+              echo "✅ Nginx is up! (Status: $STATUS)"
+              break
+            fi
+            
+            echo "zzz... (Status: $STATUS)"
+            sleep 2
+            count=$((count+2))
+          done
+
+          # 🚨 DEBUG: If we timed out, show us why!
+          if [ $count -ge 30 ]; then
+            echo "❌ Timed out waiting for Nginx."
+            echo "--- DOCKER PS ---"
+            docker-compose ps -a
+            echo "--- NGINX LOGS ---"
+            docker-compose logs nginx
+            exit 1
+          fi
 
       - name: 🧪 Run Split
         env:
