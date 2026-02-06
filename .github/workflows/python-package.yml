@@ -125,6 +125,9 @@ jobs:
           # 5. 🔄 RESTART: Apply the new configuration
           docker-compose restart nginx
 
+          # 🔌 NETWORK FIX: Connect THIS container to the Minio network
+          docker network connect test_default $(hostname)
+
       - name: 🧪 Run Split
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
