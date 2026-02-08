@@ -135,7 +135,7 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: peter-evans/create-pull-request@v7
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.MAPCHETE_PAT_CONTAINER_IMAGES_TOKEN }}
           commit-message: "chore: update uv.lock and conda recipe"
           title: "chore(deps): sync uv and conda"
           body: |
