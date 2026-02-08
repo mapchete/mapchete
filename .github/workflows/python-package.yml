@@ -8,9 +8,7 @@ on:
   pull_request:
     branches: [main]
     paths-ignore:
-      - "conda/meta.yaml"
-      - "uv.lock"
-      - "pyproject.toml"
+      - "docs/**"
   schedule:
     - cron: '0 8 * * 1,4'
   workflow_call:
