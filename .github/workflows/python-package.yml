@@ -7,8 +7,6 @@ on:
       - "docs/**"
   pull_request:
     branches: [main]
-    paths-ignore:
-      - "conda/meta.yaml"     
   schedule:
     - cron: '0 8 * * 1,4'
   workflow_call:
@@ -46,6 +44,12 @@ jobs:
       container: ghcr.io/osgeo/gdal:ubuntu-small-latest
       steps:
         - uses: actions/checkout@v4
+
+        - name: 📥 Apply Dependency Overrides
+          if: "${{ inputs.override-deps-artifact != '' }}"
+          uses: actions/download-artifact@v4
+          with:
+            name: ${{ inputs.override-deps-artifact }}
 
         - name: ⚡ Install uv
           run: |
