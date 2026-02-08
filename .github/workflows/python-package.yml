@@ -1,16 +1,13 @@
 name: Python package test
 
 on:
+  schedule:
+    - cron: '0 8 * * 1,4'  
   push:
     branches: [main]
-    paths-ignore:
-      - "docs/**"
+    tags: ['*']
   pull_request:
-    branches: [main]
-    paths-ignore:
-      - "docs/**"
-  schedule:
-    - cron: '0 8 * * 1,4'
+    branches: ['**']
   workflow_call:
     inputs:
       override-deps-artifact:
@@ -40,9 +37,6 @@ jobs:
   setup:
       name: "🏗️ Build Py${{ matrix.python-version }}"
       needs: lint
-      if: |
-        always() && 
-        (needs.lint.result == 'success' || needs.lint.result == 'skipped')
       runs-on: ubuntu-latest
       strategy:
         matrix:
