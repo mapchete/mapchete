@@ -3,16 +3,17 @@ name: sync-dependencies
 on:
   schedule:
     - cron: '0 0 * * *'
-  workflow_dispatch:
+  push:
+    branches: [main]
+    tags: ['*']
+    paths:
+      - "pyproject.toml"
+      - "uv.lock"    
   pull_request:
     paths:
       - "pyproject.toml"
       - "uv.lock"
-  push:
-    branches: [main]
-    paths:
-      - "pyproject.toml"
-      - "uv.lock"
+  workflow_dispatch:  
 
 jobs:
   sync-and-prepare:
@@ -74,7 +75,11 @@ jobs:
             
             echo "### ✅ Everything is Up-to-Date" >> $GITHUB_STEP_SUMMARY
             echo "No changes detected in \`uv.lock\`." >> $GITHUB_STEP_SUMMARY
-            echo "💤 **Action:** Skipping tests and PR creation." >> $GITHUB_STEP_SUMMARY
+            if [ "${{ github.event_name }}" == "pull_request" ] || [ "${{ startsWith(github.ref, 'refs/tags/') }}" == "true" ]; then
+              echo "🚀 **Action:** Standard tests will verify the state." >> $GITHUB_STEP_SUMMARY
+            else
+              echo "💤 **Action:** Skipping tests and PR creation." >> $GITHUB_STEP_SUMMARY
+            fi
           fi
 
       - name: 📤 Upload Updated Deps
@@ -82,24 +87,24 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: updated-deps
+          retention-days: 1
           path: |
             uv.lock
             conda/meta.yaml
 
   run-tests:
     needs: sync-and-prepare
-    if: needs.sync-and-prepare.outputs.sync_needed == 'true'
     uses: ./.github/workflows/python-package.yml
     with:
-      override-deps-artifact: updated-deps
+      override-deps-artifact: ${{ needs.sync-and-prepare.outputs.sync_needed == 'true' && 'updated-deps' || 'null' }}
     secrets: inherit
 
   finalize:
     needs: [sync-and-prepare, run-tests]
     if: |
       always() && 
-      needs.run-tests.result == 'success' &&
-      needs.sync-and-prepare.outputs.sync_needed == 'true'
+      needs.sync-and-prepare.outputs.sync_needed == 'true' &&
+      (needs.run-tests.result == 'success' || needs.run-tests.result == 'skipped' )
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -109,6 +114,7 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.ref || github.ref }}
+          token: ${{ secrets.MAPCHETE_PAT_CONTAINER_IMAGES_TOKEN }}
 
       - name: 📥 Download Verified Artifacts
         uses: actions/download-artifact@v4
@@ -131,7 +137,7 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: peter-evans/create-pull-request@v7
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.MAPCHETE_PAT_CONTAINER_IMAGES_TOKEN }}
           commit-message: "chore: update uv.lock and conda recipe"
           title: "chore(deps): sync uv and conda"
           body: |

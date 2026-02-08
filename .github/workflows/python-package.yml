@@ -1,22 +1,23 @@
 name: Python package test
 
 on:
+  schedule:
+    - cron: '0 8 * * 1,4'  
   push:
     branches: [main]
-    paths-ignore:
-      - "docs/**"
+    tags: ['*']
   pull_request:
-    branches: [main]
-    paths-ignore:
-      - "docs/**"
-  schedule:
-    - cron: '0 8 * * 1,4'
+    branches: ['**']
   workflow_call:
     inputs:
       override-deps-artifact:
         description: "Name of artifact containing updated lockfiles"
         required: false
         type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   lint:
@@ -36,9 +37,6 @@ jobs:
   setup:
       name: "🏗️ Build Py${{ matrix.python-version }}"
       needs: lint
-      if: |
-        always() && 
-        (needs.lint.result == 'success' || needs.lint.result == 'skipped')
       runs-on: ubuntu-latest
       strategy:
         matrix:
@@ -48,7 +46,7 @@ jobs:
         - uses: actions/checkout@v4
 
         - name: 📥 Apply Dependency Overrides
-          if: "${{ inputs.override-deps-artifact != '' }}"
+          if: "${{ inputs.override-deps-artifact != '' && inputs.override-deps-artifact != 'null' }}"
           uses: actions/download-artifact@v4
           with:
             name: ${{ inputs.override-deps-artifact }}
@@ -56,7 +54,7 @@ jobs:
         - name: ⚡ Install uv
           run: |
             apt-get update && apt-get install -y curl
-            curl -LsSf https://astral.sh/uv/install.sh | BINDIR=/usr/local/bin sh
+            curl -LsSf https://astral.sh/uv/install.sh BINDIR=/usr/local/bin | sh
 
         - name: 📝 Export Locked Requirements
           run: |
@@ -91,7 +89,7 @@ jobs:
         with:
           name: ${{ inputs.override-deps-artifact }}          
       
-      - name: ⚡ Install uv, Docker Compose & git
+      - name: ⚡ Install uv, git & GIS Dependencies
         run: |
           sudo apt-add-repository -y ppa:ubuntugis/ubuntugis-unstable
           sudo apt-get update
