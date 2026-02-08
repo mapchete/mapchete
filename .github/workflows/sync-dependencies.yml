@@ -74,7 +74,11 @@ jobs:
             
             echo "### ✅ Everything is Up-to-Date" >> $GITHUB_STEP_SUMMARY
             echo "No changes detected in \`uv.lock\`." >> $GITHUB_STEP_SUMMARY
-            echo "💤 **Action:** Skipping tests and PR creation." >> $GITHUB_STEP_SUMMARY
+            if [ "${{ github.event_name }}" == "pull_request" ] || [ "${{ startsWith(github.ref, 'refs/tags/') }}" == "true" ]; then
+              echo "🚀 **Action:** Standard tests will verify the state." >> $GITHUB_STEP_SUMMARY
+            else
+              echo "💤 **Action:** Skipping tests and PR creation." >> $GITHUB_STEP_SUMMARY
+            fi
           fi
 
       - name: 📤 Upload Updated Deps
@@ -88,7 +92,15 @@ jobs:
 
   run-tests:
     needs: sync-and-prepare
-    if: needs.sync-and-prepare.outputs.sync_needed == 'true'
+    # Background sync only verification.
+    # On Pull Requests and Tags, we rely on the direct trigger of the python-package workflow
+    # to provide consistent status check names for Branch Protection.
+    if: |
+      always() &&
+      needs.sync-and-prepare.result == 'success' &&
+      needs.sync-and-prepare.outputs.sync_needed == 'true' &&
+      github.event_name != 'pull_request' &&
+      !startsWith(github.ref, 'refs/tags/')
     uses: ./.github/workflows/python-package.yml
     with:
       override-deps-artifact: updated-deps
@@ -98,8 +110,8 @@ jobs:
     needs: [sync-and-prepare, run-tests]
     if: |
       always() && 
-      needs.run-tests.result == 'success' &&
-      needs.sync-and-prepare.outputs.sync_needed == 'true'
+      needs.sync-and-prepare.outputs.sync_needed == 'true' &&
+      (needs.run-tests.result == 'success' || needs.run-tests.result == 'skipped' )
     runs-on: ubuntu-latest
     permissions:
       contents: write

@@ -18,6 +18,10 @@ on:
         required: false
         type: string
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint:
     name: "📝 Pre-commit / Code Quality"
@@ -56,7 +60,7 @@ jobs:
         - name: ⚡ Install uv
           run: |
             apt-get update && apt-get install -y curl
-            curl -LsSf https://astral.sh/uv/install.sh | BINDIR=/usr/local/bin sh
+            curl -LsSf https://astral.sh/uv/install.sh BINDIR=/usr/local/bin | sh
 
         - name: 📝 Export Locked Requirements
           run: |
