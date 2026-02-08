@@ -89,7 +89,7 @@ jobs:
         with:
           name: ${{ inputs.override-deps-artifact }}          
       
-      - name: ⚡ Install uv, Docker Compose & git
+      - name: ⚡ Install uv, git & GIS Dependencies
         run: |
           sudo apt-add-repository -y ppa:ubuntugis/ubuntugis-unstable
           sudo apt-get update
