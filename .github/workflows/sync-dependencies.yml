@@ -7,10 +7,12 @@ on:
   pull_request:
     paths:
       - "pyproject.toml"
+      - "uv.lock"
   push:
     branches: [main]
     paths:
       - "pyproject.toml"
+      - "uv.lock"
 
 jobs:
   sync-and-prepare:
