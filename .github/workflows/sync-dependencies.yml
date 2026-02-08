@@ -113,6 +113,7 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.ref || github.ref }}
+          token: ${{ secrets.MAPCHETE_PAT_CONTAINER_IMAGES_TOKEN }}
 
       - name: 📥 Download Verified Artifacts
         uses: actions/download-artifact@v4
