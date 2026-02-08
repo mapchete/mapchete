@@ -7,8 +7,6 @@ on:
       - "docs/**"
   pull_request:
     branches: [main]
-    paths-ignore:
-      - "conda/meta.yaml"     
   schedule:
     - cron: '0 8 * * 1,4'
   workflow_call:
