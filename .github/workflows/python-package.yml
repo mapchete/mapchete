@@ -16,7 +16,7 @@ on:
       override-deps-artifact:
         description: "Name of artifact containing updated lockfiles"
         required: false
-        type: string    
+        type: string
 
 jobs:
   lint:
