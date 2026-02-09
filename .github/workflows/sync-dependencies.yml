@@ -94,6 +94,7 @@ jobs:
 
   run-tests:
     needs: sync-and-prepare
+    if: steps.check.outputs.changed == 'true'
     uses: ./.github/workflows/python-package.yml
     with:
       override-deps-artifact: ${{ needs.sync-and-prepare.outputs.sync_needed == 'true' && 'updated-deps' || 'null' }}
