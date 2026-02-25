@@ -170,10 +170,26 @@ def _read_vector_window_from_file(
     ] = None,
 ) -> Generator[GeoJSONLikeFeature, None, None]:
     try:
+        @retry(
+            logger=logger,
+            **IORetrySettings().model_dump(exclude_none=True),
+        )
+        def _get_list():
+            return list(
+                _get_reprojected_features_from_file(
+                    inp=inp,
+                    grid=grid,
+                    validity_check=validity_check,
+                    clip_to_crs_bounds=clip_to_crs_bounds,
+                    target_geometry_type=target_geometry_type,
+                )
+            )
+
         if isinstance(grid, BufferedTile) and grid.pixelbuffer and grid.is_on_edge():
             for grid_part in clip_grid_to_pyramid_bounds(
                 Grid.from_obj(grid), grid.tile_pyramid
             ):
+                # we don't use _get_list here to keep the retry logic simple for now
                 yield from _get_reprojected_features_from_file(
                     inp=inp,
                     grid=grid_part,
@@ -182,23 +198,13 @@ def _read_vector_window_from_file(
                     target_geometry_type=target_geometry_type,
                 )
         else:
-            yield from _get_reprojected_features_from_file(
-                inp=inp,
-                grid=grid,
-                validity_check=validity_check,
-                clip_to_crs_bounds=clip_to_crs_bounds,
-                target_geometry_type=target_geometry_type,
-            )
+            yield from _get_list()
     except FileNotFoundError:  # pragma: no cover
         raise
     except Exception as exc:  # pragma: no cover
         raise IOError(f"failed to read {inp}") from exc
 
 
-@retry(
-    logger=logger,
-    **IORetrySettings().model_dump(exclude_none=True),
-)
 def _get_reprojected_features_from_file(
     inp: MPath,
     grid: GridProtocol,

@@ -111,6 +111,7 @@ test = [
     "pytest-env",
     "pytest-flask>=1.0.0",
     "pytest-lazy-fixtures",
+    "pytest-mock",
     "pytest-split",
     "rio-cogeo>=5.0.0",
 ]
