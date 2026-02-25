@@ -5,9 +5,11 @@ import numpy.ma as ma
 import pytest
 
 from mapchete import Empty, MapcheteNodataTile
+from mapchete.io.raster.referenced_raster import ReferencedRasterInput
 from mapchete.processes import clip, contours, convert, hillshade
 from mapchete.processes.examples import example_process
 from mapchete.testing import get_process_mp
+from mapchete.tile import BufferedTilePyramid
 
 
 def test_example_process(cleantopo_tl):
@@ -20,31 +22,25 @@ def test_example_process(cleantopo_tl):
     assert output == "empty"
 
 
-def test_convert_raster(local_raster, landpoly):
+def test_convert_raster(local_raster):
     # tile with data
-    tile = (8, 28, 89)
+    tile = BufferedTilePyramid("geodetic").tile(8, 28, 89)
     assert isinstance(
-        convert.execute(
-            inp=get_process_mp(input=dict(inp=local_raster), tile=tile).open("inp")
-        ),
+        convert.execute(inp=ReferencedRasterInput.from_file(local_raster, tile=tile)),
         np.ndarray,
     )
 
 
 def test_convert_raster_empty(local_raster):
-    tile = (8, 28, 189)
+    tile = BufferedTilePyramid("geodetic").tile(8, 28, 189)
     # execute on empty tile
     with pytest.raises(MapcheteNodataTile):
-        convert.execute(
-            inp=get_process_mp(input=dict(inp=local_raster), tile=tile).open("inp")
-        )
+        convert.execute(inp=ReferencedRasterInput.from_file(local_raster, tile=tile))
 
 
 def test_convert_raster_clip(local_raster, landpoly):
-    tile = (8, 28, 89)
-    inp = get_process_mp(input=dict(inp=local_raster, clip=landpoly), tile=tile).open(
-        "inp"
-    )
+    tile = BufferedTilePyramid("geodetic").tile(8, 28, 89)
+    inp = inp = ReferencedRasterInput.from_file(local_raster, tile=tile)
 
     # tile with data
     default = convert.execute(inp)
@@ -93,9 +89,9 @@ def test_convert_vector(landpoly):
 
 def test_contours_dem(local_raster):
     # not empty dem
-    tile = (8, 28, 89)
+    tile = BufferedTilePyramid("geodetic").tile(8, 28, 89)
     output = contours.execute(
-        get_process_mp(input=dict(dem=local_raster), tile=tile).open("dem")
+        dem=ReferencedRasterInput.from_file(local_raster, tile=tile)
     )
     assert isinstance(output, list)
     assert output
@@ -103,15 +99,15 @@ def test_contours_dem(local_raster):
 
 def test_contours_empty_dem(local_raster):
     # empty dem
-    tile = (8, 28, 189)
-    dem = get_process_mp(input=dict(dem=local_raster), tile=tile).open("dem")
+    tile = BufferedTilePyramid("geodetic").tile(8, 28, 189)
+    dem = ReferencedRasterInput.from_file(local_raster, tile=tile)
     with pytest.raises(Empty):
         contours.execute(dem)
 
 
 def test_contours_clipped(local_raster, landpoly):
     # clipped contours
-    tile = (8, 28, 89)
+    tile = BufferedTilePyramid("geodetic").tile(8, 28, 89)
     mp = get_process_mp(input=dict(dem=local_raster, clip=landpoly), tile=tile)
     output = contours.execute(mp.open("dem"), mp.open("clip"))
     assert isinstance(output, list)
@@ -120,7 +116,7 @@ def test_contours_clipped(local_raster, landpoly):
 
 def test_contours_empty_clip(local_raster, landpoly):
     # empty clip geometry
-    tile = (8, 68, 35)
+    tile = BufferedTilePyramid("geodetic").tile(8, 68, 35)
     mp = get_process_mp(input=dict(dem=local_raster, clip=landpoly), tile=tile)
     with pytest.raises(Empty):
         contours.execute(mp.open("dem"), mp.open("clip"))
@@ -140,29 +136,27 @@ def test_get_contour_values(min_val, max_val, base, interval, control):
 
 
 def test_hillshade(local_raster):
-    tile = (8, 68, 35)
-    dem = get_process_mp(input=dict(dem=local_raster), tile=tile).open("dem")
+    tile = BufferedTilePyramid("geodetic").tile(8, 68, 35)
+    dem = ReferencedRasterInput.from_file(local_raster, tile=tile)
     assert isinstance(hillshade.execute(dem), np.ndarray)
 
 
 def test_hillshade_empty(local_raster, landpoly):
     # execute on empty tile
-    tile = (8, 28, 189)
-    dem = get_process_mp(input=dict(dem=local_raster), tile=tile).open("dem")
+    tile = BufferedTilePyramid("geodetic").tile(8, 28, 189)
+    dem = ReferencedRasterInput.from_file(local_raster, tile=tile)
     with pytest.raises(MapcheteNodataTile):
         hillshade.execute(dem)
 
 
 def test_hillshade_clip(local_raster, landpoly):
-    tile = (8, 28, 89)
-    dem = get_process_mp(input=dict(dem=local_raster, clip=landpoly), tile=tile).open(
-        "dem"
-    )
+    tile = BufferedTilePyramid("geodetic").tile(8, 28, 89)
+    dem = ReferencedRasterInput.from_file(local_raster, tile=tile)
     assert isinstance(hillshade.execute(dem), np.ndarray)
 
 
 def test_hillshade_clip_empty(local_raster, landpoly):
-    tile = (8, 28, 189)
+    tile = BufferedTilePyramid("geodetic").tile(8, 28, 189)
     # execute on empty tile
     mp = get_process_mp(input=dict(dem=local_raster, clip=landpoly), tile=tile)
     with pytest.raises(MapcheteNodataTile):
@@ -170,7 +164,7 @@ def test_hillshade_clip_empty(local_raster, landpoly):
 
 
 def test_clip(local_raster, landpoly):
-    tile = (8, 28, 89)
+    tile = BufferedTilePyramid("geodetic").tile(8, 28, 89)
     mp = get_process_mp(input=dict(inp=local_raster, clip=landpoly), tile=tile)
     output = clip.execute(mp.open("inp"), mp.open("clip"))
     assert isinstance(output, np.ndarray)
@@ -179,7 +173,7 @@ def test_clip(local_raster, landpoly):
 
 
 def test_clip_empty(cleantopo_br_tif, landpoly):
-    tile = (8, 28, 89)
+    tile = BufferedTilePyramid("geodetic").tile(8, 28, 89)
     mp = get_process_mp(input=dict(inp=cleantopo_br_tif, clip=landpoly), tile=tile)
     with pytest.raises(Empty):
         clip.execute(mp.open("inp"), mp.open("clip"))

@@ -4,7 +4,8 @@ import pytest
 from pytest_lazy_fixtures import lf as lazy_fixture
 
 from mapchete.io.raster.open import rasterio_open
-from mapchete.io.raster.referenced_raster import ReferencedRaster
+from mapchete.io.raster.referenced_raster import ReferencedRaster, ReferencedRasterInput
+from mapchete.tile import BufferedTilePyramid
 
 
 def test_referencedraster_meta(s2_band):
@@ -87,3 +88,10 @@ def test_referencedraster_to_file(s2_band, mp_tmpdir, dims):
     rr.to_file(out_file)
     with rasterio_open(out_file) as src:
         assert src.read(masked=True).any()
+
+
+def test_referencedrasterinput(s2_band):
+    rr = ReferencedRaster.from_file(s2_band)
+    tile = next(BufferedTilePyramid("mercator").tiles_from_bounds(rr.bounds, zoom=13))
+    rr_inp = ReferencedRasterInput.from_array(rr.array, tile)
+    assert not rr_inp.is_empty()

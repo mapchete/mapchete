@@ -95,6 +95,8 @@ def execute(
         matching_precision=td_matching_precision,
         fallback_to_higher_zoom=td_fallback_to_higher_zoom,
     )
+    if dem_data.ndim == 3:
+        dem_data = dem_data[0]
     if dem_data.mask.all():  # pragma: no cover
         logger.debug("DEM data empty over tile")
         raise Empty("DEM data empty over tile")
