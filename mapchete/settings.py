@@ -12,6 +12,7 @@ from fsspec.exceptions import FSTimeoutError
 from pydantic import NonNegativeFloat, NonNegativeInt
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from rasterio.errors import RasterioError
+from rasterio._err import CPLE_AppDefinedError, CPLE_OpenFailedError, CPLE_FileIOError
 
 from mapchete.executor import Concurrency
 
@@ -71,6 +72,9 @@ class IORetrySettings(BaseSettings):
         ServerDisconnectedError,
         ClientResponseError,
         ClientPayloadError,
+        CPLE_AppDefinedError,
+        CPLE_OpenFailedError,
+        CPLE_FileIOError,
     )
 
     # read from environment
