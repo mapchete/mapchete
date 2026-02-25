@@ -170,6 +170,7 @@ def _read_vector_window_from_file(
     ] = None,
 ) -> Generator[GeoJSONLikeFeature, None, None]:
     try:
+
         @retry(
             logger=logger,
             **IORetrySettings().model_dump(exclude_none=True),
