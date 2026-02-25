@@ -52,7 +52,6 @@ def fiona_read(
     Wrapper around fiona.open but fiona.Env is set according to path properties.
     """
     path = MPath.from_inp(path)
-
     try:
         with path.fio_env() as env:
             logger.debug("reading %s with GDAL options %s", str(path), env.options)

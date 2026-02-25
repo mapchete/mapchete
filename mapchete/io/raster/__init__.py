@@ -17,7 +17,11 @@ from mapchete.io.raster.read import (
     read_raster_window,
     tiles_to_affine_shape,
 )
-from mapchete.io.raster.referenced_raster import ReferencedRaster, read_raster
+from mapchete.io.raster.referenced_raster import (
+    ReferencedRaster,
+    ReferencedRasterInput,
+    read_raster,
+)
 from mapchete.io.raster.write import rasterio_write, write_raster_window
 
 __all__ = [
@@ -37,6 +41,7 @@ __all__ = [
     "tiles_to_affine_shape",
     "memory_file",
     "ReferencedRaster",
+    "ReferencedRasterInput",
     "read_raster",
     "rasterio_write",
     "write_raster_window",

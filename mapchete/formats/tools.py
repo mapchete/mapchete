@@ -15,7 +15,7 @@ from rasterio.crs import CRS
 from shapely.geometry.base import BaseGeometry
 
 from mapchete.errors import MapcheteConfigError, MapcheteDriverError
-from mapchete.io import MPath, fiona_open, rasterio_open
+from mapchete.path import MPath
 from mapchete.registered import drivers
 from mapchete.tile import BufferedTilePyramid
 from mapchete.types import MPathLike
@@ -112,6 +112,9 @@ def driver_from_file(input_file: MPathLike, quick: bool = True) -> str:
             pass
 
     # brute force by trying to open file with rasterio and fiona:
+    from mapchete.io.vector import fiona_open
+    from mapchete.io.raster import rasterio_open
+
     try:
         logger.debug("try to open %s with rasterio...", input_file)
         with rasterio_open(input_file):  # pragma: no cover

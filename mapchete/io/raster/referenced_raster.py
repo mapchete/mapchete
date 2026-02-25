@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import logging
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union, Any
+import uuid
 
 import numpy as np
 import numpy.ma as ma
@@ -11,6 +12,7 @@ from retry import retry
 from shapely.geometry import mapping, shape
 
 from mapchete.bounds import Bounds
+from mapchete.formats.protocols import RasterInput
 from mapchete.grid import Grid
 from mapchete.io.raster.array import prepare_array, resample_from_array
 from mapchete.io.raster.open import rasterio_open
@@ -18,6 +20,7 @@ from mapchete.io.raster.read import read_raster_window
 from mapchete.path import MPath
 from mapchete.protocols import GridProtocol
 from mapchete.settings import IORetrySettings
+from mapchete.tile import BufferedTile
 from mapchete.types import BoundsLike, CRSLike, MPathLike, NodataVal
 
 logger = logging.getLogger(__name__)
@@ -235,3 +238,73 @@ def read_raster(
     **kwargs,
 ) -> ReferencedRaster:
     return ReferencedRaster.from_file(inp, grid=grid, masked=masked, **kwargs)
+
+
+class ReferencedRasterInput(RasterInput):
+    """Wrapper around ReferencedRaster so outputs from execute functions can be passed around."""
+
+    referenced_raster: ReferencedRaster
+    preprocessing_tasks_results: dict
+    input_key: str
+    tile: BufferedTile
+
+    def __init__(
+        self,
+        referenced_raster: ReferencedRaster,
+        tile: BufferedTile,
+        input_key: Optional[str] = None,
+        preprocessing_tasks_results: Optional[dict] = None,
+    ):
+        self.referenced_raster = referenced_raster
+        self.tile = tile
+        self.input_key = input_key or uuid.uuid4().hex
+        preprocessing_tasks_results = preprocessing_tasks_results or dict()
+
+    def read(
+        self,
+        indexes: Optional[Union[int, List[int]]] = None,
+        resampling: str = "nearest",
+        **__,
+    ) -> np.ndarray:
+        """Either read full array or resampled to grid."""
+        return self.referenced_raster.read(indexes=indexes, resampling=resampling)
+
+    def is_empty(self) -> bool:
+        """Checks if input is empty here."""
+        return self.referenced_raster.masked_array().mask.all()
+
+    def set_preprocessing_task_result(self, task_key: str, result: Any) -> None:
+        # should this even be called?
+        pass
+
+    def __enter__(self) -> ReferencedRasterInput:
+        """Required for 'with' statement."""
+        return self
+
+    def __exit__(self, *args):
+        """Clean up."""
+
+    @staticmethod
+    def from_array(
+        array: np.ndarray, tile: BufferedTile, **kwargs
+    ) -> ReferencedRasterInput:
+        return ReferencedRasterInput(
+            ReferencedRaster.from_array_like(
+                array, transform=tile.transform, crs=tile.crs
+            ),
+            tile=tile,
+            **kwargs,
+        )
+
+    @staticmethod
+    def from_file(
+        path: MPathLike,
+        tile: BufferedTile,
+        masked: bool = True,
+        **kwargs,
+    ) -> ReferencedRasterInput:
+        return ReferencedRasterInput(
+            ReferencedRaster.from_file(path, grid=tile, masked=masked),
+            tile=tile,
+            **kwargs,
+        )
