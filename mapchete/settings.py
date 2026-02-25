@@ -11,7 +11,7 @@ from fiona.errors import FionaError
 from fsspec.exceptions import FSTimeoutError
 from pydantic import NonNegativeFloat, NonNegativeInt
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from rasterio.errors import RasterioError
+from rasterio.errors import RasterioError, RasterioIOError
 from rasterio._err import CPLE_AppDefinedError, CPLE_OpenFailedError, CPLE_FileIOError
 
 from mapchete.executor import Concurrency
@@ -67,6 +67,7 @@ class IORetrySettings(BaseSettings):
         SystemError,
         TimeoutError,
         RasterioError,
+        RasterioIOError,
         FionaError,
         FSTimeoutError,
         ServerDisconnectedError,
