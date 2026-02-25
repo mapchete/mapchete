@@ -355,21 +355,15 @@ def _rasterio_read(
     return out
 
 
-def _read_raster_no_crs_raw(
+@retry(logger=logger, **dict(IORetrySettings()))
+def _read_raster_no_crs(
     input_file: MPathLike, indexes: Optional[Union[int, List[int]]] = None, **kwargs
 ) -> ma.MaskedArray:
+    """Retries the raw read."""
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         with rasterio_read(input_file, "r") as src:
             return src.read(indexes=indexes, masked=True)
-
-
-@retry(logger=logger, **dict(IORetrySettings()))
-def _read_raster_no_crs_retried(
-    input_file: MPathLike, indexes: Optional[Union[int, List[int]]] = None, **kwargs
-) -> ma.MaskedArray:
-    """Retries the raw read."""
-    return _read_raster_no_crs_raw(input_file, indexes=indexes, **kwargs)
 
 
 def read_raster_no_crs(
@@ -384,7 +378,7 @@ def read_raster_no_crs(
     MapcheteIOError on other failures.
     """
     try:
-        return _read_raster_no_crs_retried(input_file, indexes=indexes, **kwargs)
+        return _read_raster_no_crs(input_file, indexes=indexes, **kwargs)
     except FileNotFoundError:
         raise
     except Exception as exc:
