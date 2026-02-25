@@ -171,3 +171,22 @@ def test_io_retry_integration_fiona_read(mocker):
     read_vector_window("test/testdata/fiona_test.geojson", grid=grid)
 
     assert mock_open.call_count == 2
+
+
+def test_io_retry_integration_raster_no_crs(mocker):
+    """
+    Integration test for read_raster_no_crs retry behavior.
+    """
+    from mapchete.io.raster.read import read_raster_no_crs
+
+    mock_open = mocker.patch("mapchete.io.raster.read.rasterio.open")
+    mock_src = mocker.MagicMock()
+    mock_src.read.return_value = "success"
+    mock_src.__enter__.return_value = mock_src
+
+    # 1 failure, 1 success
+    mock_open.side_effect = [ConnectionError("retry 1"), mock_src]
+
+    result = read_raster_no_crs(input_file="test/testdata/dummy1.tif", indexes=[1])
+    assert result == "success"
+    assert mock_open.call_count == 2

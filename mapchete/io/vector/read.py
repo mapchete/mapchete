@@ -195,6 +195,7 @@ def _read_vector_window_from_file(
         raise IOError(f"failed to read {inp}") from exc
 
 
+# Warning: This retry wont trigger as yield does not have materilized object/function
 @retry(
     logger=logger,
     **IORetrySettings().model_dump(exclude_none=True),

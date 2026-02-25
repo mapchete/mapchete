@@ -355,7 +355,23 @@ def _rasterio_read(
     return out
 
 
+def _read_raster_no_crs_raw(
+    input_file: MPathLike, indexes: Optional[Union[int, List[int]]] = None, **kwargs
+) -> ma.MaskedArray:
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        with rasterio_read(input_file, "r") as src:
+            return src.read(indexes=indexes, masked=True)
+
+
 @retry(logger=logger, **dict(IORetrySettings()))
+def _read_raster_no_crs_retried(
+    input_file: MPathLike, indexes: Optional[Union[int, List[int]]] = None, **kwargs
+) -> ma.MaskedArray:
+    """Retries the raw read."""
+    return _read_raster_no_crs_raw(input_file, indexes=indexes, **kwargs)
+
+
 def read_raster_no_crs(
     input_file: MPathLike, indexes: Optional[Union[int, List[int]]] = None, **kwargs
 ) -> ma.MaskedArray:
@@ -365,16 +381,14 @@ def read_raster_no_crs(
     Raises
     ------
     FileNotFoundError if file cannot be found.
+    MapcheteIOError on other failures.
     """
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        try:
-            with rasterio_read(input_file, "r") as src:
-                return src.read(indexes=indexes, masked=True)
-        except FileNotFoundError:
-            raise
-        except Exception as exc:
-            raise MapcheteIOError(exc)
+    try:
+        return _read_raster_no_crs_retried(input_file, indexes=indexes, **kwargs)
+    except FileNotFoundError:
+        raise
+    except Exception as exc:
+        raise MapcheteIOError(exc)
 
 
 def _extract_filenotfound_exception(rio_exc: Exception, path: MPath):
