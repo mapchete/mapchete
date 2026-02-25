@@ -273,11 +273,13 @@ class ReferencedRasterInput(RasterInput):
         """Checks if input is empty here."""
         return self.referenced_raster.masked_array().mask.all()
 
-    def set_preprocessing_task_result(self, task_key: str, result: Any) -> None:
+    def set_preprocessing_task_result(
+        self, task_key: str, result: Any
+    ) -> None:  # pragma: no cover
         # should this even be called?
         pass
 
-    def __enter__(self) -> ReferencedRasterInput:
+    def __enter__(self) -> ReferencedRasterInput:  # pragma: no cover
         """Required for 'with' statement."""
         return self
 
