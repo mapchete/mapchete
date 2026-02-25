@@ -1250,3 +1250,54 @@ def antimeridian_polygon2() -> Polygon:
 @pytest.fixture
 def antimeridian_polygon3(antimeridian_polygon2) -> MultiPolygon:
     return MultiPolygon([antimeridian_polygon2, box(170, 0, 171, 5)])
+
+
+@pytest.fixture
+def io_retry_exceptions():
+    from mapchete.settings import IORetrySettings
+
+    return IORetrySettings().exceptions
+
+
+@pytest.fixture
+def fast_io_retry_settings():
+    from mapchete.settings import IORetrySettings
+
+    return IORetrySettings(tries=2, delay=0)
+
+
+@pytest.fixture
+def instantiate_exception():
+    def _instantiate(exception_class):
+        try:
+            return exception_class("test error")
+        except TypeError:
+            try:
+                # specifically for aiohttp ClientResponseError and ClientPayloadError
+                # we just skip them here for now as they are hard to instantiate without aiohttp
+                if exception_class.__name__ in [
+                    "ClientResponseError",
+                    "ClientPayloadError",
+                ]:
+                    return None
+                return exception_class()
+            except TypeError:  # pragma: no cover
+                return None
+
+    return _instantiate
+
+
+@pytest.fixture
+def retry_mock(mocker):
+    """
+    A mock function that can be used to test retry behavior.
+    It takes a side_effect and returns a mock object that can be called.
+    """
+
+    def _create_mock(side_effect):
+        mock = mocker.Mock(side_effect=side_effect)
+        # We can add a simple wrapper if we want to ensure it behaves exactly like before,
+        # but mocker.Mock should be enough for most cases.
+        return mock
+
+    return _create_mock

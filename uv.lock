@@ -1823,6 +1823,7 @@ test = [
     { name = "pytest-env" },
     { name = "pytest-flask" },
     { name = "pytest-lazy-fixtures" },
+    { name = "pytest-mock" },
     { name = "pytest-split" },
     { name = "rio-cogeo", version = "6.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "rio-cogeo", version = "7.0.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
@@ -1885,6 +1886,7 @@ requires-dist = [
     { name = "pytest-env", marker = "extra == 'test'" },
     { name = "pytest-flask", marker = "extra == 'test'", specifier = ">=1.0.0" },
     { name = "pytest-lazy-fixtures", marker = "extra == 'test'" },
+    { name = "pytest-mock", marker = "extra == 'test'" },
     { name = "pytest-split", marker = "extra == 'test'" },
     { name = "python-dateutil" },
     { name = "rasterio", specifier = ">1.2.10" },
@@ -3377,6 +3379,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/75/05/030c4efe596bc31bcb4fefb31f5fcefc8917df99bd745a920763c5e81863/pytest_lazy_fixtures-1.4.0.tar.gz", hash = "sha256:f544b60c96b909b307558a62cc1f28f026f11e9f03d7f583a1dc636de3dbcb10", size = 36188, upload-time = "2025-09-16T18:42:31.797Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/60/a0/a07399bd4842282fe3c2da264746069d5216640bc0940b7a359e2c950aa6/pytest_lazy_fixtures-1.4.0-py3-none-any.whl", hash = "sha256:c5db4506fa0ade5887189d1a18857fec4c329b4f49043fef6732c67c9553389a", size = 9680, upload-time = "2025-09-16T18:42:30.534Z" },
+]
+
+[[package]]
+name = "pytest-mock"
+version = "3.15.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pytest" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/68/14/eb014d26be205d38ad5ad20d9a80f7d201472e08167f0bb4361e251084a9/pytest_mock-3.15.1.tar.gz", hash = "sha256:1849a238f6f396da19762269de72cb1814ab44416fa73a8686deac10b0d87a0f", size = 34036, upload-time = "2025-09-16T16:37:27.081Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5a/cc/06253936f4a7fa2e0f48dfe6d851d9c56df896a9ab09ac019d70b760619c/pytest_mock-3.15.1-py3-none-any.whl", hash = "sha256:0a25e2eb88fe5168d535041d09a4529a188176ae608a6d249ee65abc0949630d", size = 10095, upload-time = "2025-09-16T16:37:25.734Z" },
 ]
 
 [[package]]
