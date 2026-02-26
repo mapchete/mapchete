@@ -22,7 +22,7 @@ from rasterio.warp import reproject
 from retry import retry
 from tilematrix import Shape
 
-from mapchete.errors import MapcheteIOError
+from mapchete.errors import MapcheteIOError, clean_exception
 from mapchete.geometry.clip import clip_geometry_to_pyramid_bounds
 from mapchete.grid import Grid
 from mapchete.io.raster.array import extract_from_array, prepare_masked_array
@@ -201,9 +201,10 @@ def _read_raster_window(
                 raise
         except Exception as exception:  # pragma: no cover
             _, _, exc_traceback = sys.exc_info()
+            clean_exc = clean_exception(exception)
             raise MapcheteIOError(
-                f"failed to read {input_file} due to a {str(exception)}"
-            ).with_traceback(exc_traceback) from exception
+                f"failed to read {input_file} due to a {str(clean_exc)}"
+            ).with_traceback(exc_traceback) from clean_exc
 
 
 def _get_warped_edge_array(
@@ -382,7 +383,7 @@ def read_raster_no_crs(
     except FileNotFoundError:
         raise
     except Exception as exc:
-        raise MapcheteIOError(exc)
+        raise MapcheteIOError(str(clean_exc := clean_exception(exc))) from clean_exc
 
 
 def _extract_filenotfound_exception(rio_exc: Exception, path: MPath):
