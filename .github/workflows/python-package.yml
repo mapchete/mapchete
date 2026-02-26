@@ -201,8 +201,13 @@ jobs:
           fi
           
           # 3. ENFORCE 100%
+          echo "Generating coverage report..."
+          
+          # Temporarily disable exit-on-error so a failed report doesn't kill the script!
+          set +e
           OUTPUT=$(uv tool run coverage report --show-missing --fail-under=100 2>&1)
           EXIT_CODE=$?
+          set -e
           
           echo "$OUTPUT"
           
@@ -211,8 +216,7 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
           
           if [ $EXIT_CODE -ne 0 ]; then
-            echo "❌ **Coverage Failed:** Python 3.13 coverage is below 100%." >> $GITHUB_STEP_SUMMARY
-            # Exit with the original code to fail the build
+            echo "❌ **Coverage Failed:** Python 3.13 coverage check failed." >> $GITHUB_STEP_SUMMARY
             exit $EXIT_CODE
           else
             echo "✅ **Coverage Passed:** 100% coverage achieved (Py3.13)." >> $GITHUB_STEP_SUMMARY
