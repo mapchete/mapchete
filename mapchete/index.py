@@ -360,7 +360,7 @@ class VRTFileWriter:
         self.new_entries = 0
         self._new = {}
 
-    def __repr__(self):
+    def __repr__(self): # pragma: no cover
         return "VRTFileWriter(%s)" % self.path
 
     def __enter__(self):
