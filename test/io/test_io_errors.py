@@ -20,11 +20,12 @@ def test_io_retry_settings_defaults():
 def test_io_retry_settings_env_vars(monkeypatch):
     monkeypatch.setenv("MAPCHETE_IO_RETRY_TRIES", "5")
     monkeypatch.setenv("MAPCHETE_IO_RETRY_DELAY", "2.0")
-    monkeypatch.setenv("MAPCHETE_IO_RETRY_BACKOFF", "3.0")
+    monkeypatch.setenv("MAPCHETE_IO_RETRY_BACKOFF", "0.0")
     settings = IORetrySettings()
     assert settings.tries == 5
     assert settings.delay == 2.0
-    assert settings.backoff == 3.0
+    # backoff should be coerced to 1.0 if delay > 0 and backoff == 0
+    assert settings.backoff == 1.0
 
 
 @pytest.mark.parametrize("exception_class", IORetrySettings().exceptions)
