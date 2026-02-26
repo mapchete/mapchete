@@ -438,20 +438,21 @@ def test_clean_exception_setattr_attribute_error_on_chain(monkeypatch):
 def test_clean_exception_fallback_on_internal_error():
     """Cover the last-resort 'except Exception' fallback (lines 109-111).
 
-    We create an exception whose __str__ raises inside the outer try block
-    so that RuntimeError(...) construction fails.
+    We need an exception that passes `_is_frozen_exc` (so it looks normal),
+    but then blows up during the `__cause__`/`__context__` attribute walk.
+    We achieve this by raising an unexpected exception from `__getattribute__`
+    when accessing those specific attribute names.
     """
 
-    class StrRaisesError(Exception):
-        """Frozen AND __str__ raises, so RuntimeError(f'...{exc}') explodes."""
+    class GetattributeRaisesError(Exception):
+        """Raises an unexpected RuntimeError when __cause__ is accessed."""
 
-        def __setattr__(self, name, value):
-            raise AttributeError("frozen")
+        def __getattribute__(self, name):
+            if name == "__cause__":
+                raise RuntimeError("surprise during __cause__ access")
+            return super().__getattribute__(name)
 
-        def __str__(self):
-            raise RuntimeError("str() failed")
-
-    exc = StrRaisesError()
+    exc = GetattributeRaisesError("original message")
     result = errors.clean_exception(exc)
     # Falls through to the bare Exception(str(exc)) fallback
     assert isinstance(result, Exception)
