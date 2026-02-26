@@ -379,7 +379,9 @@ def test_is_frozen_exc_type_error_branch():
     assert errors._is_frozen_exc(TypeErrorOnSetattr("oops")) is True
 
 
-def test_clean_exception_setattr_attribute_error_on_chain(monkeypatch, normal_error_class):
+def test_clean_exception_setattr_attribute_error_on_chain(
+    monkeypatch, normal_error_class
+):
     """Cover the 'except AttributeError: pass' when setting __cause__/__context__
     on safe_exc raises AttributeError (lines 106-107).
 
@@ -399,6 +401,7 @@ def test_clean_exception_setattr_attribute_error_on_chain(monkeypatch, normal_er
 
     monkeypatch.setattr(errors, "setattr", patched_setattr, raising=False)
     import builtins
+
     monkeypatch.setattr(builtins, "setattr", patched_setattr)
 
     result = errors.clean_exception(exc)
