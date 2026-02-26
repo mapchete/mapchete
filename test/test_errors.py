@@ -305,3 +305,153 @@ def test_strip_zoom_error(files_zooms):
         config = files_zooms.dict
         config["input"]["equals"]["zoom=invalid"] = "dummy1.tif"
         mapchete.open(config)
+
+
+# ---------------------------------------------------------------------------
+# Tests for errors.clean_exception / errors._is_frozen_exc
+# ---------------------------------------------------------------------------
+# FrozenError and NormalError are also defined in conftest.py for potential reuse.
+
+
+class FrozenError(Exception):
+    """Simulates a Cython/C-extension exception type that rejects attribute assignment.
+
+    ``__slots__`` alone is insufficient on an Exception subclass in CPython
+    because the base class provides ``__dict__``. Overriding ``__setattr__``
+    is the correct way to reproduce the behaviour of types like
+    rasterio._err.CPLE_AppDefinedError.
+    """
+
+    def __setattr__(self, name, value):
+        raise AttributeError(
+            f"'{type(self).__name__}' object has no attribute '{name}'"
+        )
+
+
+class NormalError(Exception):
+    """Plain Python exception – arbitrary attribute assignment is allowed."""
+
+
+def test_is_frozen_exc_returns_false_for_normal_exception():
+    assert errors._is_frozen_exc(NormalError("oops")) is False
+
+
+def test_is_frozen_exc_returns_true_for_slots_exception():
+    assert errors._is_frozen_exc(FrozenError("oops")) is True
+
+
+def test_clean_exception_none():
+    assert errors.clean_exception(None) is None
+
+
+def test_clean_exception_passthrough_for_normal_exception():
+    exc = NormalError("something went wrong")
+    result = errors.clean_exception(exc)
+    assert result is exc
+
+
+def test_clean_exception_wraps_frozen_exception():
+    exc = FrozenError("gdal error detail")
+    result = errors.clean_exception(exc)
+    assert isinstance(result, RuntimeError)
+    assert "FrozenError" in str(result)
+    assert "gdal error detail" in str(result)
+
+
+def test_clean_exception_preserves_cause_for_normal_exception():
+    cause = NormalError("root cause")
+    exc = NormalError("outer")
+    exc.__cause__ = cause
+    result = errors.clean_exception(exc)
+    assert result.__cause__ is cause
+
+
+def test_clean_exception_cleans_frozen_cause():
+    frozen_cause = FrozenError("cython detail")
+    exc = NormalError("wrapper")
+    exc.__cause__ = frozen_cause
+    result = errors.clean_exception(exc)
+    assert isinstance(result.__cause__, RuntimeError)
+    assert "FrozenError" in str(result.__cause__)
+
+
+def test_clean_exception_cleans_context():
+    frozen_ctx = FrozenError("implicit context")
+    exc = NormalError("outer")
+    exc.__context__ = frozen_ctx
+    result = errors.clean_exception(exc)
+    assert isinstance(result.__context__, RuntimeError)
+    assert "FrozenError" in str(result.__context__)
+
+
+def test_clean_exception_frozen_outer_survives():
+    # FrozenError can't hold __cause__ (slots), so we just verify that
+    # clean_exception handles a frozen exc without erroring out.
+    exc = FrozenError("cython surface error")
+    result = errors.clean_exception(exc)
+    assert isinstance(result, RuntimeError)
+    assert "FrozenError" in str(result)
+
+
+def test_is_frozen_exc_type_error_branch():
+    """Trigger the TypeError branch in _is_frozen_exc (line 84).
+
+    Some C-extension types raise TypeError (not AttributeError) on setattr.
+    """
+
+    class TypeErrorOnSetattr(Exception):
+        def __setattr__(self, name, value):
+            raise TypeError("immutable type")
+
+    assert errors._is_frozen_exc(TypeErrorOnSetattr("oops")) is True
+
+
+def test_clean_exception_setattr_attribute_error_on_chain(monkeypatch):
+    """Cover the 'except AttributeError: pass' when setting __cause__/__context__
+    on safe_exc raises AttributeError (lines 106-107).
+
+    We monkeypatch setattr inside clean_exception so that the second call
+    (the one assigning to __cause__/__context__) raises AttributeError.
+    """
+    call_count = [0]
+    _real_setattr = setattr
+
+    def patched_setattr(obj, name, value):
+        if name in ("__cause__", "__context__"):
+            call_count[0] += 1
+            raise AttributeError("blocked")
+        _real_setattr(obj, name, value)
+
+    cause = NormalError("cause")
+    exc = NormalError("outer")
+    exc.__cause__ = cause
+
+    monkeypatch.setattr(errors, "setattr", patched_setattr, raising=False)
+    import builtins
+    monkeypatch.setattr(builtins, "setattr", patched_setattr)
+
+    result = errors.clean_exception(exc)
+    # Despite the blocked setattr, clean_exception must not raise
+    assert result is exc
+
+
+def test_clean_exception_fallback_on_internal_error():
+    """Cover the last-resort 'except Exception' fallback (lines 109-111).
+
+    We create an exception whose __str__ raises inside the outer try block
+    so that RuntimeError(...) construction fails.
+    """
+
+    class StrRaisesError(Exception):
+        """Frozen AND __str__ raises, so RuntimeError(f'...{exc}') explodes."""
+
+        def __setattr__(self, name, value):
+            raise AttributeError("frozen")
+
+        def __str__(self):
+            raise RuntimeError("str() failed")
+
+    exc = StrRaisesError()
+    result = errors.clean_exception(exc)
+    # Falls through to the bare Exception(str(exc)) fallback
+    assert isinstance(result, Exception)
