@@ -3,6 +3,18 @@ Changelog
 #########
 
 
+2026.2.2 - 2026-02-27
+---------------------
+
+* core
+
+  * `io.raster.read.read_raster_no_crs`: fixed retry and only raise as `MapcheteIOError` if all retries were consumed (#755)
+  * `settings.IORetrySettings`: added more rasterio based exceptions to default retries (#755)
+  * `io.raster.referenced_raster`: added `ReferencedRasterInput` class to enable passing on array outputs between `execute` functions (#756)
+  * `settings.IORetrySettings`: make sure retry backoff can't be 0 if delay is <0 (#759)
+  * `io.raster.read` and `io.vector.read`: clean up cython exceptions so they are pickleable for dask (#759)
+
+
 2026.2.1 - 2026-02-04
 ---------------------
 
