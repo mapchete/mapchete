@@ -12,7 +12,7 @@ from shapely import clip_by_rect
 from shapely.errors import TopologicalError
 from shapely.geometry import mapping
 
-from mapchete.errors import MapcheteIOError
+from mapchete.errors import MapcheteIOError, clean_exception
 from mapchete.geometry import (
     filter_by_geometry_type,
     multipart_to_singleparts,
@@ -110,9 +110,10 @@ def read_vector_window_generator(
         raise
     except Exception as exception:  # pragma: no cover
         _, _, exc_traceback = sys.exc_info()
+        clean_exc = clean_exception(exception)
         raise MapcheteIOError(
-            f"failed to read {inp} due to a {str(exception)}"
-        ).with_traceback(exc_traceback) from exception
+            f"failed to read {inp} due to a {str(clean_exc)}"
+        ).with_traceback(exc_traceback) from clean_exc
 
 
 def read_vector_window(

@@ -9,7 +9,7 @@ from aiohttp import ClientPayloadError, ClientResponseError
 from aiohttp.client_exceptions import ServerDisconnectedError
 from fiona.errors import FionaError
 from fsspec.exceptions import FSTimeoutError
-from pydantic import NonNegativeFloat, NonNegativeInt
+from pydantic import NonNegativeFloat, NonNegativeInt, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from rasterio.errors import RasterioError, RasterioIOError
 from rasterio._err import CPLE_AppDefinedError, CPLE_OpenFailedError, CPLE_FileIOError
@@ -80,6 +80,12 @@ class IORetrySettings(BaseSettings):
 
     # read from environment
     model_config = SettingsConfigDict(env_prefix="MAPCHETE_IO_RETRY_")
+
+    @model_validator(mode="after")
+    def check_backoff(self) -> "IORetrySettings":
+        if self.delay > 0 and self.backoff == 0:
+            self.backoff = 1.0
+        return self
 
 
 class MapcheteOptions(BaseSettings):

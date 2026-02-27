@@ -178,16 +178,36 @@ jobs:
           # 2. COMBINE COVERAGE (Only 3.13 files exist here)
           uv tool install coverage
           
-          # Move the specific 3.13 files to root
-          # The pattern matches .coverage.3.13.1, .coverage.3.13.2, etc.
+          # Move the specific files to root
           mv all-results/.coverage* .
           
+          # 🧹 Delete any empty (0-byte) coverage files that cause exit code 2
+          echo "Cleaning up empty or invalid coverage artifacts..."
+          find . -maxdepth 1 -name ".coverage*" -size 0 -print -delete
+          
           echo "Merging coverage files..."
+          
+          # Disable automatic exit on error temporarily so we can catch the crash
+          set +e
           uv tool run coverage combine
+          COMBINE_EXIT=$?
+          set -e
+          
+          # 🐞 If it still fails, run it again in debug mode so the logs show the exact corrupted file or path issue
+          if [ $COMBINE_EXIT -ne 0 ]; then
+              echo "❌ 'coverage combine' crashed! Running with debug trace..."
+              uv tool run coverage combine --debug=data,sys,pathmap
+              exit $COMBINE_EXIT
+          fi
           
           # 3. ENFORCE 100%
+          echo "Generating coverage report..."
+          
+          # Temporarily disable exit-on-error so a failed report doesn't kill the script!
+          set +e
           OUTPUT=$(uv tool run coverage report --show-missing --fail-under=100 2>&1)
           EXIT_CODE=$?
+          set -e
           
           echo "$OUTPUT"
           
@@ -196,8 +216,7 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
           
           if [ $EXIT_CODE -ne 0 ]; then
-            echo "❌ **Coverage Failed:** Python 3.13 coverage is below 100%." >> $GITHUB_STEP_SUMMARY
-            # Exit with the original code to fail the build
+            echo "❌ **Coverage Failed:** Python 3.13 coverage check failed." >> $GITHUB_STEP_SUMMARY
             exit $EXIT_CODE
           else
             echo "✅ **Coverage Passed:** 100% coverage achieved (Py3.13)." >> $GITHUB_STEP_SUMMARY

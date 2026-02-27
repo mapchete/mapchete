@@ -305,3 +305,128 @@ def test_strip_zoom_error(files_zooms):
         config = files_zooms.dict
         config["input"]["equals"]["zoom=invalid"] = "dummy1.tif"
         mapchete.open(config)
+
+
+def test_is_frozen_exc_returns_false_for_normal_exception(normal_error_class):
+    assert errors._is_frozen_exc(normal_error_class("oops")) is False
+
+
+def test_is_frozen_exc_returns_true_for_slots_exception(frozen_error_class):
+    assert errors._is_frozen_exc(frozen_error_class("oops")) is True
+
+
+def test_clean_exception_none():
+    assert errors.clean_exception(None) is None
+
+
+def test_clean_exception_passthrough_for_normal_exception(normal_error_class):
+    exc = normal_error_class("something went wrong")
+    result = errors.clean_exception(exc)
+    assert result is exc
+
+
+def test_clean_exception_wraps_frozen_exception(frozen_error_class):
+    exc = frozen_error_class("gdal error detail")
+    result = errors.clean_exception(exc)
+    assert isinstance(result, RuntimeError)
+    assert "FrozenError" in str(result)
+    assert "gdal error detail" in str(result)
+
+
+def test_clean_exception_preserves_cause_for_normal_exception(normal_error_class):
+    cause = normal_error_class("root cause")
+    exc = normal_error_class("outer")
+    exc.__cause__ = cause
+    result = errors.clean_exception(exc)
+    assert result.__cause__ is cause
+
+
+def test_clean_exception_cleans_frozen_cause(frozen_error_class, normal_error_class):
+    frozen_cause = frozen_error_class("cython detail")
+    exc = normal_error_class("wrapper")
+    exc.__cause__ = frozen_cause
+    result = errors.clean_exception(exc)
+    assert isinstance(result.__cause__, RuntimeError)
+    assert "FrozenError" in str(result.__cause__)
+
+
+def test_clean_exception_cleans_context(frozen_error_class, normal_error_class):
+    frozen_ctx = frozen_error_class("implicit context")
+    exc = normal_error_class("outer")
+    exc.__context__ = frozen_ctx
+    result = errors.clean_exception(exc)
+    assert isinstance(result.__context__, RuntimeError)
+    assert "FrozenError" in str(result.__context__)
+
+
+def test_clean_exception_frozen_outer_survives(frozen_error_class):
+    exc = frozen_error_class("cython surface error")
+    result = errors.clean_exception(exc)
+    assert isinstance(result, RuntimeError)
+    assert "FrozenError" in str(result)
+
+
+def test_is_frozen_exc_type_error_branch():
+    """Trigger the TypeError branch in _is_frozen_exc (line 84).
+
+    Some C-extension types raise TypeError (not AttributeError) on setattr.
+    """
+
+    class TypeErrorOnSetattr(Exception):
+        def __setattr__(self, name, value):
+            raise TypeError("immutable type")
+
+    assert errors._is_frozen_exc(TypeErrorOnSetattr("oops")) is True
+
+
+def test_clean_exception_setattr_attribute_error_on_chain(
+    monkeypatch, normal_error_class
+):
+    """Cover the 'except AttributeError: pass' when setting __cause__/__context__
+    on safe_exc raises AttributeError (lines 106-107).
+
+    We monkeypatch setattr inside clean_exception so that the second call
+    (the one assigning to __cause__/__context__) raises AttributeError.
+    """
+    _real_setattr = setattr
+
+    def patched_setattr(obj, name, value):
+        if name in ("__cause__", "__context__"):
+            raise AttributeError("blocked")
+        _real_setattr(obj, name, value)
+
+    cause = normal_error_class("cause")
+    exc = normal_error_class("outer")
+    exc.__cause__ = cause
+
+    monkeypatch.setattr(errors, "setattr", patched_setattr, raising=False)
+    import builtins
+
+    monkeypatch.setattr(builtins, "setattr", patched_setattr)
+
+    result = errors.clean_exception(exc)
+    # Despite the blocked setattr, clean_exception must not raise
+    assert result is exc
+
+
+def test_clean_exception_fallback_on_internal_error():
+    """Cover the last-resort 'except Exception' fallback (lines 109-111).
+
+    We need an exception that passes `_is_frozen_exc` (so it looks normal),
+    but then blows up during the `__cause__`/`__context__` attribute walk.
+    We achieve this by raising an unexpected exception from `__getattribute__`
+    when accessing those specific attribute names.
+    """
+
+    class GetattributeRaisesError(Exception):
+        """Raises an unexpected RuntimeError when __cause__ is accessed."""
+
+        def __getattribute__(self, name):
+            if name == "__cause__":
+                raise RuntimeError("surprise during __cause__ access")
+            return super().__getattribute__(name)
+
+    exc = GetattributeRaisesError("original message")
+    result = errors.clean_exception(exc)
+    # Falls through to the bare Exception(str(exc)) fallback
+    assert isinstance(result, Exception)

@@ -1301,3 +1301,33 @@ def retry_mock(mocker):
         return mock
 
     return _create_mock
+
+
+@pytest.fixture()
+def frozen_error_class():
+    """Return an Exception subclass that rejects attribute assignment.
+
+    Simulates Cython/C-extension types such as rasterio._err.CPLE_AppDefinedError,
+    where ``__setattr__`` raises ``AttributeError`` for any attribute write.
+    ``__slots__`` alone is insufficient on an Exception subclass in CPython
+    because the base class provides ``__dict__``; overriding ``__setattr__``
+    is the correct technique.
+    """
+
+    class FrozenError(Exception):
+        def __setattr__(self, name, value):
+            raise AttributeError(
+                f"'{type(self).__name__}' object has no attribute '{name}'"
+            )
+
+    return FrozenError
+
+
+@pytest.fixture()
+def normal_error_class():
+    """Return a plain Exception subclass that allows arbitrary attribute assignment."""
+
+    class NormalError(Exception):
+        pass
+
+    return NormalError
