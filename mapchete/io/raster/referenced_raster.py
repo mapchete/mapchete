@@ -269,7 +269,7 @@ class ReferencedRasterInput(RasterInput):
         """Either read full array or resampled to grid."""
         return self.referenced_raster.read(indexes=indexes, resampling=resampling)
 
-    def is_empty(self) -> bool:
+    def is_empty(self, **_) -> bool:
         """Checks if input is empty here."""
         return self.referenced_raster.masked_array().mask.all()
 

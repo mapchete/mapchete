@@ -312,7 +312,7 @@ class InputTile(base.InputTile, RasterInput):
                 gdal_opts=self.gdal_opts,
             )
 
-    def is_empty(self, indexes=None):
+    def is_empty(self, **_):
         """
         Check if there is data within this tile.
 

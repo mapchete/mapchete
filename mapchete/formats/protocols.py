@@ -29,7 +29,7 @@ class InputTileProtocol(GridProtocol):  # pragma: no cover
         """Read from input."""
         ...
 
-    def is_empty(self) -> bool:
+    def is_empty(self, **kwargs) -> bool:
         """Checks if input is empty here."""
         ...
 

@@ -714,7 +714,7 @@ class InputTile(base.InputTile, RasterInput):
             else ma.concatenate([ma.expand_dims(arr[i - 1], 0) for i in band_indexes])
         )
 
-    def is_empty(self, indexes=None):
+    def is_empty(self, **_):
         """
         Check if there is data within this tile.
 
