@@ -328,7 +328,7 @@ class InputTile(base.InputTile, VectorInput):
             target_geometry_type=target_geometry_type,
         )
 
-    def is_empty(self) -> bool:
+    def is_empty(self, **_) -> bool:
         """
         Check if there is data within this tile.
 

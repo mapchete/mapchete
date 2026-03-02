@@ -358,6 +358,7 @@ class InputTile(base.InputTile, RasterInput):
         matching_method="gdal",
         matching_precision=8,
         matching_max_zoom=None,
+        **_,
     ):
         """
         Check if there is data within this tile.
