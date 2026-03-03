@@ -1110,10 +1110,13 @@ def _output_tiles_batches_exist(
     config,
     is_https_without_ls,
 ) -> Generator[Tuple[BufferedTile, bool], None, None]:
-    with Executor(concurrency=mapchete_options.tiles_exist_concurrency) as executor:
+    with Executor(
+        concurrency=mapchete_options.tiles_exist_concurrency,
+        workers=min([os.cpu_count() or 4, 4]),
+    ) as executor:
         for batch in executor.as_completed(
             _output_tiles_batch_exists,
-            (list(b) for b in output_tiles_batches),
+            (list(batch) for batch in output_tiles_batches),
             fargs=(config, is_https_without_ls),
         ):
             yield from batch.result()
@@ -1122,6 +1125,7 @@ def _output_tiles_batches_exist(
 def _output_tiles_batch_exists(
     tiles, config, is_https_without_ls
 ) -> List[Tuple[BufferedTile, bool]]:
+    # this assumes all tiles are from the same zoom level
     if tiles:
         zoom = tiles[0].zoom
         # determine output paths
@@ -1145,7 +1149,10 @@ def _output_tiles_batch_exists(
 def _process_tiles_batches_exist(
     process_tiles_batches, config, is_https_without_ls
 ) -> Generator[Tuple[BufferedTile, bool], None, None]:
-    with Executor(concurrency=mapchete_options.tiles_exist_concurrency) as executor:
+    with Executor(
+        concurrency=mapchete_options.tiles_exist_concurrency,
+        workers=min([os.cpu_count() or 4, 4]),
+    ) as executor:
         for batch in executor.as_completed(
             _process_tiles_batch_exists,
             (list(b) for b in process_tiles_batches),
@@ -1201,10 +1208,10 @@ def _existing_output_tiles(
     is_https_without_ls: bool = False,
 ) -> Set[BufferedTile]:
     existing_tiles = set()
+    logger.debug("checking %s rows", len(output_rows))
     for row in output_rows:
-        logger.debug("check existing tiles in row %s", row)
         rowpath = config.output_reader.path.joinpath(zoom, row)
-        logger.debug("rowpath: %s", rowpath)
+        logger.debug("check existing tiles in rowpath %s", rowpath)
 
         if is_https_without_ls:  # pragma: no cover
             for path, tile in output_paths.items():
@@ -1214,7 +1221,11 @@ def _existing_output_tiles(
 
         else:
             try:
-                for path in rowpath.ls(detail=False):
+                row_paths = list(
+                    (path for page in (rowpath + "/").paginate() for path in page)
+                )
+                logger.debug("%s contains %s subpaths", rowpath, len(row_paths))
+                for path in row_paths:
                     path = path.crop(-3)
                     if path in output_paths:
                         existing_tiles.add(output_paths[path])

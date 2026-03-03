@@ -21,6 +21,7 @@ from mapchete.io.vector.read import read_vector_window, reprojected_features
 from mapchete.io.vector.types import FeatureCollectionProtocol
 from mapchete.protocols import GridProtocol
 from mapchete.settings import IORetrySettings
+from mapchete.timer import Timer
 from mapchete.types import BoundsLike, CRSLike, MPathLike, GeoJSONLikeFeature, Geometry
 
 
@@ -85,31 +86,34 @@ class IndexedFeatures(FeatureCollectionProtocol):
         self._items = {}
         self._non_geo_items = set()
         self.bounds = None
-        for counter, feature in enumerate(features):
-            if isinstance(feature, tuple):
-                id_, feature = feature
-            else:
-                try:
-                    id_ = object_id(feature)
-                except TypeError:
-                    # use feature position in interable as ID
-                    id_ = counter
-            self._items[id_] = feature
-            try:
-                try:
-                    bounds = object_bounds(feature, dst_crs=crs)
-                except NoCRSError:  # pragma: no cover
-                    bounds = object_bounds(feature)
-            except NoGeoError:
-                if allow_non_geo_objects:
-                    bounds = None
+        with Timer() as duration:
+            for counter, feature in enumerate(features):
+                if isinstance(feature, tuple):
+                    id_, feature = feature
                 else:
-                    raise
-            if bounds is None:
-                self._non_geo_items.add(id_)
-            else:
-                self._update_bounds(bounds)
-                self._index.insert(id_, bounds)
+                    try:
+                        id_ = object_id(feature)
+                    except TypeError:
+                        # use feature position in interable as ID
+                        id_ = counter
+                self._items[id_] = feature
+                try:
+                    try:
+                        bounds = object_bounds(feature, dst_crs=crs)
+                    except NoCRSError:  # pragma: no cover
+                        bounds = object_bounds(feature)
+                except NoGeoError:
+                    if allow_non_geo_objects:
+                        bounds = None
+                    else:
+                        raise
+                if bounds is None:
+                    self._non_geo_items.add(id_)
+                else:
+                    self._update_bounds(bounds)
+                    self._index.insert(id_, bounds)
+                if counter % 100 == 0:
+                    logger.debug("%s features read after %s", counter, duration)
 
     def __repr__(self):  # pragma: no cover
         return f"IndexedFeatures(features={len(self)}, index={self._index.__repr__()}, bounds={self.bounds})"
@@ -216,7 +220,11 @@ class IndexedFeatures(FeatureCollectionProtocol):
 
         geoms = list(_geoms())
         if geoms:
-            return unary_union(geoms)
+            logger.debug("creating union geometry ...")
+            with Timer() as duration:
+                union = unary_union(geoms)
+            logger.debug("union geometry created in %s", duration)
+            return union
         return GeometryCollection()
 
     def _update_bounds(self, bounds: BoundsLike):
