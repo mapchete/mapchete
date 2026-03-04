@@ -3,7 +3,6 @@ from __future__ import annotations
 from itertools import chain
 import logging
 from typing import Any, Dict, Iterable, List, Literal, Optional, Tuple, Union, Generator
-import warnings
 
 from fiona import Collection
 from rasterio.crs import CRS
@@ -115,8 +114,7 @@ class IndexedFeatures(FeatureCollectionProtocol):
 
                 self._index = rtree.index.Index()
             except ImportError:  # pragma: no cover
-                warnings.warn("rtree not installed, falling back to STRtree.")
-                self._index = STRtreeIndex()
+                raise ImportError("rtree package must be installed for this feature")
         else:
             self._index = FakeIndex()
         self.crs = crs or getattr(features, "crs", None)

@@ -65,7 +65,6 @@ complete = [
     "memray",
     "pystac[urllib3]>=1.8.2",
     "requests",
-    "rtree",
     "s3fs!=2023.9.0",
     "tilebench",
     "werkzeug>=0.15",
@@ -92,9 +91,6 @@ serve = [
     "Flask<4.0.0",
     "Flask-RangeRequest",
     "werkzeug>=0.15",
-]
-spatial-index = [
-    "rtree",
 ]
 vrt = [
     "lxml",
