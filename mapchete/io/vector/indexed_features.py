@@ -68,6 +68,10 @@ class STRtreeIndex:
         return self._tree
 
     def insert(self, id: int, bounds: BoundsLike):
+        if self._tree is not None:  # pragma: no cover
+            raise ValueError(
+                "cannot insert more items, because internal STRtree index is already built."
+            )
         self._ids.append(id)
         self._bounds.append(Bounds.from_inp(bounds))
 
