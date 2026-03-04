@@ -35,6 +35,16 @@ def test_rm_path_list(mp_tmpdir):
     assert not out_path.exists()
 
 
+def test_rm_path_generator(mp_tmpdir):
+    out_path = mp_tmpdir / "some_file.txt"
+    with out_path.open("w") as dst:
+        dst.write("foo")
+
+    assert out_path.exists()
+    rm(paths=(out_path for _ in range(1)))
+    assert not out_path.exists()
+
+
 @pytest.mark.integration
 def test_rm_path_list_s3(s3_testdata_dir):
     out_path = s3_testdata_dir / "some_file.txt"

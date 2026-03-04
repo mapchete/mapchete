@@ -51,7 +51,9 @@ def rm(
         Configuration options for fsspec filesystem.
     """
     all_observers = Observers(observers)
-    if paths is None and tiledir:
+    if paths is not None:
+        pass
+    elif tiledir:
         if zoom is None:  # pragma: no cover
             raise ValueError("zoom level(s) required")
         paths = gen_existing_paths(
