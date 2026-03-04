@@ -9,6 +9,7 @@ from fiona import Collection
 from rasterio.crs import CRS
 from retry import retry
 from shapely import GeometryCollection, prepare, unary_union
+from shapely.strtree import STRtree
 from mapchete.bounds import Bounds
 from mapchete.errors import NoCRSError, NoGeoError
 from mapchete.geometry.filter import is_type
@@ -40,10 +41,40 @@ class FakeIndex:
         self._items.append((id, Bounds.from_inp(bounds)))
 
     def intersection(self, bounds: BoundsLike) -> List[int]:
+        return [id for id, i_bounds in self._items if i_bounds.intersects(bounds)]
+
+
+class STRtreeIndex:
+    """Wrapper around shapely.strtree.STRtree."""
+
+    _ids: List[int]
+    _bounds: List[Bounds]
+    _tree: STRtree
+
+    def __init__(self):
+        self._ids = []
+        self._bounds = []
+        self._tree = None
+
+    def tree(self) -> STRtree:
+        if self._tree is None:
+            logger.debug("build STRtree index before first use ...")
+            self._tree = STRtree([bounds.geometry for bounds in self._bounds])
+            # empty bounds list because we don't need it anymore
+            self._bounds = []
+
+        return self._tree
+
+    def insert(self, id: int, bounds: BoundsLike):
+        self._ids.append(id)
+        self._bounds.append(Bounds.from_inp(bounds))
+
+    def intersection(self, bounds: BoundsLike) -> List[int]:
         return [
-            id
-            for id, i_bounds in self._items
-            if Bounds.from_inp(i_bounds).intersects(bounds)
+            self._ids[_id]
+            for _id in self.tree().query(
+                Bounds.from_inp(bounds).geometry, predicate="intersects"
+            )
         ]
 
 
@@ -66,20 +97,20 @@ class IndexedFeatures(FeatureCollectionProtocol):
     def __init__(
         self,
         features: Iterable[Any],
-        index: Optional[Literal["rtree"]] = "rtree",
+        index: Optional[Literal["rtree", "strtree"]] = "strtree",
         allow_non_geo_objects: bool = False,
         crs: Optional[CRSLike] = None,
     ):
-        if index == "rtree":
+        if index == "strtree":
+            self._index = STRtreeIndex()
+        elif index == "rtree":
             try:
                 import rtree
 
                 self._index = rtree.index.Index()
             except ImportError:  # pragma: no cover
-                warnings.warn(
-                    "It is recommended to install rtree in order to significantly speed up spatial indexes."
-                )
-                self._index = FakeIndex()
+                warnings.warn("rtree not installed, falling back to STRtree.")
+                self._index = STRtreeIndex()
         else:
             self._index = FakeIndex()
         self.crs = crs or getattr(features, "crs", None)
