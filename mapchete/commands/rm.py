@@ -1,7 +1,8 @@
 """Remove tiles from Tile Directory."""
 
+from itertools import chain, islice
 import logging
-from typing import List, Optional, Union, Dict, Any
+from typing import List, Optional, Union, Dict, Any, Generator, Iterable
 
 from rasterio.crs import CRS
 from shapely.geometry.base import BaseGeometry
@@ -11,14 +12,13 @@ from mapchete.commands.observer import ObserverProtocol, Observers
 from mapchete.io import tiles_exist
 from mapchete.path import MPath
 from mapchete.types import MPathLike, Progress, BoundsLike
-from mapchete.tile import BufferedTile
 
 logger = logging.getLogger(__name__)
 
 
 def rm(
     tiledir: Optional[MPathLike] = None,
-    paths: Optional[List[MPath]] = None,
+    paths: Optional[Iterable[MPath]] = None,
     zoom: Optional[Union[int, List[int]]] = None,
     area: Union[BaseGeometry, str, dict] = None,
     area_crs: Union[CRS, str] = None,
@@ -27,6 +27,7 @@ def rm(
     workers: Optional[int] = None,
     fs_opts: Optional[Dict[str, Any]] = None,
     observers: Optional[List[ObserverProtocol]] = None,
+    s3_delete_chunksize: int = 1000,
 ):
     """
     Remove tiles from TileDirectory.
@@ -50,13 +51,13 @@ def rm(
         Configuration options for fsspec filesystem.
     """
     all_observers = Observers(observers)
-
-    if tiledir:
+    if paths is not None:
+        pass
+    elif tiledir:
         if zoom is None:  # pragma: no cover
             raise ValueError("zoom level(s) required")
-        tiledir = MPath.from_inp(tiledir, storage_options=fs_opts)
-        paths = existing_paths(
-            tiledir=tiledir,
+        paths = gen_existing_paths(
+            tiledir=MPath.from_inp(tiledir, storage_options=fs_opts),
             zoom=zoom,
             area=area,
             area_crs=area_crs,
@@ -64,41 +65,96 @@ def rm(
             bounds_crs=bounds_crs,
             workers=workers,
         )
-    elif isinstance(paths, list):
-        pass
     else:  # pragma: no cover
-        raise ValueError(
-            "either a tile directory or a list of paths has to be provided"
-        )
+        raise ValueError("either tiledir or paths have to be provided")
 
-    if not paths:
+    try:
+        # this only works for lists
+        total = len(paths)
+        all_observers.notify(progress=Progress(total=total))
+        logger.debug("got %s path(s)", len(paths))
+    except TypeError:
+        # we don't know the length of a generator in advance
+        total = None
+
+    # create an iterator to have a common interface for lists and generators
+    paths_iter = iter(paths)
+    # determine the filesystem by getting the first path
+    try:
+        first_path = next(paths_iter)
+    except StopIteration:
+        # this happends if the list or generator does not have any item
         logger.debug("no paths to delete")
         return
 
-    all_observers.notify(progress=Progress(total=len(paths)))
-    logger.debug("got %s path(s)", len(paths))
+    fs = first_path.fs
+    # append first_path to other paths again
+    all_paths = chain((first_path,), paths_iter)
 
     # s3fs enables multiple paths as input, so let's use this:
-    if "s3" in paths[0].protocols:
-        paths[0].fs.rm(paths)
-        for ii, path in enumerate(paths, 1):
-            msg = f"deleted {path}"
-            logger.debug(msg)
+    if "s3" in fs.protocol:
+        tiles_counter = 0
+        while chunk := tuple(islice(all_paths, s3_delete_chunksize)):
             all_observers.notify(
-                progress=Progress(current=ii, total=len(paths)), message=msg
+                progress=Progress(
+                    current=tiles_counter, total=total or tiles_counter + len(chunk)
+                )
             )
+            # this actually deletes the files
+            fs.rm(chunk)
+            for path in chunk:
+                tiles_counter += 1
+                msg = f"deleted {path}"
+                logger.debug(msg)
+                all_observers.notify(message=msg)
+            all_observers.notify(progress=Progress(current=tiles_counter))
 
     # otherwise, just iterate through the paths
     else:
-        for ii, path in enumerate(paths, 1):
+        for tiles_counter, path in enumerate(all_paths, 1):
             path.rm()
             msg = f"deleted {path}"
             logger.debug(msg)
             all_observers.notify(
-                progress=Progress(current=ii, total=len(paths)), message=msg
+                progress=Progress(current=tiles_counter, total=total or tiles_counter),
+                message=msg,
             )
 
-    all_observers.notify(message=f"{len(paths)} tiles deleted")
+    all_observers.notify(message=f"{tiles_counter} tiles deleted")
+
+
+def gen_existing_paths(
+    tiledir: MPathLike,
+    zoom: Optional[Union[int, List[int]]] = None,
+    area: Union[BaseGeometry, str, dict] = None,
+    area_crs: Union[CRS, str] = None,
+    bounds: Optional[BoundsLike] = None,
+    bounds_crs: Union[CRS, str] = None,
+    workers: Optional[int] = None,
+) -> Generator[MPath, None, None]:
+    with mapchete.open(
+        tiledir,
+        zoom=zoom,
+        area=area,
+        area_crs=area_crs,
+        bounds=bounds,
+        bounds_crs=bounds_crs,
+        mode="readonly",
+    ) as mp:
+        tp = mp.config.output_pyramid
+        for zoom in mp.config.init_zoom_levels:
+            # check which source tiles exist
+            logger.debug("looking for existing source tiles in zoom %s...", zoom)
+            for tile, exists in tiles_exist(
+                config=mp.config,
+                output_tiles_batches=tp.tiles_from_geom_batches(
+                    mp.config.area_at_zoom(zoom), zoom
+                ),
+                workers=workers,
+            ):
+                if exists:
+                    logger.debug("yield tile %s", tile)
+                    yield mp.config.output_reader.get_path(tile)
 
 
 def existing_paths(
@@ -110,36 +166,15 @@ def existing_paths(
     bounds_crs: Union[CRS, str] = None,
     workers: Optional[int] = None,
 ) -> List[MPath]:
-    with mapchete.open(
-        tiledir,
-        zoom=zoom,
-        area=area,
-        area_crs=area_crs,
-        bounds=bounds,
-        bounds_crs=bounds_crs,
-        mode="readonly",
-    ) as mp:
-        tp = mp.config.output_pyramid
-        tiles: Dict[Union[int, List[int], None], List[BufferedTile]] = {}
-        for zoom in mp.config.init_zoom_levels:
-            tiles[zoom] = []
-            # check which source tiles exist
-            logger.debug("looking for existing source tiles in zoom %s...", zoom)
-            for tile, exists in tiles_exist(
-                config=mp.config,
-                output_tiles=(
-                    tile_
-                    for tile_ in tp.tiles_from_geom(mp.config.area_at_zoom(zoom), zoom)
-                    # this is required to omit tiles touching the config area
-                    if mp.config.area_at_zoom(zoom).intersection(tile_.bbox).area
-                ),
-                workers=workers,
-            ):
-                if exists:
-                    tiles[zoom].append(tile)
-
-        return [
-            mp.config.output_reader.get_path(tile)
-            for zoom_tiles in tiles.values()
-            for tile in zoom_tiles
-        ]
+    return [
+        tile
+        for tile in gen_existing_paths(
+            tiledir=tiledir,
+            zoom=zoom,
+            area=area,
+            area_crs=area_crs,
+            bounds=bounds,
+            bounds_crs=bounds_crs,
+            workers=workers,
+        )
+    ]

@@ -6,6 +6,7 @@ import warnings
 from collections import OrderedDict
 from copy import deepcopy
 from functools import cached_property
+import textwrap
 from typing import Any, Iterator, Optional, Tuple, Union
 
 import oyaml as yaml
@@ -123,7 +124,7 @@ class MapcheteConfig(object):
         """Initialize configuration."""
         # get dictionary representation of input_config and
         # (1) map deprecated params to new structure
-        logger.debug(f"parsing {input_config}")
+        logger.debug("parsing %s", input_config)
         try:
             self.parsed_config = parse_config(input_config, strict=stric_parsing)
             self.parsed_config.model_dump()
@@ -240,9 +241,12 @@ class MapcheteConfig(object):
             area_crs=area_crs,
             bounds_crs=bounds_crs,
         )
-        logger.info(f"process area: {self.area}")
+        logger.info(
+            "process area: %s",
+            textwrap.shorten(self.area.wkt, width=200, placeholder="..."),
+        )
         self.bounds = Bounds(*self.area.bounds)
-        logger.debug(f"process bounds: {self.bounds}")
+        logger.debug("process bounds: %s", self.bounds)
         self.init_area = self._get_process_area(
             area=self._init_area,
             bounds=self._init_bounds,
@@ -251,9 +255,12 @@ class MapcheteConfig(object):
             area_crs=area_crs,
             bounds_crs=bounds_crs,
         )
-        logger.info(f"init area: {self.init_area}")
+        logger.info(
+            "init area: %s",
+            textwrap.shorten(self.init_area.wkt, width=200, placeholder="..."),
+        )
         self.init_bounds = Bounds(*self.init_area.bounds)
-        logger.debug(f"init bounds: {self.init_bounds}")
+        logger.debug("init bounds: %s", self.init_bounds)
 
         # (7) the delimiters are used by some input drivers
         self._delimiters

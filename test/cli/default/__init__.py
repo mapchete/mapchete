@@ -7,9 +7,20 @@ from mapchete.cli.mapchete import main
 logger = logging.getLogger(__name__)
 
 
-def run_cli(args, expected_exit_code=0, output_contains=None, raise_exc=True, cli=main):
+def run_cli(
+    args,
+    expected_exit_code=0,
+    output_contains=None,
+    raise_exc=True,
+    cli=main,
+    input=None,
+):
     result = CliRunner(env=dict(MAPCHETE_TEST="TRUE")).invoke(
-        cli, list(map(str, args)), catch_exceptions=True, standalone_mode=True
+        cli,
+        list(map(str, args)),
+        catch_exceptions=True,
+        standalone_mode=True,
+        input=input,
     )
     if output_contains:
         assert output_contains in result.output or output_contains in str(

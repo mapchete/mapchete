@@ -1110,10 +1110,13 @@ def _output_tiles_batches_exist(
     config,
     is_https_without_ls,
 ) -> Generator[Tuple[BufferedTile, bool], None, None]:
-    with Executor(concurrency=mapchete_options.tiles_exist_concurrency) as executor:
+    with Executor(
+        concurrency=mapchete_options.tiles_exist_concurrency,
+        workers=min([os.cpu_count() or 4, 4]),
+    ) as executor:
         for batch in executor.as_completed(
             _output_tiles_batch_exists,
-            (list(b) for b in output_tiles_batches),
+            (list(batch) for batch in output_tiles_batches),
             fargs=(config, is_https_without_ls),
         ):
             yield from batch.result()
@@ -1122,6 +1125,7 @@ def _output_tiles_batches_exist(
 def _output_tiles_batch_exists(
     tiles, config, is_https_without_ls
 ) -> List[Tuple[BufferedTile, bool]]:
+    # this assumes all tiles are from the same zoom level
     if tiles:
         zoom = tiles[0].zoom
         # determine output paths
@@ -1145,7 +1149,10 @@ def _output_tiles_batch_exists(
 def _process_tiles_batches_exist(
     process_tiles_batches, config, is_https_without_ls
 ) -> Generator[Tuple[BufferedTile, bool], None, None]:
-    with Executor(concurrency=mapchete_options.tiles_exist_concurrency) as executor:
+    with Executor(
+        concurrency=mapchete_options.tiles_exist_concurrency,
+        workers=min([os.cpu_count() or 4, 4]),
+    ) as executor:
         for batch in executor.as_completed(
             _process_tiles_batch_exists,
             (list(b) for b in process_tiles_batches),
@@ -1172,7 +1179,8 @@ def _process_tiles_batch_exists(
             list(set(t.row for t in config.output_pyramid.intersecting(tiles[0])))
         )
         # determine all output paths
-        output_paths = {
+        output_paths: Dict[MPath, BufferedTile] = {
+            # this crops the full, absolute path to only "0/0/0.tif"
             config.output_reader.get_path(output_tile).crop(-3): output_tile
             for process_tile in tiles
             for output_tile in config.output_pyramid.intersecting(process_tile)
@@ -1195,16 +1203,17 @@ def _process_tiles_batch_exists(
 
 def _existing_output_tiles(
     output_rows: List[BufferedTile],
-    output_paths: dict,
+    output_paths: Dict[MPath, BufferedTile],
     config,
     zoom: int,
     is_https_without_ls: bool = False,
 ) -> Set[BufferedTile]:
     existing_tiles = set()
+    logger.debug("checking %s rows", len(output_rows))
     for row in output_rows:
-        logger.debug("check existing tiles in row %s", row)
-        rowpath = config.output_reader.path.joinpath(zoom, row)
-        logger.debug("rowpath: %s", rowpath)
+        # we have to add "/" to make sure only "subpaths" are returned when paginating
+        rowpath: MPath = config.output_reader.path.joinpath(zoom, row) + "/"
+        logger.debug("check existing tiles in rowpath %s", rowpath)
 
         if is_https_without_ls:  # pragma: no cover
             for path, tile in output_paths.items():
@@ -1214,12 +1223,16 @@ def _existing_output_tiles(
 
         else:
             try:
-                for path in rowpath.ls(detail=False):
-                    path = path.crop(-3)
-                    if path in output_paths:
-                        existing_tiles.add(output_paths[path])
+                for cropped_path in (
+                    # this crops the full, absolute path to only "0/0/0.tif"
+                    path.crop(-3)
+                    for page in rowpath.paginate()
+                    for path in page
+                ):
+                    if cropped_path in output_paths:
+                        existing_tiles.add(output_paths[cropped_path])
             # this happens when the row directory does not even exist
-            except FileNotFoundError:
+            except FileNotFoundError:  # pragma: no cover
                 pass
 
     return existing_tiles
