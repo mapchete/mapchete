@@ -45,7 +45,7 @@ def rm(
             **kwargs,
         )
         if len(tiles_to_delete):
-            if force or click.confirm(
+            if click.confirm(
                 f"Do you want to delete {len(tiles_to_delete)} tiles?", abort=True
             ):
                 with PBar(
