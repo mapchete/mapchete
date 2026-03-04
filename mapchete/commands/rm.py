@@ -109,7 +109,8 @@ def rm(
                 ii += 1
                 msg = f"deleted {path}"
                 logger.debug(msg)
-                all_observers.notify(progress=Progress(current=ii), message=msg)
+                all_observers.notify(message=msg)
+            all_observers.notify(progress=Progress(current=ii))
 
     # otherwise, just iterate through the paths
     else:
