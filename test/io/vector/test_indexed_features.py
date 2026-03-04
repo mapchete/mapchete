@@ -133,6 +133,12 @@ def test_read_union_geometry(aoi_br_geojson):
     ).is_empty
 
 
+def test_intersects(landpoly):
+    features = IndexedFeatures.from_file(landpoly)
+    assert features.intersects(object_geometry(next(iter(features.values()))))
+    assert not features.intersects(box(0, 1, 2, 3))
+
+
 def test_object_bounds_attr_bounds():
     control = (0, 1, 2, 3)
 

@@ -218,7 +218,7 @@ class IndexedFeatures(FeatureCollectionProtocol):
             try:
                 if object_geometry(feature).intersects(geometry):
                     return True
-            except NoGeoError:
+            except NoGeoError:  # pragma: no cover
                 continue
         return False
 
