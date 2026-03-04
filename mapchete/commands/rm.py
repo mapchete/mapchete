@@ -1,6 +1,6 @@
 """Remove tiles from Tile Directory."""
 
-from itertools import batched, chain
+from itertools import chain, islice
 import logging
 from types import GeneratorType
 from typing import List, Optional, Union, Dict, Any, Generator
@@ -97,7 +97,9 @@ def rm(
     # s3fs enables multiple paths as input, so let's use this:
     if "s3" in fs.protocol:
         ii = 0
-        for chunk in batched(chain((first_path,), paths_iter), S3_DELETE_CHUNKSIZE):
+        while chunk := tuple(
+            islice(chain((first_path,), paths_iter), S3_DELETE_CHUNKSIZE)
+        ):
             all_observers.notify(
                 progress=Progress(current=ii, total=total or ii + len(chunk))
             )
