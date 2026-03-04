@@ -1179,7 +1179,7 @@ def _process_tiles_batch_exists(
             list(set(t.row for t in config.output_pyramid.intersecting(tiles[0])))
         )
         # determine all output paths
-        output_paths = {
+        output_paths: Dict[MPath, BufferedTile] = {
             config.output_reader.get_path(output_tile).crop(-3): output_tile
             for process_tile in tiles
             for output_tile in config.output_pyramid.intersecting(process_tile)
@@ -1202,7 +1202,7 @@ def _process_tiles_batch_exists(
 
 def _existing_output_tiles(
     output_rows: List[BufferedTile],
-    output_paths: dict,
+    output_paths: Dict[MPath, BufferedTile],
     config,
     zoom: int,
     is_https_without_ls: bool = False,
@@ -1210,7 +1210,7 @@ def _existing_output_tiles(
     existing_tiles = set()
     logger.debug("checking %s rows", len(output_rows))
     for row in output_rows:
-        rowpath = config.output_reader.path.joinpath(zoom, row)
+        rowpath: MPath = config.output_reader.path.joinpath(zoom, row)
         logger.debug("check existing tiles in rowpath %s", rowpath)
 
         if is_https_without_ls:  # pragma: no cover
@@ -1221,16 +1221,15 @@ def _existing_output_tiles(
 
         else:
             try:
-                row_paths = list(
-                    (path for page in (rowpath + "/").paginate() for path in page)
-                )
-                logger.debug("%s contains %s subpaths", rowpath, len(row_paths))
-                for path in row_paths:
-                    path = path.crop(-3)
+                for path in (
+                    path.crop(-3)
+                    for page in (rowpath + "/").paginate()
+                    for path in page
+                ):
                     if path in output_paths:
                         existing_tiles.add(output_paths[path])
             # this happens when the row directory does not even exist
-            except FileNotFoundError:
+            except FileNotFoundError:  # pragma: no cover
                 pass
 
     return existing_tiles
