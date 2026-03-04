@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from itertools import chain
 import logging
-from typing import Any, Dict, Iterable, List, Literal, Optional, Tuple, Union
+from typing import Any, Dict, Iterable, List, Literal, Optional, Tuple, Union, Generator
 import warnings
 
 from fiona import Collection
 from rasterio.crs import CRS
 from retry import retry
 from shapely import GeometryCollection, prepare, unary_union
+from shapely.geometry.base import BaseGeometry
 from shapely.strtree import STRtree
 from mapchete.bounds import Bounds
 from mapchete.errors import NoCRSError, NoGeoError
@@ -27,6 +28,7 @@ from mapchete.types import BoundsLike, CRSLike, MPathLike, GeoJSONLikeFeature, G
 
 
 logger = logging.getLogger(__name__)
+IndexType = Literal["rtree", "strtree"]
 
 
 class FakeIndex:
@@ -97,7 +99,7 @@ class IndexedFeatures(FeatureCollectionProtocol):
     def __init__(
         self,
         features: Iterable[Any],
-        index: Optional[Literal["rtree", "strtree"]] = "strtree",
+        index: Optional[IndexType] = "strtree",
         allow_non_geo_objects: bool = False,
         crs: Optional[CRSLike] = None,
     ):
@@ -210,6 +212,16 @@ class IndexedFeatures(FeatureCollectionProtocol):
             )
         return list(out_features)
 
+    def intersects(self, geometry: BaseGeometry) -> bool:
+        """Check if geometry intersects with any of the features."""
+        for feature in self.filter(bounds=geometry.bounds):
+            try:
+                if object_geometry(feature).intersects(geometry):
+                    return True
+            except NoGeoError:
+                continue
+        return False
+
     def read(
         self,
         grid: Optional[Union[Grid, GridProtocol]] = None,
@@ -233,23 +245,11 @@ class IndexedFeatures(FeatureCollectionProtocol):
             Union[GeometryTypeLike, Tuple[GeometryTypeLike]]
         ] = None,
     ) -> Geometry:
-        def _geoms():
-            if bounds and clip:
-                bounds_geom = to_shape(Bounds.from_inp(bounds))
-                prepare(bounds_geom)
-                for feature in self.filter(
-                    bounds=bounds, target_geometry_type=target_geometry_type
-                ):
-                    geom = bounds_geom.intersection(to_shape(feature))
-                    if not geom.is_empty:
-                        yield geom
-            else:
-                for feature in self.filter(
-                    bounds=bounds, target_geometry_type=target_geometry_type
-                ):
-                    yield to_shape(feature)
-
-        geoms = list(_geoms())
+        geoms = list(
+            self.generate_geometries(
+                bounds=bounds, clip=clip, target_geometry_type=target_geometry_type
+            )
+        )
         if geoms:
             logger.debug("creating union geometry ...")
             with Timer() as duration:
@@ -257,6 +257,50 @@ class IndexedFeatures(FeatureCollectionProtocol):
             logger.debug("union geometry created in %s", duration)
             return union
         return GeometryCollection()
+
+    def read_geometry_collection(
+        self,
+        bounds: Optional[BoundsLike] = None,
+        clip: bool = False,
+        target_geometry_type: Optional[
+            Union[GeometryTypeLike, Tuple[GeometryTypeLike]]
+        ] = None,
+    ) -> GeometryCollection:
+        with Timer() as duration:
+            geom_collection = GeometryCollection(
+                list(
+                    self.generate_geometries(
+                        bounds=bounds,
+                        clip=clip,
+                        target_geometry_type=target_geometry_type,
+                    )
+                )
+            )
+        logger.debug("geometry collection created in %s", duration)
+        return geom_collection
+
+    def generate_geometries(
+        self,
+        bounds: Optional[BoundsLike] = None,
+        clip: bool = False,
+        target_geometry_type: Optional[
+            Union[GeometryTypeLike, Tuple[GeometryTypeLike]]
+        ] = None,
+    ) -> Generator[Geometry, None, None]:
+        if bounds and clip:
+            bounds_geom = to_shape(Bounds.from_inp(bounds))
+            prepare(bounds_geom)
+            for feature in self.filter(
+                bounds=bounds, target_geometry_type=target_geometry_type
+            ):
+                geom = bounds_geom.intersection(to_shape(feature))
+                if not geom.is_empty:
+                    yield geom
+        else:
+            for feature in self.filter(
+                bounds=bounds, target_geometry_type=target_geometry_type
+            ):
+                yield to_shape(feature)
 
     def _update_bounds(self, bounds: BoundsLike):
         bounds = Bounds.from_inp(bounds)
@@ -268,7 +312,7 @@ class IndexedFeatures(FeatureCollectionProtocol):
     @staticmethod
     def from_fiona(
         src: Collection,
-        index: Optional[Literal["rtree"]] = "rtree",
+        index: Optional[IndexType] = "strtree",
     ) -> IndexedFeatures:
         return IndexedFeatures(src, index=index, crs=src.crs)
 
@@ -276,7 +320,7 @@ class IndexedFeatures(FeatureCollectionProtocol):
     def from_file(
         path: MPathLike,
         grid: Optional[Union[Grid, GridProtocol]] = None,
-        index: Optional[Literal["rtree"]] = "rtree",
+        index: Optional[IndexType] = "strtree",
         **kwargs,
     ) -> IndexedFeatures:
         logger.debug(f"reading {str(path)} into memory")
@@ -297,7 +341,7 @@ class IndexedFeatures(FeatureCollectionProtocol):
 
 def read_vector(
     path: MPathLike,
-    index: Optional[Literal["rtree"]] = "rtree",
+    index: Optional[IndexType] = "strtree",
 ) -> IndexedFeatures:
     return IndexedFeatures.from_file(path, index=index)
 
@@ -329,7 +373,9 @@ def object_geometry(obj: Any) -> Geometry:
     Determine geometry from object if available.
     """
     try:
-        if hasattr(obj, "__geo_interface__"):
+        if isinstance(obj, BaseGeometry):
+            return obj
+        elif hasattr(obj, "__geo_interface__"):
             return to_shape(obj)
         elif hasattr(obj, "geometry"):
             return to_shape(obj.geometry)
