@@ -2,8 +2,7 @@
 
 from itertools import chain, islice
 import logging
-from types import GeneratorType
-from typing import List, Optional, Union, Dict, Any, Generator
+from typing import List, Optional, Union, Dict, Any, Generator, Iterable
 
 from rasterio.crs import CRS
 from shapely.geometry.base import BaseGeometry
@@ -17,12 +16,9 @@ from mapchete.types import MPathLike, Progress, BoundsLike
 logger = logging.getLogger(__name__)
 
 
-S3_DELETE_CHUNKSIZE = 1000
-
-
 def rm(
     tiledir: Optional[MPathLike] = None,
-    paths: Optional[Union[List[MPath], Generator[MPath, None, None]]] = None,
+    paths: Optional[Iterable[MPath]] = None,
     zoom: Optional[Union[int, List[int]]] = None,
     area: Union[BaseGeometry, str, dict] = None,
     area_crs: Union[CRS, str] = None,
@@ -31,6 +27,7 @@ def rm(
     workers: Optional[int] = None,
     fs_opts: Optional[Dict[str, Any]] = None,
     observers: Optional[List[ObserverProtocol]] = None,
+    s3_delete_chunksize: int = 1000,
 ):
     """
     Remove tiles from TileDirectory.
@@ -54,14 +51,11 @@ def rm(
         Configuration options for fsspec filesystem.
     """
     all_observers = Observers(observers)
-    if isinstance(paths, (list, GeneratorType)):
-        pass
-    elif tiledir:
+    if paths is None and tiledir:
         if zoom is None:  # pragma: no cover
             raise ValueError("zoom level(s) required")
-        tiledir = MPath.from_inp(tiledir, storage_options=fs_opts)
         paths = gen_existing_paths(
-            tiledir=tiledir,
+            tiledir=MPath.from_inp(tiledir, storage_options=fs_opts),
             zoom=zoom,
             area=area,
             area_crs=area_crs,
@@ -70,18 +64,15 @@ def rm(
             workers=workers,
         )
     else:  # pragma: no cover
-        raise ValueError(
-            "either a tile directory or a list of paths has to be provided"
-        )
+        raise ValueError("either tiledir or paths have to be provided")
 
-    if isinstance(paths, list):
+    try:
+        # this only works for lists
         total = len(paths)
-        if not paths:
-            logger.debug("no paths to delete")
-            return
         all_observers.notify(progress=Progress(total=total))
         logger.debug("got %s path(s)", len(paths))
-    else:
+    except TypeError:
+        # we don't know the length of a generator in advance
         total = None
 
     # create an iterator to have a common interface for lists and generators
@@ -90,39 +81,44 @@ def rm(
     try:
         first_path = next(paths_iter)
     except StopIteration:
+        # this happends if the list or generator does not have any item
         logger.debug("no paths to delete")
         return
+
     fs = first_path.fs
+    # append first_path to other paths again
+    all_paths = chain((first_path,), paths_iter)
 
     # s3fs enables multiple paths as input, so let's use this:
     if "s3" in fs.protocol:
-        ii = 0
-        while chunk := tuple(
-            islice(chain((first_path,), paths_iter), S3_DELETE_CHUNKSIZE)
-        ):
+        tiles_counter = 0
+        while chunk := tuple(islice(all_paths, s3_delete_chunksize)):
             all_observers.notify(
-                progress=Progress(current=ii, total=total or ii + len(chunk))
+                progress=Progress(
+                    current=tiles_counter, total=total or tiles_counter + len(chunk)
+                )
             )
             # this actually deletes the files
             fs.rm(chunk)
             for path in chunk:
-                ii += 1
+                tiles_counter += 1
                 msg = f"deleted {path}"
                 logger.debug(msg)
                 all_observers.notify(message=msg)
-            all_observers.notify(progress=Progress(current=ii))
+            all_observers.notify(progress=Progress(current=tiles_counter))
 
     # otherwise, just iterate through the paths
     else:
-        for ii, path in enumerate(chain((first_path,), paths_iter), 1):
+        for tiles_counter, path in enumerate(all_paths, 1):
             path.rm()
             msg = f"deleted {path}"
             logger.debug(msg)
             all_observers.notify(
-                progress=Progress(current=ii, total=total or ii), message=msg
+                progress=Progress(current=tiles_counter, total=total or tiles_counter),
+                message=msg,
             )
 
-    all_observers.notify(message=f"{ii} tiles deleted")
+    all_observers.notify(message=f"{tiles_counter} tiles deleted")
 
 
 def gen_existing_paths(
