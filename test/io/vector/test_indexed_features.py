@@ -57,37 +57,31 @@ def test_indexed_features_bounds():
         IndexedFeatures([feature])
 
 
-def test_indexed_features_fakeindex(landpoly):
-    with fiona_open(str(landpoly)) as src:
-        features = list(src)
-        idx = IndexedFeatures(features)
-        fake_idx = IndexedFeatures(features, index=None)
-    bounds = (-135.0, 60, -90, 80)
-    assert len(idx.filter(bounds)) == len(fake_idx.filter(bounds))
-
-
-def test_indexed_features_polygon(aoi_br_geojson):
+@pytest.mark.parametrize("index", ["rtree", "strtree", None])
+def test_indexed_features_polygon(aoi_br_geojson, index):
     with fiona_open(str(aoi_br_geojson)) as src:
-        index = IndexedFeatures(src)
+        index = IndexedFeatures(src, index=index)
     tp = BufferedTilePyramid("geodetic")
     for tile in tp.tiles_from_bounds(bounds=index.bounds, zoom=5):
         assert len(index.filter(tile.bounds)) == 1
 
 
-def test_indexed_features_filter(aoi_br_geojson):
+@pytest.mark.parametrize("index", ["rtree", "strtree", None])
+def test_indexed_features_filter(aoi_br_geojson, index):
     with fiona_open(str(aoi_br_geojson)) as src:
         count = len(src)
-        index = IndexedFeatures(src)
+        index = IndexedFeatures(src, index=index)
     tp = BufferedTilePyramid("geodetic")
     for tile in tp.tiles_from_bounds(bounds=index.bounds, zoom=5):
         assert len(index.filter(bounds=tile.bounds)) == 1
     assert len(index.filter()) == count
 
 
-def test_indexed_features_filter_geom_type(aoi_br_geojson):
+@pytest.mark.parametrize("index", ["rtree", "strtree", None])
+def test_indexed_features_filter_geom_type(aoi_br_geojson, index):
     with fiona_open(str(aoi_br_geojson)) as src:
         count = len(src)
-        index = IndexedFeatures(src)
+        index = IndexedFeatures(src, index=index)
         geom_type = src.schema["geometry"]
     assert len(index.filter(target_geometry_type=geom_type)) == count
     assert len(index.filter(target_geometry_type="Point")) == 0
@@ -137,6 +131,12 @@ def test_read_union_geometry(aoi_br_geojson):
     assert not read_union_geometry(
         aoi_br_geojson, bounds=(-180, -90, 180, 90), clip=True
     ).is_empty
+
+
+def test_intersects(landpoly):
+    features = IndexedFeatures.from_file(landpoly)
+    assert features.intersects(object_geometry(next(iter(features.values()))))
+    assert not features.intersects(box(0, 1, 2, 3))
 
 
 def test_object_bounds_attr_bounds():

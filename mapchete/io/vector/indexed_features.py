@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from itertools import chain
 import logging
-from typing import Any, Dict, Iterable, List, Literal, Optional, Tuple, Union
-import warnings
+from typing import Any, Dict, Iterable, List, Literal, Optional, Tuple, Union, Generator
 
 from fiona import Collection
 from rasterio.crs import CRS
 from retry import retry
 from shapely import GeometryCollection, prepare, unary_union
+from shapely.geometry.base import BaseGeometry
+from shapely.strtree import STRtree
 from mapchete.bounds import Bounds
 from mapchete.errors import NoCRSError, NoGeoError
 from mapchete.geometry.filter import is_type
@@ -26,6 +27,7 @@ from mapchete.types import BoundsLike, CRSLike, MPathLike, GeoJSONLikeFeature, G
 
 
 logger = logging.getLogger(__name__)
+IndexType = Literal["rtree", "strtree"]
 
 
 class FakeIndex:
@@ -40,10 +42,44 @@ class FakeIndex:
         self._items.append((id, Bounds.from_inp(bounds)))
 
     def intersection(self, bounds: BoundsLike) -> List[int]:
+        return [id for id, i_bounds in self._items if i_bounds.intersects(bounds)]
+
+
+class STRtreeIndex:
+    """Wrapper around shapely.strtree.STRtree."""
+
+    _ids: List[int]
+    _bounds: List[Bounds]
+    _tree: STRtree
+
+    def __init__(self):
+        self._ids = []
+        self._bounds = []
+        self._tree = None
+
+    def tree(self) -> STRtree:
+        if self._tree is None:
+            logger.debug("build STRtree index before first use ...")
+            self._tree = STRtree([bounds.geometry for bounds in self._bounds])
+            # empty bounds list because we don't need it anymore
+            self._bounds = []
+
+        return self._tree
+
+    def insert(self, id: int, bounds: BoundsLike):
+        if self._tree is not None:  # pragma: no cover
+            raise ValueError(
+                "cannot insert more items, because internal STRtree index is already built."
+            )
+        self._ids.append(id)
+        self._bounds.append(Bounds.from_inp(bounds))
+
+    def intersection(self, bounds: BoundsLike) -> List[int]:
         return [
-            id
-            for id, i_bounds in self._items
-            if Bounds.from_inp(i_bounds).intersects(bounds)
+            self._ids[_id]
+            for _id in self.tree().query(
+                Bounds.from_inp(bounds).geometry, predicate="intersects"
+            )
         ]
 
 
@@ -66,20 +102,19 @@ class IndexedFeatures(FeatureCollectionProtocol):
     def __init__(
         self,
         features: Iterable[Any],
-        index: Optional[Literal["rtree"]] = "rtree",
+        index: Optional[IndexType] = "strtree",
         allow_non_geo_objects: bool = False,
         crs: Optional[CRSLike] = None,
     ):
-        if index == "rtree":
+        if index == "strtree":
+            self._index = STRtreeIndex()
+        elif index == "rtree":
             try:
                 import rtree
 
                 self._index = rtree.index.Index()
             except ImportError:  # pragma: no cover
-                warnings.warn(
-                    "It is recommended to install rtree in order to significantly speed up spatial indexes."
-                )
-                self._index = FakeIndex()
+                raise ImportError("rtree package must be installed for this feature")
         else:
             self._index = FakeIndex()
         self.crs = crs or getattr(features, "crs", None)
@@ -179,6 +214,16 @@ class IndexedFeatures(FeatureCollectionProtocol):
             )
         return list(out_features)
 
+    def intersects(self, geometry: BaseGeometry) -> bool:
+        """Check if geometry intersects with any of the features."""
+        for feature in self.filter(bounds=geometry.bounds):
+            try:
+                if object_geometry(feature).intersects(geometry):
+                    return True
+            except NoGeoError:  # pragma: no cover
+                continue
+        return False
+
     def read(
         self,
         grid: Optional[Union[Grid, GridProtocol]] = None,
@@ -202,23 +247,11 @@ class IndexedFeatures(FeatureCollectionProtocol):
             Union[GeometryTypeLike, Tuple[GeometryTypeLike]]
         ] = None,
     ) -> Geometry:
-        def _geoms():
-            if bounds and clip:
-                bounds_geom = to_shape(Bounds.from_inp(bounds))
-                prepare(bounds_geom)
-                for feature in self.filter(
-                    bounds=bounds, target_geometry_type=target_geometry_type
-                ):
-                    geom = bounds_geom.intersection(to_shape(feature))
-                    if not geom.is_empty:
-                        yield geom
-            else:
-                for feature in self.filter(
-                    bounds=bounds, target_geometry_type=target_geometry_type
-                ):
-                    yield to_shape(feature)
-
-        geoms = list(_geoms())
+        geoms = list(
+            self.generate_geometries(
+                bounds=bounds, clip=clip, target_geometry_type=target_geometry_type
+            )
+        )
         if geoms:
             logger.debug("creating union geometry ...")
             with Timer() as duration:
@@ -226,6 +259,29 @@ class IndexedFeatures(FeatureCollectionProtocol):
             logger.debug("union geometry created in %s", duration)
             return union
         return GeometryCollection()
+
+    def generate_geometries(
+        self,
+        bounds: Optional[BoundsLike] = None,
+        clip: bool = False,
+        target_geometry_type: Optional[
+            Union[GeometryTypeLike, Tuple[GeometryTypeLike]]
+        ] = None,
+    ) -> Generator[Geometry, None, None]:
+        if bounds and clip:
+            bounds_geom = to_shape(Bounds.from_inp(bounds))
+            prepare(bounds_geom)
+            for feature in self.filter(
+                bounds=bounds, target_geometry_type=target_geometry_type
+            ):
+                geom = bounds_geom.intersection(to_shape(feature))
+                if not geom.is_empty:
+                    yield geom
+        else:
+            for feature in self.filter(
+                bounds=bounds, target_geometry_type=target_geometry_type
+            ):
+                yield to_shape(feature)
 
     def _update_bounds(self, bounds: BoundsLike):
         bounds = Bounds.from_inp(bounds)
@@ -237,7 +293,7 @@ class IndexedFeatures(FeatureCollectionProtocol):
     @staticmethod
     def from_fiona(
         src: Collection,
-        index: Optional[Literal["rtree"]] = "rtree",
+        index: Optional[IndexType] = "strtree",
     ) -> IndexedFeatures:
         return IndexedFeatures(src, index=index, crs=src.crs)
 
@@ -245,7 +301,7 @@ class IndexedFeatures(FeatureCollectionProtocol):
     def from_file(
         path: MPathLike,
         grid: Optional[Union[Grid, GridProtocol]] = None,
-        index: Optional[Literal["rtree"]] = "rtree",
+        index: Optional[IndexType] = "strtree",
         **kwargs,
     ) -> IndexedFeatures:
         logger.debug(f"reading {str(path)} into memory")
@@ -266,7 +322,7 @@ class IndexedFeatures(FeatureCollectionProtocol):
 
 def read_vector(
     path: MPathLike,
-    index: Optional[Literal["rtree"]] = "rtree",
+    index: Optional[IndexType] = "strtree",
 ) -> IndexedFeatures:
     return IndexedFeatures.from_file(path, index=index)
 
@@ -298,7 +354,9 @@ def object_geometry(obj: Any) -> Geometry:
     Determine geometry from object if available.
     """
     try:
-        if hasattr(obj, "__geo_interface__"):
+        if isinstance(obj, BaseGeometry):  # pragma: no cover
+            return obj
+        elif hasattr(obj, "__geo_interface__"):
             return to_shape(obj)
         elif hasattr(obj, "geometry"):
             return to_shape(obj.geometry)

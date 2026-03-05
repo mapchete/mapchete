@@ -303,6 +303,7 @@ dependencies = [
     { name = "jmespath" },
     { name = "s3transfer" },
 ]
+sdist = { url = "https://files.pythonhosted.org/packages/58/15/356d38280ce3fce37a8e2b44e2ead81240d933f64411e86415a2ed4c0bd5/boto3-1.42.61.tar.gz", hash = "sha256:117ebfc597c95bfb64c6d37ba77bd1c2a97a1885c1dcac2a8be1a14e2139a76d", size = 112750, upload-time = "2026-03-04T20:30:53.73Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/66/d7/a2fa875cb7c5d6b5c5cf6fc181343708c8dc6cafae3e6964ed486ae21bea/boto3-1.42.61-py3-none-any.whl", hash = "sha256:156efcc298a33206be6dfd220815c64aa8b09424017534cabe717636961fc306", size = 140555, upload-time = "2026-03-04T20:30:51.17Z" },
 ]
@@ -1770,7 +1771,6 @@ complete = [
     { name = "memray" },
     { name = "pystac", extra = ["urllib3"] },
     { name = "requests" },
-    { name = "rtree" },
     { name = "s3fs" },
     { name = "tilebench", version = "0.16.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "tilebench", version = "0.17.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
@@ -1800,9 +1800,6 @@ serve = [
     { name = "flask-rangerequest" },
     { name = "werkzeug" },
 ]
-spatial-index = [
-    { name = "rtree" },
-]
 test = [
     { name = "coverage" },
     { name = "coveralls" },
@@ -1820,6 +1817,7 @@ test = [
     { name = "pytest-split" },
     { name = "rio-cogeo", version = "6.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "rio-cogeo", version = "7.0.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "rtree" },
 ]
 vrt = [
     { name = "lxml" },
@@ -1887,8 +1885,7 @@ requires-dist = [
     { name = "requests", marker = "extra == 'http'" },
     { name = "retry" },
     { name = "rio-cogeo", marker = "extra == 'test'", specifier = ">=5.0.0" },
-    { name = "rtree", marker = "extra == 'complete'" },
-    { name = "rtree", marker = "extra == 'spatial-index'" },
+    { name = "rtree", marker = "extra == 'test'" },
     { name = "s3fs", marker = "extra == 'complete'", specifier = "!=2023.9.0" },
     { name = "s3fs", marker = "extra == 's3'", specifier = "!=2023.9.0" },
     { name = "shapely", specifier = ">=2.0.0" },
@@ -1899,7 +1896,7 @@ requires-dist = [
     { name = "werkzeug", marker = "extra == 'complete'", specifier = ">=0.15" },
     { name = "werkzeug", marker = "extra == 'serve'", specifier = ">=0.15" },
 ]
-provides-extras = ["complete", "contours", "http", "profiling", "s3", "serve", "spatial-index", "test", "vrt"]
+provides-extras = ["complete", "contours", "http", "profiling", "s3", "serve", "test", "vrt"]
 
 [[package]]
 name = "markdown-it-py"
