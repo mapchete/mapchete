@@ -110,6 +110,7 @@ test = [
     "pytest-mock",
     "pytest-split",
     "rio-cogeo>=5.0.0",
+    "rtree"
 ]
 
 
