@@ -3,6 +3,28 @@ Changelog
 #########
 
 
+2026.3.0 - 2026-03-05
+---------------------
+
+* core
+
+  * `formats.protocols.InputTileProtocol.is_empty()` (and related classes): allow wildcard kwargs to assure compatibility with multiple drivers (#761)
+  * `commands.rm.rm()`: use generator to start deleting tiles before all tiles have materialized (#763)
+  * `config.base`: avoid f-strings in log messages; shorten WKT when logging process area (#763)
+  * `io.vector.indexed_features`: add log messages for longer running methods (#763)
+  * `io.vector.indexed_features.IndexedFeatures`: use `shapely.strtree.STRtree()` as default search index (#764)
+  * `io.vector.indexed_features.IndexedFeatures`: add `intersects()` and `generate_geometries()` methods (#764)
+  * `path.tiles_exist()`: limit concurrency to a maximum of 4 when checking for tiles (#763)
+
+* CLI
+
+  * `mapchete rm`: allow deleting tiles before all tiles have materialized when using `--force` flag (#763)
+
+* packaging
+
+  * remove `rtree` from dependencies (except for testing) (#764)
+
+
 2026.2.2 - 2026-02-27
 ---------------------
 
