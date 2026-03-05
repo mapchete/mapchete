@@ -260,27 +260,6 @@ class IndexedFeatures(FeatureCollectionProtocol):
             return union
         return GeometryCollection()
 
-    def read_geometry_collection(
-        self,
-        bounds: Optional[BoundsLike] = None,
-        clip: bool = False,
-        target_geometry_type: Optional[
-            Union[GeometryTypeLike, Tuple[GeometryTypeLike]]
-        ] = None,
-    ) -> GeometryCollection:
-        with Timer() as duration:
-            geom_collection = GeometryCollection(
-                list(
-                    self.generate_geometries(
-                        bounds=bounds,
-                        clip=clip,
-                        target_geometry_type=target_geometry_type,
-                    )
-                )
-            )
-        logger.debug("geometry collection created in %s", duration)
-        return geom_collection
-
     def generate_geometries(
         self,
         bounds: Optional[BoundsLike] = None,
@@ -375,7 +354,7 @@ def object_geometry(obj: Any) -> Geometry:
     Determine geometry from object if available.
     """
     try:
-        if isinstance(obj, BaseGeometry):
+        if isinstance(obj, BaseGeometry):  # pragma: no cover
             return obj
         elif hasattr(obj, "__geo_interface__"):
             return to_shape(obj)
