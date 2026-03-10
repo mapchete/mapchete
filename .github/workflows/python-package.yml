@@ -214,7 +214,11 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo "$OUTPUT" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          
+
+          # 🔗 GENERATE DYNAMIC CODECOV LINK
+          CODECOV_URL="https://app.codecov.io/github/${{ github.repository }}/commit/${{ github.sha }}"
+          echo "🔗 **[View full line-by-line report on Codecov]($CODECOV_URL)**" >> $GITHUB_STEP_SUMMARY
+
           if [ $EXIT_CODE -ne 0 ]; then
             echo "❌ **Coverage Failed:** Python 3.13 coverage check failed." >> $GITHUB_STEP_SUMMARY
             exit $EXIT_CODE
