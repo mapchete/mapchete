@@ -152,7 +152,7 @@ def sync_file(
     dry_run: bool = False,
 ) -> Tuple[Tuple[MPath, MPath], str]:
 
-    if dry_run:
+    if dry_run:  # pragma: no cover
         return paths, "0s [DRY-RUN]"
 
     src_file, dst_file = paths
