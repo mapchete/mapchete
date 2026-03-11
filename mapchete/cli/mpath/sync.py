@@ -42,6 +42,7 @@ logger = logging.getLogger(__name__)
 @options.opt_workers
 @options.opt_debug
 @options.opt_verbose
+@click.option("--dry-run", is_flag=True, help="Don't copy anything.")
 def sync(
     path: MPath,
     out_path: MPath,
@@ -51,6 +52,7 @@ def sync(
     workers: int = 1,
     debug: bool = False,
     verbose: bool = False,
+    dry_run: bool = False,
     **_,
 ):
     try:
@@ -83,7 +85,7 @@ def sync(
                             path, out_path, compare_checksums=compare_checksums
                         ),
                         fargs=None,
-                        fkwargs=dict(chunksize=chunksize, debug=debug),
+                        fkwargs=dict(chunksize=chunksize, debug=debug, dry_run=dry_run),
                         item_skip_bool=True,
                         max_submitted_tasks=workers * 10,
                     ),
@@ -144,8 +146,15 @@ def check_files(
 
 
 def sync_file(
-    paths: Tuple[MPath, MPath], chunksize: int = 1024 * 1024, debug: bool = False
+    paths: Tuple[MPath, MPath],
+    chunksize: int = 1024 * 1024,
+    debug: bool = False,
+    dry_run: bool = False,
 ) -> Tuple[Tuple[MPath, MPath], str]:
+
+    if dry_run:  # pragma: no cover
+        return paths, "0s [DRY-RUN]"
+
     src_file, dst_file = paths
     with PBar(
         total=100,

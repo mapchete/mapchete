@@ -163,8 +163,10 @@ class ConcurrentFuturesExecutor(ExecutorBase):
                     futures.remove(future)
 
                     # immediately submit next task from iterator
-                    try:
-                        item, skip_item, skip_info = next(item_skip_tuples)
+                    for item, skip_item, skip_info in item_skip_tuples:
+                        # yield as many skipped futures as they come but when a future
+                        # is to be submitted, exit this loop and wait for the next finished
+                        # futures
 
                         # skip task submission if option is activated
                         if skip_item:  # pragma: no cover
@@ -174,9 +176,11 @@ class ConcurrentFuturesExecutor(ExecutorBase):
                         else:
                             futures.add(self._submit(func, item, fargs, fkwargs))
 
-                    except StopIteration:
-                        # nothing left to submit
-                        pass
+                            # jump out of item tuples loop
+                            break
+
+                        if self.cancel_signal:  # pragma: no cover
+                            raise JobCancelledError("cancel signal caught")
 
             if self.cancel_signal:  # pragma: no cover
                 raise JobCancelledError("cancel signal caught")
