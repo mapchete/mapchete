@@ -39,7 +39,7 @@ class InputTileProtocol(GridProtocol):  # pragma: no cover
         """Required for 'with' statement."""
         return self
 
-    def __exit__(self, *args):
+    def __exit__(self, *args) -> None:
         """Clean up."""
 
 
@@ -162,10 +162,10 @@ class OutputDataReaderProtocol(Protocol):  # pragma: no cover
         process: "MapcheteProcess",  # noqa: F821 # type: ignore
     ) -> InputTileProtocol: ...
 
-    def for_web(self, data) -> np.ndarray: ...
+    def for_web(self, data: Any) -> Any: ...
 
 
-class FileSystemOutputDataReaderProtocol:  # pragma: no cover
+class FileSystemOutputDataReaderProtocol(Protocol):  # pragma: no cover
     """Minimum interface for any filesystem storage based output reader class."""
 
     def get_path(self, tile: BufferedTile) -> MPath: ...
@@ -203,3 +203,63 @@ class OutputDataWriterProtocol(OutputDataReaderProtocol):  # pragma: no cover
         excinst: Optional[BaseException],
         exctb: Optional[TracebackType],
     ) -> None: ...
+
+
+class RasterOutputProtocol(Protocol):  # pragma: no cover
+    """Common interface for raster output format drivers."""
+
+    def profile(self, tile: Optional[BufferedTile] = None) -> dict:
+        """Create a metadata dictionary for rasterio."""
+        ...
+
+    def empty(self, process_tile: BufferedTile) -> ma.MaskedArray:
+        """Return empty data as masked array."""
+        ...
+
+    def for_web(self, data: Any) -> Tuple[Any, str]:
+        """Convert data to web output, returning (data, MIME type)."""
+        ...
+
+
+class VectorOutputProtocol(Protocol):  # pragma: no cover
+    """Common interface for vector output format drivers."""
+
+    def empty(self, process_tile: Optional[BufferedTile] = None) -> list:
+        """Return empty data as empty list."""
+        ...
+
+    def for_web(self, data: Any) -> Tuple[Any, str]:
+        """Convert data to web output, returning (data, MIME type)."""
+        ...
+
+
+class OutputConfigValidation(Protocol):  # pragma: no cover
+    """Protocol for output drivers that support config validation."""
+
+    def is_valid_with_config(self, config: dict) -> bool:
+        """Check if output format is valid with other process parameters."""
+        ...
+
+
+class STACOutputProtocol(Protocol):  # pragma: no cover
+    """Protocol for output drivers that support STAC metadata."""
+
+    @property
+    def stac_path(self) -> MPath:
+        """Return path to STAC JSON file."""
+        ...
+
+    @property
+    def stac_item_id(self) -> str:
+        """Return STAC item ID."""
+        ...
+
+    @property
+    def stac_item_metadata(self) -> dict:
+        """Return custom STAC metadata."""
+        ...
+
+    @property
+    def stac_asset_type(self) -> str:
+        """Return asset MIME type."""
+        ...

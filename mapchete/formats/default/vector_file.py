@@ -79,7 +79,7 @@ class InputData(base.InputData):
     _memory_cache_active = False
     _bbox_cache = None
 
-    def __init__(self, input_params, **kwargs):
+    def __init__(self, input_params: dict, **kwargs) -> None:
         """Initialize."""
         super().__init__(input_params, **kwargs)
         self.path = (
@@ -135,7 +135,7 @@ class InputData(base.InputData):
         """This property can be accessed once the preprocessing task is finished."""
         return IndexedFeatures(self.get_preprocessing_task_result(f"cache_{self.path}"))
 
-    def open(self, tile: BufferedTile, **kwargs):
+    def open(self, tile: BufferedTile, **kwargs) -> "InputTile":
         """
         Return InputTile object.
 
@@ -172,7 +172,7 @@ class InputData(base.InputData):
             **kwargs,
         )
 
-    def bbox(self, out_crs=None):
+    def bbox(self, out_crs: Optional[CRSLike] = None) -> Geometry:
         """
         Return data bounding box.
 
@@ -202,7 +202,7 @@ class InputData(base.InputData):
             box(*bounds), src_crs=inp_crs, dst_crs=out_crs, clip_to_crs_bounds=False
         )
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         """Cleanup when mapchete closes."""
         if self._cached_path and not self._cache_keep:  # pragma: no cover
             logger.debug("remove cached file %s", self._cached_path)
@@ -260,7 +260,7 @@ class InputTile(base.InputTile, VectorInput):
         self.bounds = Bounds.from_inp(tile.bounds)
         self.crs = tile.crs
 
-    def __repr__(self):  # pragma: no cover
+    def __repr__(self) -> str:  # pragma: no cover
         source = (
             repr(self._in_memory_features) if self._memory_cache_active else self.path
         )
@@ -409,12 +409,12 @@ class InputTile(base.InputTile, VectorInput):
 
     def _read_from_cache(
         self,
-        validity_check=True,
-        clip_to_crs_bounds=False,
+        validity_check: bool = True,
+        clip_to_crs_bounds: bool = False,
         target_geometry_type: Optional[
             Union[GeometryTypeLike, Tuple[GeometryTypeLike]]
         ] = None,
-    ):
+    ) -> List[GeoJSONLikeFeature]:
         checked = "checked" if validity_check else "not_checked"
         if checked not in self._cache:
             self._cache[checked] = list(
