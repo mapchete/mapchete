@@ -47,7 +47,6 @@ from rasterio.windows import from_bounds
 from shapely.geometry import box
 from tilematrix import Bounds
 
-
 from mapchete.config.base import snap_bounds
 from mapchete.errors import MapcheteConfigError, MapcheteNodataTile
 
