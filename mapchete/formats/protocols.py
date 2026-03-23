@@ -1,7 +1,17 @@
 from __future__ import annotations
 
 from types import TracebackType
-from typing import Any, Callable, Generator, List, Optional, Protocol, Tuple, Type
+from typing import (
+    Any,
+    Callable,
+    Generator,
+    List,
+    Optional,
+    Protocol,
+    Tuple,
+    Type,
+    TYPE_CHECKING,
+)
 
 import numpy as np
 import numpy.ma as ma
@@ -18,6 +28,9 @@ from mapchete.types import (
     ResamplingLike,
     GeoJSONLikeFeature,
 )
+
+if TYPE_CHECKING:
+    from mapchete.processing import MapcheteProcess
 
 
 class InputTileProtocol(GridProtocol):  # pragma: no cover
@@ -159,7 +172,7 @@ class OutputDataReaderProtocol(Protocol):  # pragma: no cover
     def open(
         self,
         tile: BufferedTile,
-        process: "MapcheteProcess",  # noqa: F821 # type: ignore
+        process: "MapcheteProcess",
     ) -> InputTileProtocol: ...
 
     def for_web(self, data: Any) -> Any: ...

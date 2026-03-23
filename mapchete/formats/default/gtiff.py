@@ -47,7 +47,7 @@ from rasterio.windows import from_bounds
 from shapely.geometry import box
 from tilematrix import Bounds
 
-from mapchete.config.base import _OUTPUT_PARAMETERS, snap_bounds
+from mapchete.config.base import snap_bounds
 from mapchete.errors import MapcheteConfigError
 from mapchete.formats import base
 from mapchete.formats.protocols import RasterInput
@@ -70,6 +70,17 @@ logger = logging.getLogger(__name__)
 
 
 METADATA = {"driver_name": "GTiff", "data_type": "raster", "mode": "rw"}
+
+RESERVED_KEYWORDS = [
+    "format",
+    "path",
+    "grid",
+    "pixelbuffer",
+    "metatiling",
+    "delimiters",
+    "mode",
+    "stac",
+]
 
 
 class OutputDataReader:
@@ -311,7 +322,7 @@ class GTiffTileDirectoryOutputReader(
             **{
                 k: v
                 for k, v in self.output_params.items()
-                if k not in _OUTPUT_PARAMETERS
+                if k not in RESERVED_KEYWORDS
             },
         )
         dst_metadata.pop("transform", None)
@@ -433,7 +444,7 @@ class GTiffSingleFileOutputWriter(
         logger.debug("output raster bounds: %s", bounds)
         logger.debug("output raster shape: %s, %s", height, width)
         creation_options = {
-            k: v for k, v in self.output_params.items() if k not in _OUTPUT_PARAMETERS
+            k: v for k, v in self.output_params.items() if k not in RESERVED_KEYWORDS
         }
         self._profile = DEFAULT_PROFILES["COG" if self.cog else "GTiff"](
             transform=Affine(
