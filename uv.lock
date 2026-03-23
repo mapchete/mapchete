@@ -278,11 +278,11 @@ wheels = [
 
 [[package]]
 name = "attrs"
-version = "25.4.0"
+version = "26.1.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/6b/5c/685e6633917e101e5dcb62b9dd76946cbb57c26e133bae9e0cd36033c0a9/attrs-25.4.0.tar.gz", hash = "sha256:16d5969b87f0859ef33a48b35d55ac1be6e42ae49d5e853b597db70c35c57e11", size = 934251, upload-time = "2025-10-06T13:54:44.725Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/9a/8e/82a0fe20a541c03148528be8cac2408564a6c9a0cc7e9171802bc1d26985/attrs-26.1.0.tar.gz", hash = "sha256:d03ceb89cb322a8fd706d4fb91940737b6642aa36998fe130a9bc96c985eff32", size = 952055, upload-time = "2026-03-19T14:22:25.026Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3a/2a/7cc015f5b9f5db42b7d48157e23356022889fc354a2813c15934b7cb5c0e/attrs-25.4.0-py3-none-any.whl", hash = "sha256:adcf7e2a1fb3b36ac48d97835bb6d8ade15b8dcce26aba8bf1d14847b57a3373", size = 67615, upload-time = "2025-10-06T13:54:43.17Z" },
+    { url = "https://files.pythonhosted.org/packages/64/b4/17d4b0b2a2dc85a6df63d1157e028ed19f90d4cd97c36717afef2bc2f395/attrs-26.1.0-py3-none-any.whl", hash = "sha256:c647aa4a12dfbad9333ca4e71fe62ddc36f4e63b2d260a37a8b83d2f043ac309", size = 67548, upload-time = "2026-03-19T14:22:23.645Z" },
 ]
 
 [[package]]
@@ -1387,14 +1387,14 @@ wheels = [
 
 [[package]]
 name = "importlib-metadata"
-version = "8.7.1"
+version = "9.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "zipp" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f3/49/3b30cad09e7771a4982d9975a8cbf64f00d4a1ececb53297f1d9a7be1b10/importlib_metadata-8.7.1.tar.gz", hash = "sha256:49fef1ae6440c182052f407c8d34a68f72efc36db9ca90dc0113398f2fdde8bb", size = 57107, upload-time = "2025-12-21T10:00:19.278Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a9/01/15bb152d77b21318514a96f43af312635eb2500c96b55398d020c93d86ea/importlib_metadata-9.0.0.tar.gz", hash = "sha256:a4f57ab599e6a2e3016d7595cfd72eb4661a5106e787a95bcc90c7105b831efc", size = 56405, upload-time = "2026-03-20T06:42:56.999Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/fa/5e/f8e9a1d23b9c20a551a8a02ea3637b4642e22c2626e3a13a9a29cdea99eb/importlib_metadata-8.7.1-py3-none-any.whl", hash = "sha256:5a1f80bf1daa489495071efbb095d75a634cf28a8bc299581244063b53176151", size = 27865, upload-time = "2025-12-21T10:00:18.329Z" },
+    { url = "https://files.pythonhosted.org/packages/38/3d/2d244233ac4f76e38533cfcb2991c9eb4c7bf688ae0a036d30725b8faafe/importlib_metadata-9.0.0-py3-none-any.whl", hash = "sha256:2d21d1cc5a017bd0559e36150c21c830ab1dc304dedd1b7ea85d20f45ef3edd7", size = 27789, upload-time = "2026-03-20T06:42:55.665Z" },
 ]
 
 [[package]]
@@ -3352,16 +3352,16 @@ wheels = [
 
 [[package]]
 name = "pytest-cov"
-version = "7.0.0"
+version = "7.1.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "coverage", extra = ["toml"] },
     { name = "pluggy" },
     { name = "pytest" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/5e/f7/c933acc76f5208b3b00089573cf6a2bc26dc80a8aece8f52bb7d6b1855ca/pytest_cov-7.0.0.tar.gz", hash = "sha256:33c97eda2e049a0c5298e91f519302a1334c26ac65c1a483d6206fd458361af1", size = 54328, upload-time = "2025-09-09T10:57:02.113Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b1/51/a849f96e117386044471c8ec2bd6cfebacda285da9525c9106aeb28da671/pytest_cov-7.1.0.tar.gz", hash = "sha256:30674f2b5f6351aa09702a9c8c364f6a01c27aae0c1366ae8016160d1efc56b2", size = 55592, upload-time = "2026-03-21T20:11:16.284Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ee/49/1377b49de7d0c1ce41292161ea0f721913fa8722c19fb9c1e3aa0367eecb/pytest_cov-7.0.0-py3-none-any.whl", hash = "sha256:3b8e9558b16cc1479da72058bdecf8073661c7f57f7d3c5f22a1c23507f2d861", size = 22424, upload-time = "2025-09-09T10:57:00.695Z" },
+    { url = "https://files.pythonhosted.org/packages/9d/7a/d968e294073affff457b041c2be9868a40c1c71f4a35fcc1e45e5493067b/pytest_cov-7.1.0-py3-none-any.whl", hash = "sha256:a0461110b7865f9a271aa1b51e516c9a95de9d696734a2f71e3e78f46e1d4678", size = 22876, upload-time = "2026-03-21T20:11:14.438Z" },
 ]
 
 [[package]]
@@ -3723,7 +3723,7 @@ wheels = [
 
 [[package]]
 name = "rio-tiler"
-version = "7.9.3"
+version = "7.9.4"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version < '3.11'",
@@ -3741,14 +3741,14 @@ dependencies = [
     { name = "rasterio", version = "1.4.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "typing-extensions", marker = "python_full_version < '3.11'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f1/32/688049e942a8ae24fe23b15e528ad7bf4a36c63fc80dfbdf58394c1bc1cb/rio_tiler-7.9.3.tar.gz", hash = "sha256:e65a18f3de11810e1e6cd3b1036482c86e8257fcad51116eaae69d662a2ac20d", size = 175974, upload-time = "2026-02-12T19:54:55.146Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/04/66/7e5fa025b336af1f80cf5f26a9102929b1530556146ab7893532d686304d/rio_tiler-7.9.4.tar.gz", hash = "sha256:f80c0e90a5604a26e4dca133d76d7a52155788283f056110025b0de6354ac2a4", size = 176007, upload-time = "2026-03-19T11:37:25.813Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/94/95/07450df5f99d3fe2cc1b6937705f03062f199a85a66ee6ca9676e2890103/rio_tiler-7.9.3-py3-none-any.whl", hash = "sha256:f1cda1ee20853d4be700503c5768fe7df1ea47a5b2769ed03bff24243996137a", size = 270171, upload-time = "2026-02-12T19:54:53.549Z" },
+    { url = "https://files.pythonhosted.org/packages/8d/e7/6dfe4d65a105f9811e7a39d42b705c85cb15a94dcb09f34809ecd1cd3fb1/rio_tiler-7.9.4-py3-none-any.whl", hash = "sha256:adf5d96735f2ec1d3c957cf49e4683cde504a7feeeb4b55ca45288b3d7487883", size = 270244, upload-time = "2026-03-19T11:37:27.751Z" },
 ]
 
 [[package]]
 name = "rio-tiler"
-version = "9.0.1"
+version = "9.0.3"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.14'",
@@ -3769,9 +3769,9 @@ dependencies = [
     { name = "rasterio", version = "1.5.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "typing-extensions", marker = "python_full_version == '3.11.*'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/39/f5/1c51c611b3f7a834ba0b64c5f518ee852d2df4a7fa406c5edb4380dad60e/rio_tiler-9.0.1.tar.gz", hash = "sha256:ab59ffe110ca2d8aee161d85549197748e08c38a4f0bdaa51c1e6201c386aebd", size = 190638, upload-time = "2026-03-18T11:00:46.801Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/5c/54/ef5f4a6e845098a17cd7697b0039acf8f4b13911557150642d8c142a41c5/rio_tiler-9.0.3.tar.gz", hash = "sha256:c410023e77eff3b51b1b6417144b325925a4e84b89dd415491e276d080876223", size = 190705, upload-time = "2026-03-19T11:43:05.72Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/fa/80/1e684324abdd638b6ccfac86dc9b845b3fda55a906ad9ee5642d11d01f94/rio_tiler-9.0.1-py3-none-any.whl", hash = "sha256:19ae9b29f40ebb68b74f3eb6a60e33d1ebdaf3201b7c214371dba07c5d7b1ad2", size = 287170, upload-time = "2026-03-18T11:00:45.606Z" },
+    { url = "https://files.pythonhosted.org/packages/eb/c8/49e5cf92701fbc8950cf2a2c904ad15c707b7b6a1fb19fce15c3b1d599f8/rio_tiler-9.0.3-py3-none-any.whl", hash = "sha256:8de3ef968f19105e98d35d368abd13d8042f3b0e5e47a5f1669ff0a0fc396881", size = 287242, upload-time = "2026-03-19T11:43:06.999Z" },
 ]
 
 [[package]]
@@ -4035,15 +4035,15 @@ wheels = [
 
 [[package]]
 name = "starlette"
-version = "0.52.1"
+version = "1.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
     { name = "typing-extensions", marker = "python_full_version < '3.13'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c4/68/79977123bb7be889ad680d79a40f339082c1978b5cfcf62c2d8d196873ac/starlette-0.52.1.tar.gz", hash = "sha256:834edd1b0a23167694292e94f597773bc3f89f362be6effee198165a35d62933", size = 2653702, upload-time = "2026-01-18T13:34:11.062Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/81/69/17425771797c36cded50b7fe44e850315d039f28b15901ab44839e70b593/starlette-1.0.0.tar.gz", hash = "sha256:6a4beaf1f81bb472fd19ea9b918b50dc3a77a6f2e190a12954b25e6ed5eea149", size = 2655289, upload-time = "2026-03-22T18:29:46.779Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/81/0d/13d1d239a25cbfb19e740db83143e95c772a1fe10202dda4b76792b114dd/starlette-0.52.1-py3-none-any.whl", hash = "sha256:0029d43eb3d273bc4f83a08720b4912ea4b071087a3b48db01b7c839f7954d74", size = 74272, upload-time = "2026-01-18T13:34:09.188Z" },
+    { url = "https://files.pythonhosted.org/packages/0b/c9/584bc9651441b4ba60cc4d557d8a547b5aff901af35bda3a4ee30c819b82/starlette-1.0.0-py3-none-any.whl", hash = "sha256:d3ec55e0bb321692d275455ddfd3df75fff145d009685eb40dc91fc66b03d38b", size = 72651, upload-time = "2026-03-22T18:29:45.111Z" },
 ]
 
 [[package]]
@@ -4084,7 +4084,7 @@ dependencies = [
     { name = "jinja2", marker = "python_full_version < '3.11'" },
     { name = "loguru", marker = "python_full_version < '3.11'" },
     { name = "rasterio", version = "1.4.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "rio-tiler", version = "7.9.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "rio-tiler", version = "7.9.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "uvicorn", extra = ["standard"], marker = "python_full_version < '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/0c/ac/24e0d99e18c340bf5a9e2c9d045d4f4059ee89b2361f9cb32ab40ea3b796/tilebench-0.16.0.tar.gz", hash = "sha256:25a2966ab2765de874a2185c07f0f66d03f979ebf2a180b27e6a9ab06bd877b4", size = 24685, upload-time = "2025-04-30T08:12:22.646Z" }
@@ -4107,7 +4107,7 @@ dependencies = [
     { name = "loguru", marker = "python_full_version >= '3.11'" },
     { name = "rasterio", version = "1.4.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
     { name = "rasterio", version = "1.5.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
-    { name = "rio-tiler", version = "9.0.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "rio-tiler", version = "9.0.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "uvicorn", extra = ["standard"], marker = "python_full_version >= '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/94/1a/5da31e64f93e0d76d99a8f2d52bbf56cde278f684170b18e64c94570c0a6/tilebench-0.17.0.tar.gz", hash = "sha256:be9ee259d75609427276bf2e97dc3afd0d05712751ac6d3d81c3a75038da83ea", size = 20767, upload-time = "2025-11-17T21:27:30.883Z" }
