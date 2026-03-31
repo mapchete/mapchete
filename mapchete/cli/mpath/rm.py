@@ -57,13 +57,14 @@ def rm(
                         click.echo(f"found {len(pages)} pages")
                     else:
                         pages = path.paginate()
-
+                    deleted = 0
                     with tqdm.tqdm(
                         total=len(pages) if isinstance(pages, list) else None,
                         desc="pages",
                     ) as pbar:
                         for page in pages:
                             pbar.total = (pbar.total or 0) + 1
+                            pbar.refresh()
 
                             if verbose:  # pragma: no cover
                                 tqdm.tqdm.write(f"found {len(page)} files")
@@ -85,7 +86,10 @@ def rm(
                                     msg = future.result()
                                     tqdm.tqdm.write(msg)
 
-                            pbar.update(1)
+                            deleted += len(page)
+                            pbar.update()
+
+                click.echo(f"{len(deleted)} files deleted")
 
             else:
                 msg = rm_file(path)
