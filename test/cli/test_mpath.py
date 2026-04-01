@@ -53,6 +53,13 @@ def test_rm_file(metadata_json, mp_tmpdir):
 def test_rm_dir(metadata_json, mp_tmpdir):
     out_dir = mp_tmpdir / "rm_test"
     assert run_cli(["cp", "-r", str(metadata_json.parent), out_dir], cli=mpath)
+    assert run_cli(["rm", "-r", out_dir, "--force", "--verbose"], cli=mpath)
+    assert not out_dir.exists()
+
+
+def test_rm_dir_count(metadata_json, mp_tmpdir):
+    out_dir = mp_tmpdir / "rm_test"
+    assert run_cli(["cp", "-r", str(metadata_json.parent), out_dir], cli=mpath)
     assert run_cli(["rm", "-r", out_dir, "--force", "--verbose", "--count"], cli=mpath)
     assert not out_dir.exists()
 
