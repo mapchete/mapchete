@@ -43,10 +43,18 @@ def test_cp_directory(local_tiledir, mp_tmpdir):
     assert out_path.ls()
 
 
-def test_rm(metadata_json, mp_tmpdir):
+def test_rm_file(metadata_json, mp_tmpdir):
     out_file = mp_tmpdir / metadata_json.name
     assert run_cli(["cp", str(metadata_json), out_file], cli=mpath)
     assert run_cli(["rm", out_file, "--force"], cli=mpath)
+    assert not out_file.exists()
+
+
+def test_rm_dir(metadata_json, mp_tmpdir):
+    out_dir = mp_tmpdir / "rm_test"
+    assert run_cli(["cp", "-r", str(metadata_json.parent), out_dir], cli=mpath)
+    assert run_cli(["rm", "-r", out_dir, "--force"], cli=mpath)
+    assert not out_dir.exists()
 
 
 def test_read_json(metadata_json):

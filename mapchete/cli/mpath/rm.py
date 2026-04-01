@@ -89,7 +89,9 @@ def rm(
                             deleted += len(page)
                             pbar.update()
 
-                click.echo(f"{len(deleted)} files deleted")
+                # finally delete folder after all its contents have been deleted
+                path.rm(recursive=True)
+                click.echo(f"{deleted} files deleted")
 
             else:
                 msg = rm_file(path)
@@ -106,6 +108,6 @@ def rm_file(file: MPath) -> str:
         msg = f"[OK] {str(file)}: deleted"
         logger.debug(msg)
         return msg
-    except Exception as exc:
+    except Exception as exc:  # pragma: no cover
         logger.exception(exc)
         raise
