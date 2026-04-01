@@ -63,8 +63,10 @@ def rm(
                         desc="pages",
                     ) as pbar:
                         for page in pages:
-                            pbar.total = (pbar.total or 0) + 1
-                            pbar.refresh()
+                            # when using a generator, manually update total length
+                            if not isinstance(pages, list):
+                                pbar.total = (pbar.total or 0) + 1
+                                pbar.refresh()
 
                             if verbose:  # pragma: no cover
                                 tqdm.tqdm.write(f"found {len(page)} files")
