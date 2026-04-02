@@ -1,12 +1,42 @@
+import logging
 from typing import List
-from shapely import box
+from shapely import box, clip_by_rect
 from shapely.affinity import translate
+from shapely.geometry import GeometryCollection
+
 from mapchete.bounds import Bounds
+from mapchete.geometry.repair import repair as repair_geometry
 from mapchete.geometry.shape import to_shape
 from mapchete.geometry.types import MultipartGeometry
 from mapchete.grid import Grid
 from mapchete.tile import BufferedTilePyramid
 from mapchete.geometry.types import Geometry
+
+
+logger = logging.getLogger(__name__)
+
+
+def clip_by_bounds(
+    geometry: Geometry,
+    bounds: Bounds,
+    repair: bool = False,
+    ignore_errors: bool = False,
+) -> Geometry:
+    """
+    Uses shapely.clip_by_rect to quickly clip geometry by bounds.
+
+    Can also automatically repair output geometry and return an empty GeometryCollection
+    if errors occur and the respective flags are activated
+    """
+    try:
+        clipped = clip_by_rect(geometry, *bounds)
+        return repair_geometry(clipped) if repair else clipped
+    except Exception as exc:
+        if ignore_errors:
+            logger.error(exc)
+            return GeometryCollection()
+        else:
+            raise exc
 
 
 def clip_geometry_to_pyramid_bounds(

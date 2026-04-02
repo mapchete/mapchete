@@ -1,10 +1,11 @@
 from typing import Any
 from shapely.geometry import shape
 
+from mapchete.geometry.repair import repair as repair_geom
 from mapchete.types import GeoInterface, Geometry
 
 
-def to_shape(geometry: Any) -> Geometry:
+def to_shape(geometry: Any, repair: bool = False) -> Geometry:
     """
     Convert geometry to shapely geometry if necessary.
 
@@ -18,16 +19,19 @@ def to_shape(geometry: Any) -> Geometry:
     """
     try:
         if isinstance(geometry, Geometry):
-            return geometry
+            pass
         elif isinstance(geometry, dict) and geometry.get("geometry"):
-            return shape(geometry["geometry"])
+            geometry = shape(geometry["geometry"])
         elif (
             isinstance(geometry, GeoInterface)
             and isinstance(geometry.__geo_interface__, dict)
             and geometry.__geo_interface__.get("geometry")
         ):
-            return shape(geometry.__geo_interface__["geometry"])
+            geometry = shape(geometry.__geo_interface__["geometry"])
         else:
-            return shape(geometry)  # type: ignore
+            geometry = shape(geometry)  # type: ignore
+
+        return repair_geom(geometry) if repair else geometry
+
     except Exception:  # pragma: no cover
         raise TypeError(f"invalid geometry type: {type(geometry)}")
