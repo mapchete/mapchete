@@ -8,7 +8,6 @@ from typing import Generator, List, Optional, Tuple, Union
 import fiona
 from fiona.errors import DriverError
 from retry import retry
-from shapely import clip_by_rect
 from shapely.errors import TopologicalError
 from shapely.geometry import mapping
 
@@ -16,12 +15,11 @@ from mapchete.errors import MapcheteIOError, clean_exception
 from mapchete.geometry import (
     filter_by_geometry_type,
     multipart_to_singleparts,
-    repair,
     reproject_geometry,
     segmentize_geometry,
     to_shape,
 )
-from mapchete.geometry.clip import clip_grid_to_pyramid_bounds
+from mapchete.geometry.clip import clip_grid_to_pyramid_bounds, clip_by_bounds
 from mapchete.geometry.filter import omit_empty_geometries
 from mapchete.geometry.types import (
     GeometryTypeLike,
@@ -244,12 +242,14 @@ def reprojected_features(
     for feature in src.filter(bbox=dst_bounds):
         try:
             # check validity
-            original_geom = repair(to_shape(feature))
+            original_geom = to_shape(feature, repair=True)
             target_geometry_type = target_geometry_type or original_geom.geom_type
 
             # clip with bounds and omit if clipped geometry is empty
             for checked_geom in filter_by_geometry_type(
-                repair(clip_by_rect(original_geom, *dst_bounds)),
+                clip_by_bounds(
+                    original_geom, dst_bounds, repair=True, ignore_errors=True
+                ),
                 target_geometry_type,
             ):
                 # reproject each feature to grid CRS
