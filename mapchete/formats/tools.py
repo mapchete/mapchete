@@ -8,7 +8,7 @@ import datetime
 import logging
 import warnings
 from pprint import pformat
-from typing import Dict
+from typing import Any, Dict, List, Optional, Tuple
 
 import dateutil.parser
 from rasterio.crs import CRS
@@ -195,7 +195,7 @@ def data_type_from_extension(file_extension: str) -> str:
         )
 
 
-def dump_metadata(params: Dict, parse_datetime=True) -> Dict:
+def dump_metadata(params: Dict, parse_datetime: bool = True) -> Dict:
     """
     Transform params to JSON-serializable dictionary for a metadata.json file.
 
@@ -226,10 +226,10 @@ def dump_metadata(params: Dict, parse_datetime=True) -> Dict:
         },
     )
 
-    def _datetime_to_str(value):
+    def _datetime_to_str(value: Any) -> str:
         return value.isoformat()
 
-    def _geometry_to_none(value):
+    def _geometry_to_none(value: Any) -> None:
         return None
 
     strategies = [
@@ -257,7 +257,7 @@ def read_output_metadata(metadata_json: MPathLike, **kwargs: str) -> Dict:
     return load_metadata(MPath.from_inp(metadata_json).read_json())
 
 
-def load_metadata(params: Dict, parse_known_types=True) -> Dict:
+def load_metadata(params: Dict, parse_known_types: bool = True) -> Dict:
     """
     Parse output metadata dictionary.
 
@@ -356,7 +356,7 @@ def compare_metadata_params(params1: Dict, params2: Dict) -> None:
         Output metadata parameters.
     """
 
-    def _buffered_pyramid(pyramid):
+    def _buffered_pyramid(pyramid: Any) -> BufferedTilePyramid:
         if isinstance(pyramid, dict):
             return BufferedTilePyramid(**pyramid)
         else:
@@ -376,10 +376,10 @@ def compare_metadata_params(params1: Dict, params2: Dict) -> None:
         )
 
 
-def _parse_dict(d, strategies=None):
+def _parse_dict(d: Dict, strategies: Optional[List[Tuple[Any, Any]]] = None) -> Dict:
     """Iterate through dictionary and try to parse values according to strategies."""
 
-    def _parse_val(val):
+    def _parse_val(val: Any) -> Any:
         for func, allowed_exception in strategies:
             try:
                 return func(val)
@@ -403,10 +403,10 @@ def _parse_dict(d, strategies=None):
     return out
 
 
-def _unparse_dict(d, strategies=None):
+def _unparse_dict(d: Dict, strategies: Optional[List[Tuple[Any, Any]]] = None) -> Dict:
     """Iterate through dictionary and try to unparse values according to strategies."""
 
-    def _unparse_val(val):
+    def _unparse_val(val: Any) -> Any:
         for instance_type, func in strategies:
             if isinstance(val, instance_type):
                 return func(val)
