@@ -248,7 +248,7 @@ def reprojected_features(
             # clip with bounds and omit if clipped geometry is empty
             for checked_geom in filter_by_geometry_type(
                 clip_by_bounds(
-                    original_geom, *dst_bounds, repair=True, ignore_errors=True
+                    original_geom, dst_bounds, repair=True, ignore_errors=True
                 ),
                 target_geometry_type,
             ):
