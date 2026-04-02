@@ -3,6 +3,21 @@ Changelog
 #########
 
 
+2026.4.0 - 2026-04-02
+---------------------
+
+* core
+
+  * `executor.concurrent_futures.ConcurrentFuturesExecutor.as_completed()`: fix early processing run stop if many tasks are skipped (#770)
+  * `geometry.clip`: add `clip_by_bounds()` convenience method (#781)
+  * `geometry.shape.to_shape()`: add `repair` flag (defaults to `False`) (#781)
+
+* CLI
+
+  * `mpath sync`: add `--dry-run` flag (#770)
+  * `mpath rm`: add `--verbose`, `--count` and `--worker` flags; use pagination to iterate through files to delete (#779)
+
+
 2026.3.0 - 2026-03-05
 ---------------------
 
