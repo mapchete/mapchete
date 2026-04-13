@@ -3,6 +3,18 @@ Changelog
 #########
 
 
+2026.4.1 - 2026-04-13
+---------------------
+
+* core
+
+  * `settings.IORetrySettings`: if `botocore` is installed, add `botocore.exceptions.ClientError` to retryable exceptions (#788)
+
+* CLI
+
+  * `mapchete serve`: add `--quick` flag for quick previews (#785)
+
+
 2026.4.0 - 2026-04-02
 ---------------------
 
