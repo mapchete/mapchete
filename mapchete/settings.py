@@ -68,7 +68,7 @@ try:
     from botocore.exceptions import ClientError
 
     _RETRYABLE_EXCEPTIONS += (ClientError,)
-except ImportError:
+except ImportError:  # pragma: no cover
     pass
 
 
