@@ -20,6 +20,7 @@ def test_serve_cli_params(cleantopo_br):
         ["serve", cleantopo_br.path, "--overwrite"],
         ["serve", cleantopo_br.path, "--readonly"],
         ["serve", cleantopo_br.path, "--memory"],
+        ["serve", cleantopo_br.path, "--quick"],
     ]:
         run_cli(args)
 

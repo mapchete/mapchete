@@ -2,15 +2,16 @@
 """Command line utility to serve a Mapchete process."""
 
 import logging
-import logging.config
 import os
 import pkgutil
+from tempfile import TemporaryDirectory
 
 import click
 from rasterio.io import MemoryFile
 
 import mapchete
 from mapchete.cli import options
+from mapchete.config.parse import parse_config, ProcessConfig
 from mapchete.io import MPath
 from mapchete.tile import BufferedTilePyramid
 
@@ -26,6 +27,12 @@ logger = logging.getLogger(__name__)
 @options.opt_overwrite
 @options.opt_readonly
 @options.opt_memory
+@click.option(
+    "--quick",
+    "-q",
+    is_flag=True,
+    help="For quick previews. Changes the output format to PNG, won't write tiles and set metatiling to 1.",
+)
 @options.opt_input_file
 @options.opt_debug
 @options.opt_logfile
@@ -38,6 +45,7 @@ def serve(
     overwrite=False,
     readonly=False,
     memory=False,
+    quick=False,
     input_file=None,
     debug=False,
     logfile=None,
@@ -48,24 +56,27 @@ def serve(
     Creates the Mapchete host and serves both web page with OpenLayers and the
     WMTS simple REST endpoint.
     """
-    app = create_app(
-        mapchete_files=mapchete_files,
-        zoom=zoom,
-        bounds=bounds,
-        single_input_file=input_file,
-        mode=_get_mode(memory, readonly, overwrite),
-        debug=debug,
-    )
-    if os.environ.get("MAPCHETE_TEST") == "TRUE":
-        logger.debug("don't run flask app, MAPCHETE_TEST environment detected")
-    else:  # pragma: no cover
-        app.run(
-            threaded=True,
+    with TemporaryDirectory() as temp_dir:
+        app = create_app(
+            mapchete_files=mapchete_files,
+            zoom=zoom,
+            bounds=bounds,
+            single_input_file=input_file,
+            mode=_get_mode(memory, readonly, overwrite),
+            quick=quick,
             debug=debug,
-            port=port,
-            host="0.0.0.0",
-            extra_files=mapchete_files,
+            temp_dir=temp_dir,
         )
+        if os.environ.get("MAPCHETE_TEST") == "TRUE":
+            logger.debug("don't run flask app, MAPCHETE_TEST environment detected")
+        else:  # pragma: no cover
+            app.run(
+                threaded=True,
+                debug=debug,
+                port=port,
+                host="0.0.0.0",
+                extra_files=mapchete_files,
+            )
 
 
 def create_app(
@@ -74,17 +85,30 @@ def create_app(
     bounds=None,
     single_input_file=None,
     mode="continue",
+    quick=False,
     debug=None,
+    temp_dir=None,
 ):
     """Configure and create Flask app."""
     from flask import Flask, render_template_string
 
-    app = Flask(__name__)
-    mapchete_processes = {
+    mapchete_configs = {
         str(
             MPath.from_inp(MPath.from_inp(mapchete_file).name).without_suffix()
-        ): mapchete.open(
-            mapchete_file,
+        ).replace("-", "_"): parse_config(mapchete_file)
+        for mapchete_file in mapchete_files
+    }
+    if quick:
+        mode = "memory"
+        mapchete_configs = {
+            process_name: _make_quick(config, MPath.from_inp(temp_dir) / process_name)
+            for process_name, config in mapchete_configs.items()
+        }
+
+    app = Flask(__name__)
+    mapchete_processes = {
+        process_name: mapchete.open(
+            config.model_dump(exclude_none=True),
             zoom=zoom,
             bounds=bounds,
             single_input_file=single_input_file,
@@ -92,7 +116,7 @@ def create_app(
             with_cache=True,
             debug=debug,
         )
-        for mapchete_file in mapchete_files
+        for process_name, config in mapchete_configs.items()
     }
 
     mp = next(iter(mapchete_processes.values()))
@@ -182,3 +206,11 @@ def _valid_tile_response(mp, data):
     response.headers["Content-Type"] = mime_type
     response.cache_control.no_write = True
     return response
+
+
+def _make_quick(config: ProcessConfig, temp_dir: str) -> ProcessConfig:
+    config_dict = config.model_dump(exclude_none=True)
+    config_dict["pyramid"]["metatiling"] = 1
+    config_dict["output"]["format"] = "PNG"
+    config_dict["output"]["path"] = temp_dir
+    return ProcessConfig.model_validate(config_dict)
