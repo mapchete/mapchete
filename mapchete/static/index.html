@@ -78,6 +78,21 @@
             var terrain_light_wmts_layer = new OpenLayers.Layer.WMTS(options);
             map.addLayer(terrain_light_wmts_layer);
 
+            // Sentinel-2 Cloudless 2024
+            var options = extend(defaults, {
+                url: "https://tiles.maps.eox.at/wmts/",
+                name: "Sentinel-2 Cloudless 2024",
+                {% if is_mercator %}
+                layer: 's2cloudless-2024_3857',
+                {% else %}
+                layer: 's2cloudless-2024',
+                {% endif %}
+                format: 'image/jpeg',
+                isBaseLayer: true,
+            });
+            var s2cloudless2024_wmts_layer = new OpenLayers.Layer.WMTS(options);
+            map.addLayer(s2cloudless2024_wmts_layer);
+
             // Sentinel-2 Cloudless 2023
             var options = extend(defaults, {
                 url: "https://tiles.maps.eox.at/wmts/",
