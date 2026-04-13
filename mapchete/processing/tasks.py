@@ -312,7 +312,11 @@ class TileTask(Task):
         if self.tile.zoom not in self.config_zoom_levels:
             raise MapcheteNodataTile
 
-        process_output = self._execute(dependencies=dependencies or {})
+        with Timer() as duration:
+            try:
+                process_output = self._execute(dependencies=dependencies or {})
+            finally:
+                logger.debug("output generated in %s", duration)
         if isinstance(process_output, str) and process_output == "empty":
             raise MapcheteNodataTile
         elif process_output is None:
@@ -394,62 +398,76 @@ class TileTask(Task):
             else self.output_reader.pyramid.intersecting(tile)
         )
 
-        with Timer() as duration:
-            # resample from parent tile
-            if baselevel == InterpolateFrom.higher:
-                parent_tile = self.tile.get_parent()
-                process_data = raster.resample_from_array(
-                    self.output_reader.read(parent_tile),
-                    in_affine=parent_tile.affine,
-                    out_tile=self.tile,
-                    resampling=self.config_baselevels["higher"],
-                    nodata=self.output_reader.output_params["nodata"],
-                )
-            # resample from children tiles
-            elif baselevel == InterpolateFrom.lower:
-                src_tiles = {}
-                # don't know why this would not be covered when running on GH:
-                for task_info in dependencies.values():  # pragma: no cover
-                    logger.debug("reading output from dependend tasks")
-                    for output_tile in self.output_reader.pyramid.intersecting(
-                        task_info.tile
-                    ):
-                        if task_info.output is not None:
-                            src_tiles[output_tile] = raster.extract_from_array(
-                                array=task_info.output,
-                                in_affine=task_info.tile.affine,
-                                out_tile=output_tile,
-                            )
-                if self.output_reader.pyramid.pixelbuffer:  # pragma: no cover
-                    # if there is a pixelbuffer around the output tiles, we need to read more child tiles
-                    child_tiles = [
-                        child_tile
-                        for output_tile in output_tiles
-                        for child_tile in self.output_reader.pyramid.tiles_from_bounds(
-                            output_tile.bounds, output_tile.zoom + 1
-                        )
-                    ]
-                else:
-                    child_tiles = [
-                        child_tile
-                        for output_tile in output_tiles
-                        for child_tile in output_tile.get_children()
-                    ]
-                for child_tile in child_tiles:
-                    if child_tile not in src_tiles:
-                        src_tiles[child_tile] = self.output_reader.read(child_tile)
-
-                process_data = raster.resample_from_array(
-                    array_or_raster=raster.create_mosaic(
-                        [(src_tile, data) for src_tile, data in src_tiles.items()],
+        try:
+            with Timer() as duration:
+                # resample from parent tile
+                if baselevel == InterpolateFrom.higher:
+                    parent_tile = self.tile.get_parent()
+                    process_data = raster.resample_from_array(
+                        self.output_reader.read(parent_tile, raise_if_empty=True),
+                        in_affine=parent_tile.affine,
+                        out_tile=self.tile,
+                        resampling=self.config_baselevels["higher"],
                         nodata=self.output_reader.output_params["nodata"],
-                    ),
-                    out_tile=self.tile,
-                    resampling=self.config_baselevels["lower"],
-                    nodata=self.output_reader.output_params["nodata"],
-                )
-        logger.debug((self.tile.id, "generated from baselevel", str(duration)))
-        return process_data
+                    )
+                # resample from children tiles
+                elif baselevel == InterpolateFrom.lower:
+                    src_tiles = {}
+                    # don't know why this would not be covered when running on GH:
+                    for task_info in dependencies.values():  # pragma: no cover
+                        logger.debug("reading output from dependend tasks")
+                        for output_tile in self.output_reader.pyramid.intersecting(
+                            task_info.tile
+                        ):
+                            if task_info.output is not None:
+                                src_tiles[output_tile] = raster.extract_from_array(
+                                    array=task_info.output,
+                                    in_affine=task_info.tile.affine,
+                                    out_tile=output_tile,
+                                )
+                    if self.output_reader.pyramid.pixelbuffer:  # pragma: no cover
+                        # if there is a pixelbuffer around the output tiles, we need to read more child tiles
+                        child_tiles = [
+                            child_tile
+                            for output_tile in output_tiles
+                            for child_tile in self.output_reader.pyramid.tiles_from_bounds(
+                                output_tile.bounds, output_tile.zoom + 1
+                            )
+                        ]
+                    else:
+                        child_tiles = [
+                            child_tile
+                            for output_tile in output_tiles
+                            for child_tile in output_tile.get_children()
+                        ]
+                    for child_tile in child_tiles:
+                        if child_tile not in src_tiles:
+                            try:
+                                src_tiles[child_tile] = self.output_reader.read(
+                                    child_tile, raise_if_empty=True
+                                )
+                            except MapcheteNodataTile:
+                                pass
+                    if src_tiles:
+                        process_data = raster.resample_from_array(
+                            array_or_raster=raster.create_mosaic(
+                                [
+                                    (src_tile, data)
+                                    for src_tile, data in src_tiles.items()
+                                ],
+                                nodata=self.output_reader.output_params["nodata"],
+                            ),
+                            out_tile=self.tile,
+                            resampling=self.config_baselevels["lower"],
+                            nodata=self.output_reader.output_params["nodata"],
+                        )
+                    else:
+                        raise MapcheteNodataTile(
+                            f"all child tiles of {self.tile} are empty"
+                        )
+            return process_data
+        finally:
+            logger.debug((self.tile.id, "generated from baselevel", str(duration)))
 
 
 class TileTaskBatch(TaskBatch):
