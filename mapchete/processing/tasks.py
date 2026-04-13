@@ -403,7 +403,7 @@ class TileTask(Task):
                 # resample from parent tile
                 if baselevel == InterpolateFrom.higher:
                     parent_tile = self.tile.get_parent()
-                    process_data = raster.resample_from_array(
+                    return raster.resample_from_array(
                         self.output_reader.read(parent_tile, raise_if_empty=True),
                         in_affine=parent_tile.affine,
                         out_tile=self.tile,
@@ -449,7 +449,7 @@ class TileTask(Task):
                             except MapcheteNodataTile:
                                 pass
                     if src_tiles:
-                        process_data = raster.resample_from_array(
+                        return raster.resample_from_array(
                             array_or_raster=raster.create_mosaic(
                                 [
                                     (src_tile, data)
@@ -465,7 +465,6 @@ class TileTask(Task):
                         raise MapcheteNodataTile(
                             f"all child tiles of {self.tile} are empty"
                         )
-            return process_data
         finally:
             logger.debug((self.tile.id, "generated from baselevel", str(duration)))
 
