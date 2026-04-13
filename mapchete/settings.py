@@ -45,6 +45,33 @@ class GDALHTTPOptions(BaseSettings):
     model_config = SettingsConfigDict()
 
 
+_RETRYABLE_EXCEPTIONS = (
+    BufferError,
+    ConnectionError,
+    InterruptedError,
+    LookupError,
+    NameError,
+    SystemError,
+    TimeoutError,
+    RasterioError,
+    RasterioIOError,
+    FionaError,
+    FSTimeoutError,
+    ServerDisconnectedError,
+    ClientResponseError,
+    ClientPayloadError,
+    CPLE_AppDefinedError,
+    CPLE_OpenFailedError,
+    CPLE_FileIOError,
+)
+try:
+    from botocore.exceptions import ClientError
+
+    _RETRYABLE_EXCEPTIONS += (ClientError,)
+except ImportError:  # pragma: no cover
+    pass
+
+
 class IORetrySettings(BaseSettings):
     """Combine default retry settings with env variables.
 
@@ -58,25 +85,7 @@ class IORetrySettings(BaseSettings):
     backoff: NonNegativeFloat = 1.0
     # only retry the most common exceptions which do not hint to
     # a permanent issue (such as FileNotFoundError, ...).
-    exceptions: Tuple[Type[Exception], ...] = (
-        BufferError,
-        ConnectionError,
-        InterruptedError,
-        LookupError,
-        NameError,
-        SystemError,
-        TimeoutError,
-        RasterioError,
-        RasterioIOError,
-        FionaError,
-        FSTimeoutError,
-        ServerDisconnectedError,
-        ClientResponseError,
-        ClientPayloadError,
-        CPLE_AppDefinedError,
-        CPLE_OpenFailedError,
-        CPLE_FileIOError,
-    )
+    exceptions: Tuple[Type[Exception], ...] = _RETRYABLE_EXCEPTIONS
 
     # read from environment
     model_config = SettingsConfigDict(env_prefix="MAPCHETE_IO_RETRY_")
