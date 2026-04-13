@@ -7,7 +7,7 @@ from collections import OrderedDict
 from copy import deepcopy
 from functools import cached_property
 import textwrap
-from typing import Any, Iterator, Optional, Tuple, Union
+from typing import Any, Iterator, Optional, Tuple, Union, TYPE_CHECKING
 
 import oyaml as yaml
 from shapely.geometry import box
@@ -45,22 +45,13 @@ from mapchete.validate import (
 )
 from mapchete.zoom_levels import ZoomLevels
 
+if TYPE_CHECKING:
+    from mapchete.formats.base import OutputDataReader, OutputDataWriter
+
+
 logger = logging.getLogger(__name__)
 
 __all__ = ["validate_bounds", "validate_zooms", "validate_values"]
-
-# TODO remove these
-# parameters for output configuration
-_OUTPUT_PARAMETERS = [
-    "format",
-    "path",
-    "grid",
-    "pixelbuffer",
-    "metatiling",
-    "delimiters",
-    "mode",
-    "stac",
-]
 
 
 class MapcheteConfig(object):
@@ -106,8 +97,8 @@ class MapcheteConfig(object):
     effective_area: BaseGeometry
     effective_bounds: Bounds
     input: OrderedDict
-    output: "OutputDataWriter"  # noqa: F821
-    output_reader: "OutputDataReader"  # noqa: F821
+    output: "OutputDataWriter"
+    output_reader: "OutputDataReader"
 
     def __init__(
         self,

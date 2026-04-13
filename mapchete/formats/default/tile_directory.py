@@ -2,6 +2,7 @@
 
 import logging
 from functools import cached_property
+from typing import Any, List, Optional, Tuple, Union
 
 from shapely.geometry import box
 
@@ -166,7 +167,7 @@ class InputData(base.InputData):
     def _tiledir_metadata_json(self):
         return read_output_metadata(self.path.joinpath("metadata.json"))
 
-    def open(self, tile, **kwargs):
+    def open(self, tile: Any, **kwargs) -> "InputTile":
         """
         Return InputTile object.
 
@@ -193,7 +194,7 @@ class InputData(base.InputData):
             **kwargs,
         )
 
-    def bbox(self, out_crs=None):
+    def bbox(self, out_crs: Optional[Any] = None) -> Any:
         """
         Return data bounding box.
 
@@ -216,8 +217,13 @@ class InputData(base.InputData):
 
 
 def _get_tiles_paths(
-    basepath=None, ext=None, pyramid=None, bounds=None, zoom=None, exists_check=False
-):
+    basepath: Optional[Any] = None,
+    ext: Optional[str] = None,
+    pyramid: Optional[Any] = None,
+    bounds: Optional[Any] = None,
+    zoom: Optional[int] = None,
+    exists_check: bool = False,
+) -> List[Tuple[Any, Any]]:
     return [
         (_tile, _path)
         for _tile, _path in [
@@ -245,18 +251,18 @@ class InputTile(base.InputTile, RasterInput):
 
     def __init__(
         self,
-        tile,
-        data_type=None,
-        basepath=None,
-        file_extension=None,
-        profile=None,
-        td_crs=None,
-        td_pyramid=None,
-        read_as_tiledir_func=None,
-        min_zoom=None,
-        max_zoom=None,
-        resampling=None,
-    ):
+        tile: Any,
+        data_type: Optional[str] = None,
+        basepath: Optional[Any] = None,
+        file_extension: Optional[str] = None,
+        profile: Optional[dict] = None,
+        td_crs: Optional[Any] = None,
+        td_pyramid: Optional[Any] = None,
+        read_as_tiledir_func: Optional[Any] = None,
+        min_zoom: Optional[int] = None,
+        max_zoom: Optional[int] = None,
+        resampling: Optional[str] = None,
+    ) -> None:
         """Initialize."""
         self.tile = tile
         self._data_type = data_type
@@ -271,18 +277,18 @@ class InputTile(base.InputTile, RasterInput):
 
     def read(
         self,
-        indexes=None,
-        resampling=None,
-        tile_directory_zoom=None,
-        matching_method="gdal",
-        matching_max_zoom=None,
-        matching_precision=8,
-        fallback_to_higher_zoom=False,
-        validity_check=False,
-        dst_nodata=None,
-        gdal_opts=None,
+        indexes: Optional[Any] = None,
+        resampling: Optional[str] = None,
+        tile_directory_zoom: Optional[int] = None,
+        matching_method: str = "gdal",
+        matching_max_zoom: Optional[int] = None,
+        matching_precision: int = 8,
+        fallback_to_higher_zoom: bool = False,
+        validity_check: bool = False,
+        dst_nodata: Optional[Union[int, float]] = None,
+        gdal_opts: Optional[dict] = None,
         **kwargs,
-    ):
+    ) -> Any:
         """
         Read reprojected & resampled input data.
 
@@ -353,13 +359,13 @@ class InputTile(base.InputTile, RasterInput):
 
     def is_empty(
         self,
-        tile_directory_zoom=None,
-        fallback_to_higher_zoom=False,
-        matching_method="gdal",
-        matching_precision=8,
-        matching_max_zoom=None,
+        tile_directory_zoom: Optional[int] = None,
+        fallback_to_higher_zoom: bool = False,
+        matching_method: str = "gdal",
+        matching_precision: int = 8,
+        matching_max_zoom: Optional[int] = None,
         **_,
-    ):
+    ) -> bool:
         """
         Check if there is data within this tile.
 
@@ -404,12 +410,12 @@ class InputTile(base.InputTile, RasterInput):
 
     def _get_tiles_paths(
         self,
-        tile_directory_zoom=None,
-        fallback_to_higher_zoom=False,
-        matching_method="gdal",
-        matching_precision=8,
-        matching_max_zoom=None,
-    ):
+        tile_directory_zoom: Optional[int] = None,
+        fallback_to_higher_zoom: bool = False,
+        matching_method: str = "gdal",
+        matching_precision: int = 8,
+        matching_max_zoom: Optional[int] = None,
+    ) -> List[Tuple[Any, Any]]:
         # determine tile bounds in TileDirectory CRS
         # NOTE: because fiona/OGR cannot handle geometries crossing the antimeridian,
         # we have to clip the source bounds to the CRS bounds.

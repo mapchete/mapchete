@@ -21,6 +21,7 @@ nodata: integer or float
 """
 
 import logging
+from typing import Any, Optional, Tuple
 
 import numpy as np
 import numpy.ma as ma
@@ -73,7 +74,7 @@ class OutputDataReader(base.TileDirectoryOutputReader):
 
     METADATA = METADATA
 
-    def __init__(self, output_params, **kwargs):
+    def __init__(self, output_params: dict, **kwargs) -> None:
         """Initialize."""
         super().__init__(output_params)
         self.path = output_params["path"]
@@ -91,7 +92,7 @@ class OutputDataReader(base.TileDirectoryOutputReader):
             self.old_band_num = False
         self.output_params.update(dtype=self._profile["dtype"])
 
-    def read(self, output_tile, **kwargs):
+    def read(self, output_tile: BufferedTile, **kwargs) -> ma.MaskedArray:
         """
         Read existing process output.
 
@@ -114,7 +115,7 @@ class OutputDataReader(base.TileDirectoryOutputReader):
         except FileNotFoundError:
             return self.empty(output_tile)
 
-    def is_valid_with_config(self, config):
+    def is_valid_with_config(self, config: dict) -> bool:
         """
         Check if output format is valid with other process parameters.
 
@@ -129,7 +130,7 @@ class OutputDataReader(base.TileDirectoryOutputReader):
         """
         return validate_values(config, [("path", (str, MPath))])
 
-    def profile(self, tile=None):
+    def profile(self, tile: Optional[BufferedTile] = None) -> dict:
         """
         Create a metadata dictionary for rasterio.
 
@@ -153,7 +154,7 @@ class OutputDataReader(base.TileDirectoryOutputReader):
             )
         return dst_metadata
 
-    def for_web(self, data):
+    def for_web(self, data: Any) -> Tuple[Any, str]:
         """
         Convert data to web output.
 
@@ -170,7 +171,7 @@ class OutputDataReader(base.TileDirectoryOutputReader):
             "image/png",
         )  # pragma: no cover
 
-    def empty(self, process_tile):
+    def empty(self, process_tile: BufferedTile) -> ma.MaskedArray:
         """
         Return empty data.
 
@@ -187,7 +188,7 @@ class OutputDataReader(base.TileDirectoryOutputReader):
         """
         return ma.masked_values(np.zeros(process_tile.shape), 0)
 
-    def _prepare_array(self, data):
+    def _prepare_array(self, data: Any) -> ma.MaskedArray:
         data = prepare_array(-(data - 255), dtype="uint8", masked=False, nodata=0)[0]
         zeros = np.zeros(data.shape)
         if self.old_band_num:
@@ -200,7 +201,7 @@ class OutputDataReader(base.TileDirectoryOutputReader):
 class OutputDataWriter(base.OutputDataWriter, OutputDataReader):
     METADATA = METADATA
 
-    def write(self, process_tile, data):
+    def write(self, process_tile: BufferedTile, data: Any) -> None:
         """
         Write data from process tiles into PNG file(s).
 

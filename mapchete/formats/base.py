@@ -9,7 +9,8 @@ import logging
 import types
 import warnings
 from itertools import chain
-from typing import Any, List, Optional, Tuple
+from types import TracebackType
+from typing import Any, Callable, List, Optional, Tuple, Type, Union
 
 import numpy as np
 import numpy.ma as ma
@@ -68,11 +69,16 @@ class InputTile(InputTileProtocol):
         """
         self.preprocessing_tasks_results[task_key] = result
 
-    def __enter__(self):
+    def __enter__(self) -> "InputTile":
         """Required for 'with' statement."""
         return self
 
-    def __exit__(self, t, v, tb):
+    def __exit__(
+        self,
+        t: Optional[Type[BaseException]],
+        v: Optional[BaseException],
+        tb: Optional[TracebackType],
+    ) -> None:
         """Clean up."""
 
 
@@ -121,8 +127,14 @@ class InputData(InputDataProtocol):
         """Optional cleanup function called when Mapchete exits."""
 
     def add_preprocessing_task(
-        self, func, fargs=None, fkwargs=None, key=None, geometry=None, bounds=None
-    ):
+        self,
+        func: Callable,
+        fargs: Optional[tuple] = None,
+        fkwargs: Optional[dict] = None,
+        key: Optional[str] = None,
+        geometry: Optional[Any] = None,
+        bounds: Optional[Any] = None,
+    ) -> None:
         """
         Add longer running preprocessing function to be called right before processing.
 
@@ -149,7 +161,7 @@ class InputData(InputDataProtocol):
             bounds=bounds,
         )
 
-    def get_preprocessing_task_result(self, task_key):
+    def get_preprocessing_task_result(self, task_key: str) -> Any:
         """
         Get result of preprocessing task.
         """
@@ -161,7 +173,7 @@ class InputData(InputDataProtocol):
             raise ValueError(f"task {task_key} has not yet been executed")
         return self.preprocessing_tasks_results[task_key]
 
-    def set_preprocessing_task_result(self, task_key, result):
+    def set_preprocessing_task_result(self, task_key: str, result: Any) -> None:
         """
         Set result of preprocessing task.
         """
@@ -177,7 +189,7 @@ class InputData(InputDataProtocol):
         #     raise KeyError(f"task {task_key} has already been set")
         self.preprocessing_tasks_results[task_key] = result
 
-    def preprocessing_task_finished(self, task_key):
+    def preprocessing_task_finished(self, task_key: str) -> bool:
         """
         Return whether preprocessing task already ran.
         """
@@ -194,7 +206,7 @@ class OutputDataBase:
     pyramid: BufferedTilePyramid
     crs: CRSLike
 
-    def __init__(self, output_params: dict, readonly: bool = False, **kwargs):
+    def __init__(self, output_params: dict, readonly: bool = False, **kwargs) -> None:
         """Initialize."""
         self.pixelbuffer = output_params["pixelbuffer"]
         if "type" in output_params:  # pragma: no cover
@@ -265,7 +277,7 @@ class OutputDataBase:
                 if shape(feature["geometry"]).intersects(out_tile.bbox)
             ]
 
-    def prepare(self, **kwargs):
+    def prepare(self, **kwargs) -> None:
         pass
 
 
@@ -292,12 +304,12 @@ class OutputSTACMixin:
         return self.output_params.get("stac", {}).get("id") or self.path.stem
 
     @property
-    def stac_item_metadata(self):
+    def stac_item_metadata(self) -> dict:
         """Custom STAC metadata."""
         return self.output_params.get("stac", {})
 
     @property
-    def stac_asset_type(self):  # pragma: no cover
+    def stac_asset_type(self) -> str:  # pragma: no cover
         """Asset MIME type."""
         return "image/tiff; application=geotiff"
 
@@ -315,12 +327,12 @@ class OutputSTACMixin:
                 href=self.stac_path,
             )
 
-    def create_prototype_files(self):
+    def create_prototype_files(self) -> None:
         self.get_stacta().create_prototype_files(out_profile=self.profile())  # type: ignore
 
 
 class OutputDataReader(OutputDataBase):
-    def read(self, output_tile):  # pragma: no cover
+    def read(self, output_tile: BufferedTile) -> Any:  # pragma: no cover
         """
         Read existing process output.
 
@@ -335,7 +347,7 @@ class OutputDataReader(OutputDataBase):
         """
         raise NotImplementedError()
 
-    def empty(self, process_tile):  # pragma: no cover
+    def empty(self, process_tile: BufferedTile) -> Any:  # pragma: no cover
         """
         Return empty data.
 
@@ -352,7 +364,7 @@ class OutputDataReader(OutputDataBase):
         """
         raise NotImplementedError()
 
-    def open(self, tile, process):  # pragma: no cover
+    def open(self, tile: BufferedTile, process: Any) -> Any:  # pragma: no cover
         """
         Open process output as input for other process.
 
@@ -363,7 +375,7 @@ class OutputDataReader(OutputDataBase):
         """
         raise NotImplementedError
 
-    def for_web(self, data):  # pragma: no cover
+    def for_web(self, data: Any) -> Any:  # pragma: no cover
         """
         Convert data to web output (raster only).
 
@@ -400,7 +412,7 @@ class OutputDataWriter(OutputDataReader):
     METADATA = {"driver_name": None, "data_type": None, "mode": "w"}
     use_stac = False
 
-    def write(self, process_tile, data):  # pragma: no cover
+    def write(self, process_tile: BufferedTile, data: Any) -> None:  # pragma: no cover
         """
         Write data from one or more process tiles.
 
@@ -411,7 +423,7 @@ class OutputDataWriter(OutputDataReader):
         """
         raise NotImplementedError
 
-    def prepare_path(self, tile):
+    def prepare_path(self, tile: BufferedTile) -> None:
         """
         Create directory and subdirectory if necessary.
 
@@ -422,7 +434,7 @@ class OutputDataWriter(OutputDataReader):
         """
         self.get_path(tile).parent.makedirs()
 
-    def output_is_valid(self, process_data):
+    def output_is_valid(self, process_data: Any) -> Optional[bool]:
         """
         Check whether process output is allowed with output driver.
 
@@ -441,7 +453,7 @@ class OutputDataWriter(OutputDataReader):
         elif self.METADATA["data_type"] == "vector":
             return is_feature_list(process_data)
 
-    def output_cleaned(self, process_data):
+    def output_cleaned(self, process_data: Any) -> Any:
         """
         Return verified and cleaned output.
 
@@ -467,7 +479,7 @@ class OutputDataWriter(OutputDataReader):
         elif self.METADATA["data_type"] == "vector":
             return list(process_data)
 
-    def streamline_output(self, process_data):
+    def streamline_output(self, process_data: Any) -> Any:
         if isinstance(process_data, str) and process_data == "empty":
             raise MapcheteNodataTile
         elif process_data is None:  # pragma: no cover
@@ -479,14 +491,19 @@ class OutputDataWriter(OutputDataReader):
                 "invalid output type: %s" % type(process_data)
             )
 
-    def close(self, exc_type=None, exc_value=None, exc_traceback=None):
+    def close(
+        self,
+        exc_type: Optional[Type[BaseException]] = None,
+        exc_value: Optional[BaseException] = None,
+        exc_traceback: Optional[TracebackType] = None,
+    ) -> None:
         """Gets called if process is closed."""
 
 
 class TileDirectoryOutputReader(OutputDataReader, OutputSTACMixin):
     tile_path_schema: str = DEFAULT_TILE_PATH_SCHEMA
 
-    def __init__(self, output_params, readonly=False):
+    def __init__(self, output_params: dict, readonly: bool = False) -> None:
         """Initialize."""
         super().__init__(output_params, readonly=readonly)
         self.tile_path_schema = output_params.get(
@@ -497,7 +514,11 @@ class TileDirectoryOutputReader(OutputDataReader, OutputSTACMixin):
                 {k: v for k, v in output_params.items() if k not in ["stac"]}
             )
 
-    def tiles_exist(self, process_tile=None, output_tile=None):
+    def tiles_exist(
+        self,
+        process_tile: Optional[BufferedTile] = None,
+        output_tile: Optional[BufferedTile] = None,
+    ) -> bool:
         """
         Check whether output tiles of a tile (either process or output) exists.
 
@@ -525,17 +546,17 @@ class TileDirectoryOutputReader(OutputDataReader, OutputSTACMixin):
 
     def _read_as_tiledir(
         self,
-        out_tile=None,
-        td_crs=None,
-        tiles_paths=None,
-        profile=None,
-        validity_check=False,
-        indexes=None,
-        resampling=None,
-        dst_nodata=None,
-        gdal_opts=None,
+        out_tile: Optional[BufferedTile] = None,
+        td_crs: Optional[Any] = None,
+        tiles_paths: Optional[List[Tuple[Any, Any]]] = None,
+        profile: Optional[dict] = None,
+        validity_check: bool = False,
+        indexes: Optional[Any] = None,
+        resampling: Optional[str] = None,
+        dst_nodata: Optional[Union[int, float]] = None,
+        gdal_opts: Optional[dict] = None,
         **kwargs,
-    ):
+    ) -> Any:
         """
         Read reprojected & resampled input data.
 
@@ -576,11 +597,15 @@ class TileDirectoryOutputWriter(OutputDataWriter, TileDirectoryOutputReader):
 
 
 class SingleFileOutputReader(OutputDataReader, OutputSTACMixin):
-    def __init__(self, output_params, readonly=False):
+    def __init__(self, output_params: dict, readonly: bool = False) -> None:
         """Initialize."""
         super().__init__(output_params, readonly=readonly)
 
-    def tiles_exist(self, process_tile=None, output_tile=None):  # pragma: no cover
+    def tiles_exist(
+        self,
+        process_tile: Optional[BufferedTile] = None,
+        output_tile: Optional[BufferedTile] = None,
+    ) -> bool:  # pragma: no cover
         """
         Check whether output tiles of a tile (either process or output) exists.
 
@@ -603,11 +628,11 @@ class SingleFileOutputWriter(OutputDataWriter, SingleFileOutputReader):
     pass
 
 
-def is_numpy_or_masked_array(data):
+def is_numpy_or_masked_array(data: Any) -> bool:
     return isinstance(data, (np.ndarray, ma.MaskedArray))
 
 
-def is_numpy_or_masked_array_with_tags(data):
+def is_numpy_or_masked_array_with_tags(data: Any) -> bool:
     return (
         isinstance(data, tuple)
         and len(data) == 2
@@ -616,23 +641,23 @@ def is_numpy_or_masked_array_with_tags(data):
     )
 
 
-def is_feature_list(data):
+def is_feature_list(data: Any) -> bool:
     return isinstance(data, (list, types.GeneratorType))
 
 
 def _read_as_tiledir(
-    data_type=None,
-    out_tile=None,
-    td_crs=None,
-    tiles_paths=None,
-    profile=None,
-    validity_check=False,
-    indexes=None,
-    resampling=None,
-    dst_nodata=None,
-    gdal_opts=None,
+    data_type: Optional[str] = None,
+    out_tile: Optional[BufferedTile] = None,
+    td_crs: Optional[Any] = None,
+    tiles_paths: Optional[List[Tuple[Any, Any]]] = None,
+    profile: Optional[dict] = None,
+    validity_check: bool = False,
+    indexes: Optional[Any] = None,
+    resampling: Optional[str] = None,
+    dst_nodata: Optional[Union[int, float]] = None,
+    gdal_opts: Optional[dict] = None,
     **kwargs,
-):
+) -> Any:
     logger.debug("reading data from CRS %s to CRS %s", td_crs, out_tile.tp.crs)
     if data_type == "vector":
         if tiles_paths:

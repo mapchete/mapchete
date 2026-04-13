@@ -8,6 +8,7 @@ extended easily.
 import logging
 import warnings
 from copy import deepcopy
+from typing import Any, Optional
 
 import numpy.ma as ma
 from rasterio.crs import CRS
@@ -72,7 +73,7 @@ class InputData(base.InputData):
     _cache_keep = False
     _memory_cache_active = False
 
-    def __init__(self, input_params, **kwargs):
+    def __init__(self, input_params: dict, **kwargs) -> None:
         """Initialize."""
         super().__init__(input_params, **kwargs)
         self.path = (
@@ -143,7 +144,7 @@ class InputData(base.InputData):
                     f"invalid cache configuration given: {input_params['abstract']['cache']}"
                 )
 
-    def open(self, tile, **kwargs):
+    def open(self, tile: Any, **kwargs) -> "InputTile":
         """
         Return InputTile object.
 
@@ -170,7 +171,7 @@ class InputData(base.InputData):
             **kwargs,
         )
 
-    def bbox(self, out_crs=None):
+    def bbox(self, out_crs: Optional[Any] = None) -> Any:
         """
         Return data bounding box.
 
@@ -200,7 +201,7 @@ class InputData(base.InputData):
         else:
             return self._src_bbox
 
-    def exists(self):
+    def exists(self) -> bool:
         """
         Check if data or file even exists.
 
@@ -210,7 +211,7 @@ class InputData(base.InputData):
         """
         return self.path.exists()  # pragma: no cover
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         """Cleanup when mapchete closes."""
         if self._cached_path and not self._cache_keep:  # pragma: no cover
             logger.debug("remove cached file %s", self._cached_path)
@@ -260,7 +261,9 @@ class InputTile(base.InputTile, RasterInput):
         )
         return f"raster_file.InputTile(tile={self.tile.id}, source={source})"
 
-    def read(self, indexes=None, resampling="nearest", **kwargs):
+    def read(
+        self, indexes: Optional[Any] = None, resampling: str = "nearest", **kwargs
+    ) -> Any:
         """
         Read reprojected & resampled input data.
 
@@ -323,7 +326,7 @@ class InputTile(base.InputTile, RasterInput):
         # empty if tile does not intersect with file bounding box
         return not self.tile.bbox.intersects(self.bbox)
 
-    def _get_band_indexes(self, indexes=None):
+    def _get_band_indexes(self, indexes: Optional[Any] = None) -> list:
         """Return valid band indexes."""
         if indexes:
             return indexes

@@ -1,5 +1,7 @@
 """Use another Mapchete process as input."""
 
+from typing import Any, Optional
+
 from mapchete import Mapchete
 from mapchete.config import MapcheteConfig
 from mapchete.formats import base
@@ -44,7 +46,7 @@ class InputData(base.InputData):
         "file_extensions": ["mapchete"],
     }
 
-    def __init__(self, input_params, **kwargs):
+    def __init__(self, input_params: dict, **kwargs) -> None:
         """Initialize."""
         super().__init__(input_params, **kwargs)
         self.path = input_params["path"]
@@ -65,7 +67,7 @@ class InputData(base.InputData):
         """
         return self.process.config.output.open(tile, self.process, **kwargs)
 
-    def bbox(self, out_crs=None):
+    def bbox(self, out_crs: Optional[Any] = None) -> Any:
         """
         Return data bounding box.
 

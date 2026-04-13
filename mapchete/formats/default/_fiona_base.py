@@ -4,6 +4,7 @@ Baseclasses for all drivers using fiona for reading and writing data.
 
 import logging
 import types
+from typing import Any, Optional, Tuple
 
 from mapchete.formats import base
 from mapchete.formats.protocols import VectorInput
@@ -42,7 +43,7 @@ class OutputDataReader(base.TileDirectoryOutputReader):
         spatial reference ID of CRS (e.g. "{'init': 'epsg:4326'}")
     """
 
-    def read(self, output_tile, **kwargs):
+    def read(self, output_tile: BufferedTile, **kwargs) -> list:
         """
         Read existing process output.
 
@@ -61,7 +62,7 @@ class OutputDataReader(base.TileDirectoryOutputReader):
         except FileNotFoundError:
             return self.empty(output_tile)
 
-    def is_valid_with_config(self, config):
+    def is_valid_with_config(self, config: dict) -> bool:
         """
         Check if output format is valid with other process parameters.
 
@@ -90,7 +91,7 @@ class OutputDataReader(base.TileDirectoryOutputReader):
             raise TypeError("invalid geometry type")
         return True
 
-    def empty(self, process_tile=None):
+    def empty(self, process_tile: Optional[BufferedTile] = None) -> list:
         """
         Return empty data.
 
@@ -105,7 +106,7 @@ class OutputDataReader(base.TileDirectoryOutputReader):
         """
         return []
 
-    def for_web(self, data):
+    def for_web(self, data: Any) -> Tuple[list, str]:
         """
         Convert data to web output (raster only).
 
@@ -119,7 +120,7 @@ class OutputDataReader(base.TileDirectoryOutputReader):
         """
         return list(data), "application/json"
 
-    def open(self, tile, process):
+    def open(self, tile: BufferedTile, process: Any) -> "InputTile":
         """
         Open process output as input for other process.
 
@@ -132,7 +133,7 @@ class OutputDataReader(base.TileDirectoryOutputReader):
 
 
 class OutputDataWriter(base.TileDirectoryOutputWriter, OutputDataReader):
-    def write(self, process_tile, data):
+    def write(self, process_tile: BufferedTile, data: Any) -> None:
         """
         Write data from process tiles into vector file(s).
 
@@ -184,13 +185,15 @@ class InputTile(base.InputTile, VectorInput):
     process : ``MapcheteProcess``
     """
 
-    def __init__(self, tile, process):
+    def __init__(self, tile: BufferedTile, process: Any) -> None:
         """Initialize."""
         self.tile = tile
         self.process = process
         self._cache = {}
 
-    def read(self, validity_check=True, no_neighbors=False, **kwargs):
+    def read(
+        self, validity_check: bool = True, no_neighbors: bool = False, **kwargs
+    ) -> list:
         """
         Read data from process output.
 
@@ -211,7 +214,7 @@ class InputTile(base.InputTile, VectorInput):
             raise NotImplementedError()
         return self._from_cache(validity_check=validity_check)
 
-    def is_empty(self, validity_check=True, **_):  # pragma: no cover
+    def is_empty(self, validity_check: bool = True, **_) -> bool:  # pragma: no cover
         """
         Check if there is data within this tile.
 
@@ -221,15 +224,17 @@ class InputTile(base.InputTile, VectorInput):
         """
         return len(self._from_cache(validity_check=validity_check)) == 0
 
-    def _from_cache(self, validity_check=True):
+    def _from_cache(self, validity_check: bool = True) -> list:
         if validity_check not in self._cache:
             self._cache[validity_check] = self.process.get_raw_output(self.tile)
         return self._cache[validity_check]
 
-    def __enter__(self):
+    def __enter__(self) -> "InputTile":
         """Enable context manager."""
         return self
 
-    def __exit__(self, t, v, tb):
+    def __exit__(
+        self, t: Optional[type], v: Optional[BaseException], tb: Optional[Any]
+    ) -> None:
         """Clear cache on close."""
         self._cache = {}
