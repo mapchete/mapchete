@@ -391,13 +391,6 @@ class TileTask(Task):
         # process pyramid pixelbuffers.
         tile = self.config_baselevels["tile_pyramid"].tile(*self.tile.id)
 
-        # get output_tiles that intersect with process tile
-        output_tiles = (
-            list(self.output_reader.pyramid.tiles_from_bounds(tile.bounds, tile.zoom))
-            if tile.pixelbuffer > self.output_reader.pyramid.pixelbuffer
-            else self.output_reader.pyramid.intersecting(tile)
-        )
-
         try:
             with Timer() as duration:
                 # resample from parent tile
@@ -412,8 +405,12 @@ class TileTask(Task):
                     )
                 # resample from children tiles
                 elif baselevel == InterpolateFrom.lower:
+                    # this is to collect source data for interpolation (either through previous tasks
+                    # or written output)
                     src_tiles = {}
+
                     # don't know why this would not be covered when running on GH:
+                    # get output from previous tasks
                     for task_info in dependencies.values():  # pragma: no cover
                         logger.debug("reading output from dependend tasks")
                         for output_tile in self.output_reader.pyramid.intersecting(
@@ -425,6 +422,18 @@ class TileTask(Task):
                                     in_affine=task_info.tile.affine,
                                     out_tile=output_tile,
                                 )
+
+                    # get output_tiles that intersect with process tile
+                    output_tiles = (
+                        list(
+                            self.output_reader.pyramid.tiles_from_bounds(
+                                tile.bounds, tile.zoom
+                            )
+                        )
+                        if tile.pixelbuffer > self.output_reader.pyramid.pixelbuffer
+                        else self.output_reader.pyramid.intersecting(tile)
+                    )
+                    # read output from child tiles
                     if self.output_reader.pyramid.pixelbuffer:  # pragma: no cover
                         # if there is a pixelbuffer around the output tiles, we need to read more child tiles
                         child_tiles = [
@@ -448,6 +457,8 @@ class TileTask(Task):
                                 )
                             except MapcheteNodataTile:
                                 pass
+
+                    # only resample if there is something to resample
                     if src_tiles:
                         return raster.resample_from_array(
                             array_or_raster=raster.create_mosaic(
@@ -465,6 +476,7 @@ class TileTask(Task):
                         raise MapcheteNodataTile(
                             f"all child tiles of {self.tile} are empty"
                         )
+
         finally:
             logger.debug((self.tile.id, "generated from baselevel", str(duration)))
 
