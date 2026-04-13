@@ -148,8 +148,7 @@ jobs:
             ✅ **Verification:** The full parallelized test suite passed with these new versions.
           branch: "automated-dependency-sync"
           delete-branch: true
-          assignees: ungarj
-          reviewers: Scartography
+          assignees: ungarj, Scartography
           labels: |
             dependencies
             automated-pr
