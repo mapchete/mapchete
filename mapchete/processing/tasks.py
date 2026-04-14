@@ -409,7 +409,9 @@ class TileTask(Task):
                     # don't know why this would not be covered when running on GH:
                     # get output from previous tasks
                     for task_info in dependencies.values():  # pragma: no cover
-                        logger.debug("reading output from dependend tasks")
+                        logger.debug(
+                            "reading output from dependend task %s", task_info.id
+                        )
                         for output_tile in self.output_reader.pyramid.intersecting(
                             task_info.tile
                         ):

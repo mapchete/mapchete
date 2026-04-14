@@ -152,14 +152,19 @@ def execute(
                             if potential_tasks_count > 10_000
                             else "..."
                         )
-                        all_observers.notify(message=message)
+                        all_observers.notify(
+                            message=message,
+                            progress=Progress(total=potential_tasks_count),
+                        )
                     except Exception:  # pragma: no cover
                         pass
                 tasks = mp.tasks(zoom=zoom, tile=tile)
 
                 if len(tasks) == 0:
                     all_observers.notify(
-                        status=Status.done, message="no tasks to process"
+                        status=Status.done,
+                        message="no tasks to process",
+                        progress=Progress(total=0),
                     )
                     return
 

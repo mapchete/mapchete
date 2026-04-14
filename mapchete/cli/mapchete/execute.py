@@ -58,7 +58,6 @@ def execute(
         tqdm.tqdm.write(f"preparing to process {mapchete_file}")
         with mapchete.Timer() as t:
             with PBar(
-                total=100,
                 desc="tasks",
                 disable=debug or no_pbar,
                 print_messages=verbose,
