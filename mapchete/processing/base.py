@@ -710,8 +710,7 @@ def _task_batches(
 ) -> Iterator[Union[TaskBatch, TileTaskBatch]]:
     """Create task batches for each processing stage."""
     profilers = profilers or []
-    if tile:
-        tile = process.config.process_pyramid.tile(*tile)
+    tile = process.config.process_pyramid.tile(*tile) if tile else None
 
     # first, materialize tile task batches to determine process AOI
     tile_task_batches = _tile_task_batches(
@@ -772,7 +771,6 @@ def _tile_task_batches(
 ) -> List[TileTaskBatch]:
     with Timer() as duration:
         batches = []
-
         if tile:
             # nothing to process here
             if (
@@ -805,7 +803,7 @@ def _tile_task_batches(
             # here we store the parents of tiles about to be processed so we can update overviews
             # also in "continue" mode in case there were updates at the baselevel
             overview_parents = set()
-            for i, zoom in enumerate(zoom_levels.descending()):
+            for count, zoom in enumerate(zoom_levels.descending()):
                 tile_tasks = []
                 if hasattr(process.config.output_reader, "tile_path_schema"):
                     batch_by = batch_sort_property(
@@ -819,7 +817,9 @@ def _tile_task_batches(
                         zoom, batch_by=BatchBy[batch_by]
                     ),
                     overview_tiles=(
-                        overview_parents if process.config.baselevels and i else None
+                        overview_parents
+                        if process.config.baselevels and count
+                        else None
                     ),
                 ):
                     # we don't need the current tile anymore
