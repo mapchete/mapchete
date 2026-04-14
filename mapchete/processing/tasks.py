@@ -217,7 +217,7 @@ class TileTask(Task):
     process = Optional[ProcessFunc]
     config_dir = Optional[MPath]
     tile: BufferedTile
-    _dependencies: dict
+    _dependencies: Dict[str, Any]
 
     def __init__(
         self,
@@ -323,7 +323,7 @@ class TileTask(Task):
             raise MapcheteProcessOutputError("process output is empty")
         return process_output
 
-    def _execute(self, dependencies: Dict[str, TaskInfo]) -> Any:
+    def _execute(self, dependencies: Dict[str, Any]) -> Any:
         # If baselevel is active and zoom is outside of baselevel,
         # interpolate from other zoom levels.
         if self.config_baselevels:
@@ -331,29 +331,28 @@ class TileTask(Task):
                 return self._interpolate_from_baselevel("lower", dependencies)
             elif self.tile.zoom > max(self.config_baselevels["zooms"]):
                 return self._interpolate_from_baselevel("higher", dependencies)
+
         # Otherwise, execute from process file.
         try:
             with Timer() as duration:
-                if self._dependencies:
-                    dependencies.update(self._dependencies)
                 # append dependent preprocessing task results to input objects
-                if dependencies:
-                    for task_key, task_result in dependencies.items():
-                        # don't know why this would not be covered when running on GH:
-                        if hasattr(task_result, "output"):  # pragma: no cover
-                            task_result = task_result.output
-                        if not task_key.startswith("tile_task"):
-                            inp_key, task_key = (
-                                task_key.split(":")[0],
-                                ":".join(task_key.split(":")[1:]),
-                            )
-                            if task_key in [None, ""]:  # pragma: no cover
-                                raise KeyError(f"malformed task key: {inp_key}")
-                            for inp in self.input.values():
-                                if inp.input_key == inp_key:
-                                    inp.set_preprocessing_task_result(
-                                        task_key=task_key, result=task_result
-                                    )
+                for task_key, task_info in dict(
+                    dependencies, **self._dependencies
+                ).items():
+                    if not task_key.startswith("tile_task"):
+                        inp_key, task_key = (
+                            task_key.split(":")[0],
+                            ":".join(task_key.split(":")[1:]),
+                        )
+                        if task_key in [None, ""]:  # pragma: no cover
+                            raise KeyError(f"malformed task key: {inp_key}")
+                        for inp in self.input.values():
+                            if inp.input_key == inp_key:
+                                inp.set_preprocessing_task_result(
+                                    task_key=task_key,
+                                    result=getattr(task_info, "output", None)
+                                    or task_info,
+                                )
                 # Actually run process.
                 # this contains key: params mapping, where under param.annotation we can inspect for target type
                 if isinstance(self.process, ProcessFunc):
@@ -365,7 +364,7 @@ class TileTask(Task):
                         output_params=self.output_params,
                     )
 
-                    process_data = self.process.execute(
+                    return self.process.execute(
                         parameters_at_zoom=dict(self.process_func_params, mp=mp),
                         inputs=self.input,
                         process_tile=self.tile,
@@ -379,8 +378,6 @@ class TileTask(Task):
             # Log process time and tile
             logger.error((self.tile.id, "exception in user process", e, str(duration)))
             raise
-
-        return process_data
 
     def _interpolate_from_baselevel(
         self, baselevel: InterpolateFrom, dependencies: Dict[str, TaskInfo]
