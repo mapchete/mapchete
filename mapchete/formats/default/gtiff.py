@@ -47,8 +47,10 @@ from rasterio.windows import from_bounds
 from shapely.geometry import box
 from tilematrix import Bounds
 
+
 from mapchete.config.base import snap_bounds
-from mapchete.errors import MapcheteConfigError
+from mapchete.errors import MapcheteConfigError, MapcheteNodataTile
+
 from mapchete.formats import base
 from mapchete.formats.protocols import RasterInput
 from mapchete.io import MPath, path_exists, path_is_remote
@@ -259,7 +261,7 @@ class GTiffTileDirectoryOutputReader(
         super().__init__(output_params, **kwargs)
         self._set_attributes(output_params)
 
-    def read(self, output_tile: BufferedTile, **kwargs) -> ma.MaskedArray:
+    def read(self, output_tile: BufferedTile, raise_if_empty: bool = False, **kwargs) -> ma.MaskedArray:
         """
         Read existing process output.
 
@@ -276,6 +278,10 @@ class GTiffTileDirectoryOutputReader(
         try:
             return read_raster_no_crs(self.get_path(output_tile))
         except FileNotFoundError:
+            if raise_if_empty:
+                raise MapcheteNodataTile(
+                    f"path {self.get_path(output_tile)} does not exist"
+                )
             return self.empty(output_tile)
 
     def empty(self, process_tile: BufferedTile) -> ma.MaskedArray:

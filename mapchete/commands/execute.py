@@ -143,16 +143,34 @@ def execute(
                 all_observers.notify(status=Status.initializing)
 
                 # determine tasks
+                if observers:
+                    try:
+                        potential_tasks_count = mp.count_tasks()
+                        message = f"determining which of up to {potential_tasks_count} tasks to process "
+                        message += (
+                            "(this may take a while) ..."
+                            if potential_tasks_count > 10_000
+                            else "..."
+                        )
+                        all_observers.notify(
+                            message=message,
+                            progress=Progress(total=potential_tasks_count),
+                        )
+                    except Exception:  # pragma: no cover
+                        pass
                 tasks = mp.tasks(zoom=zoom, tile=tile)
 
                 if len(tasks) == 0:
                     all_observers.notify(
-                        status=Status.done, message="no tasks to process"
+                        status=Status.done,
+                        message="no tasks to process",
+                        progress=Progress(total=0),
                     )
                     return
 
                 all_observers.notify(
-                    message=f"processing {len(tasks)} tasks on {workers} worker(s)"
+                    message=f"processing {len(tasks)} tasks on {workers} worker(s)",
+                    progress=Progress(total=len(tasks)),
                 )
                 all_observers.notify(message="waiting for executor ...")
 
@@ -175,7 +193,6 @@ def execute(
                             )
                         all_observers.notify(
                             status=Status.running,
-                            progress=Progress(total=len(tasks)),
                             message=f"sending {len(tasks)} tasks to {executor} ...",
                             executor=executor,
                         )

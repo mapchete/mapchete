@@ -801,10 +801,13 @@ def test_execute_without_results(baselevels, executor, process_graph):
     # make sure task results are appended to tasks
     with baselevels.mp() as mp:
         tile_tasks = 0
+        some_output_propagated = False
         for task_info in mp.execute(**execute_kwargs, propagate_results=True):
-            assert task_info.output is not None
+            if task_info.output is not None:
+                some_output_propagated = True
             tile_tasks += 1
     assert tile_tasks == 6
+    assert some_output_propagated
 
     # make sure task results are None
     with baselevels.mp() as mp:

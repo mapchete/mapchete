@@ -25,6 +25,7 @@ from typing import Any, Optional, Tuple
 import numpy as np
 import numpy.ma as ma
 
+from mapchete.errors import MapcheteNodataTile
 from mapchete.formats import base
 from mapchete.io.raster import (
     memory_file,
@@ -83,7 +84,7 @@ class OutputDataReader(base.TileDirectoryOutputReader):
             dtype=PNG_DEFAULT_PROFILE["dtype"],
         )
 
-    def read(self, output_tile: BufferedTile, **kwargs) -> ma.MaskedArray:
+    def read(self, output_tile: BufferedTile, raise_if_empty: bool = False, **kwargs) -> ma.MaskedArray:
         """
         Read existing process output.
 
@@ -99,6 +100,10 @@ class OutputDataReader(base.TileDirectoryOutputReader):
         try:
             return read_raster_no_crs(self.get_path(output_tile))
         except FileNotFoundError:
+            if raise_if_empty:  # pragma: no cover
+                raise MapcheteNodataTile(
+                    f"path {self.get_path(output_tile)} does not exist"
+                )
             return self.empty(output_tile)
 
     def is_valid_with_config(self, config: dict) -> bool:

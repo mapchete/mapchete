@@ -1012,7 +1012,7 @@ def tiles_exist(
     # for single file outputs:
     if basepath.suffix == config.output_reader.file_extension:
 
-        def _exists(tile):
+        def _exists(tile) -> Tuple[BufferedTile, bool]:
             return (
                 tile,
                 config.output_reader.tiles_exist(
