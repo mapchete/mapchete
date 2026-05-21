@@ -237,3 +237,25 @@ def test_get_crs_bounds_custom():
                 "+proj=ortho +lat_0=90 +lon_0=0 +x_0=0 +y_0=0 +ellps=WGS84 +units=m +no_defs"
             )
         )
+
+
+@pytest.mark.parametrize("engine", ["fiona", "pyproj"])
+def test_reproject_3857_to_4326(engine):
+    poly_3857 = wkt.loads(
+        "POLYGON ((-20042400.31259945 -626172.1357121617, 621280.1659019105 -626172.1357121617, 621280.1659019105 20037508.3427892, -20042400.31259945 20037508.3427892, -20042400.31259945 -626172.1357121617))"
+    )
+    point_4326 = Point(-90, 90)
+
+    # create point to make sure our test is valid and polygon is on the Western hemisphere
+    point_3857 = reproject_geometry(
+        point_4326, src_crs="EPSG:4326", dst_crs="EPSG:4326"
+    )
+    assert poly_3857.contains(point_3857)
+
+    # reproject geometry
+    poly_4326 = reproject_geometry(
+        geometry=poly_3857, src_crs="EPSG:3857", dst_crs="EPSG:4326", engine=engine
+    )
+
+    # make sure output geometry is still on the Western hemisphere
+    assert poly_4326.contains(point_4326)
