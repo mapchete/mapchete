@@ -24,7 +24,7 @@ import operator
 import xml.etree.ElementTree as ET
 from contextlib import ExitStack
 from copy import deepcopy
-from typing import Optional, Generator
+from typing import Optional, Any, List
 from xml.dom import minidom
 
 import fiona
@@ -43,9 +43,10 @@ from mapchete.io import (
     tiles_exist,
     vector,
 )
+from mapchete.commands.observer import ObserverProtocol, Observers
 from mapchete.path import batch_sort_property
-from mapchete.tile import BufferedTile
-from mapchete.types import ZoomLevelsLike, TileLike, MPathLike, CRSLike
+from mapchete.tile import BufferedTile, BufferedTilePyramid
+from mapchete.types import ZoomLevelsLike, TileLike, MPathLike, CRSLike, Progress
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +56,7 @@ spatial_schema = {
 }
 
 
-def zoom_index_gen(
+def create_indexes(
     config: MapcheteConfig,
     out_dir: MPath,
     zoom: Optional[ZoomLevelsLike] = None,
@@ -69,14 +70,18 @@ def zoom_index_gen(
     fieldname: str = "location",
     basepath: Optional[MPathLike] = None,
     for_gdal: bool = True,
-) -> Generator[BufferedTile, None, None]:
+    observers: Optional[List[ObserverProtocol]] = None,
+) -> None:
     """
     Generate indexes for given zoom level.
     """
     if tile and zoom:  # pragma: no cover
         raise ValueError("tile and zoom cannot be used at the same time")
 
+    all_observers = Observers(observers)
+
     zoom = tile.zoom if tile else zoom
+    ii = 0
     for zoom in get_zoom_levels(process_zoom_levels=zoom):
         with ExitStack() as es:
             # get index writers for all enabled formats
@@ -179,8 +184,10 @@ def zoom_index_gen(
                     for index in indexes:
                         index.write(output_tile, tile_path)
 
-                # yield tile for progress information
-                yield output_tile
+                ii += 1
+                all_observers.notify(
+                    progress=Progress(current=ii), message=f"{output_tile.id} indexed"
+                )
 
 
 def _index_file_path(out_dir: MPathLike, zoom: int, ext: str) -> MPath:
@@ -266,7 +273,9 @@ class VectorFileWriter:
         finally:
             self.close()
 
-    def write(self, tile: TileLike, path: MPathLike) -> None:
+    def write(
+        self, tile: Optional[BufferedTile] = None, path: Optional[MPathLike] = None
+    ):
         if not self.entry_exists(tile=tile):
             logger.debug("write %s to %s", path, self)
             self.sink.write(
@@ -283,7 +292,9 @@ class VectorFileWriter:
             )
             self.new_entries += 1
 
-    def entry_exists(self, tile: TileLike, path=None):
+    def entry_exists(
+        self, tile: Optional[BufferedTile] = None, path: Optional[MPathLike] = None
+    ) -> bool:
         exists = str(tile.id) in self._existing.keys()
         logger.debug("%s exists: %s", tile, exists)
         return exists
@@ -296,7 +307,7 @@ class VectorFileWriter:
 class TextFileWriter:
     """Writes tile paths into text file."""
 
-    def __init__(self, out_path=None):
+    def __init__(self, out_path: MPathLike):
         self.path = out_path
         logger.debug("initialize TXT writer")
         self.fs = fs_from_path(out_path)
@@ -310,7 +321,7 @@ class TextFileWriter:
         for line in self._existing:
             self._write_line(line)
 
-    def __repr__(self):
+    def __repr__(self):  # pragma: no cover
         return "TextFileWriter(%s)" % self.path
 
     def __enter__(self):
@@ -322,13 +333,17 @@ class TextFileWriter:
     def _write_line(self, line):
         self.sink.write(line)
 
-    def write(self, tile, path):
+    def write(
+        self, tile: Optional[BufferedTile] = None, path: Optional[MPathLike] = None
+    ):
         if not self.entry_exists(path=path):
             logger.debug("write %s to %s", path, self)
             self._write_line(path + "\n")
             self.new_entries += 1
 
-    def entry_exists(self, tile=None, path=None):
+    def entry_exists(
+        self, tile: Optional[BufferedTile] = None, path: Optional[MPathLike] = None
+    ) -> bool:
         exists = path + "\n" in self._existing
         logger.debug("tile %s with path %s exists: %s", tile, path, exists)
         return exists
@@ -341,7 +356,9 @@ class TextFileWriter:
 class VRTFileWriter:
     """Generates GDAL-style VRT file."""
 
-    def __init__(self, out_path=None, output=None, out_pyramid=None):
+    def __init__(
+        self, out_path: MPathLike, output: Any, out_pyramid: BufferedTilePyramid
+    ):
         # see if lxml is installed before checking all output tiles
 
         self.path = out_path
@@ -384,13 +401,17 @@ class VRTFileWriter:
             path = next(entry.iter("SourceFilename")).text
             yield (self._path_to_tile(path), path)
 
-    def write(self, tile, path):
+    def write(
+        self, tile: Optional[BufferedTile] = None, path: Optional[MPathLike] = None
+    ):
         if not self.entry_exists(tile=tile, path=path):
             logger.debug("write %s to %s", path, self)
             self._add_entry(tile=tile, path=path)
             self.new_entries += 1
 
-    def entry_exists(self, tile=None, path=None):
+    def entry_exists(
+        self, tile: Optional[BufferedTile] = None, path: Optional[MPathLike] = None
+    ) -> bool:
         path = relative_path(path=path, base_dir=self.path.dirname)
         exists = path in self._existing
         logger.debug("tile %s with path %s exists: %s", tile, path, exists)

@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 import mapchete
-from mapchete.index import zoom_index_gen
+from mapchete.index import create_indexes
 from mapchete.io import fiona_open, rasterio_open
 
 
@@ -15,15 +15,13 @@ def test_remote_indexes(gtiff_s3):
 
     def gen_indexes_and_check():
         # generate indexes
-        list(
-            zoom_index_gen(
-                config=mp.config,
-                zoom=zoom,
-                out_dir=mp.config.output.path,
-                geojson=True,
-                txt=True,
-                vrt=True,
-            )
+        create_indexes(
+            config=mp.config,
+            zoom=zoom,
+            out_dir=mp.config.output.path,
+            geojson=True,
+            txt=True,
+            vrt=True,
         )
 
         # assert GeoJSON exists
@@ -61,13 +59,11 @@ def test_vrt(mp_tmpdir, cleantopo_br):
         list(mp.execute(zoom=zoom))
 
         # generate index
-        list(
-            zoom_index_gen(
-                config=mp.config,
-                zoom=zoom,
-                out_dir=mp.config.output.path,
-                vrt=True,
-            )
+        create_indexes(
+            config=mp.config,
+            zoom=zoom,
+            out_dir=mp.config.output.path,
+            vrt=True,
         )
         output_tiles = list(
             mp.config.output_pyramid.tiles_from_bounds(
@@ -117,13 +113,11 @@ def test_vrt(mp_tmpdir, cleantopo_br):
         list(mp.execute(zoom=zoom))
 
         # generate index
-        list(
-            zoom_index_gen(
-                config=mp.config,
-                zoom=zoom,
-                out_dir=mp.config.output.path,
-                vrt=True,
-            )
+        create_indexes(
+            config=mp.config,
+            zoom=zoom,
+            out_dir=mp.config.output.path,
+            vrt=True,
         )
 
 
@@ -136,13 +130,11 @@ def test_vrt_mercator(cleantopo_br_mercator):
         list(mp.execute(zoom=zoom))
 
         # generate index
-        list(
-            zoom_index_gen(
-                config=mp.config,
-                zoom=zoom,
-                out_dir=mp.config.output.path,
-                vrt=True,
-            )
+        create_indexes(
+            config=mp.config,
+            zoom=zoom,
+            out_dir=mp.config.output.path,
+            vrt=True,
         )
         output_tiles = list(
             mp.config.output_pyramid.tiles_from_bounds(
@@ -195,11 +187,9 @@ def test_vrt_mercator(cleantopo_br_mercator):
         list(mp.execute(zoom=zoom))
 
         # generate index
-        list(
-            zoom_index_gen(
-                config=mp.config,
-                zoom=zoom,
-                out_dir=mp.config.output.path,
-                vrt=True,
-            )
+        create_indexes(
+            config=mp.config,
+            zoom=zoom,
+            out_dir=mp.config.output.path,
+            vrt=True,
         )
