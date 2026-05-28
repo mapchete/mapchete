@@ -30,6 +30,7 @@ jobs:
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: 🛠️ Upgrade & Sync
         run: |
