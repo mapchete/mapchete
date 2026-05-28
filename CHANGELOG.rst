@@ -12,6 +12,7 @@ Unreleased
   * upgrade all GitHub Actions to May 2026 versions (utilizing Node.js 24)
   * standardized on `astral-sh/setup-uv@v8.1.0` (immutable release)
   * fix GitHub API rate limit issues by providing `GITHUB_TOKEN` to `setup-uv`
+  * fix CI cache reservation collisions in parallel test matrix using `cache-suffix`
   * use `uv sync --frozen` for test environment management
   * enable `uv` caching and add `uv cache prune --ci` steps
   * pyproject2conda: migrate to new `dependencies` table in `pyproject.toml`
