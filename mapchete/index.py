@@ -24,12 +24,14 @@ import operator
 import xml.etree.ElementTree as ET
 from contextlib import ExitStack
 from copy import deepcopy
+from typing import Optional, Generator
 from xml.dom import minidom
 
 import fiona
 from rasterio.dtypes import _gdal_typename
 from shapely.geometry import mapping
 
+from mapchete.config import MapcheteConfig
 from mapchete.config.parse import get_zoom_levels
 from mapchete.io import (
     MPath,
@@ -42,6 +44,8 @@ from mapchete.io import (
     vector,
 )
 from mapchete.path import batch_sort_property
+from mapchete.tile import BufferedTile
+from mapchete.types import ZoomLevelsLike, TileLike, MPathLike, CRSLike
 
 logger = logging.getLogger(__name__)
 
@@ -52,20 +56,20 @@ spatial_schema = {
 
 
 def zoom_index_gen(
-    mp=None,
-    out_dir=None,
-    zoom=None,
-    tile=None,
-    geojson=False,
-    gpkg=False,
-    shapefile=False,
-    flatgeobuf=False,
-    txt=False,
-    vrt=False,
-    fieldname="location",
-    basepath=None,
-    for_gdal=True,
-):
+    config: MapcheteConfig,
+    out_dir: MPath,
+    zoom: Optional[ZoomLevelsLike] = None,
+    tile: Optional[TileLike] = None,
+    geojson: bool = False,
+    gpkg: bool = False,
+    shapefile: bool = False,
+    flatgeobuf: bool = False,
+    txt: bool = False,
+    vrt: bool = False,
+    fieldname: str = "location",
+    basepath: Optional[MPathLike] = None,
+    for_gdal: bool = True,
+) -> Generator[BufferedTile, None, None]:
     """
     Generate indexes for given zoom level.
     """
@@ -83,7 +87,7 @@ def zoom_index_gen(
                         VectorFileWriter(
                             driver="GeoJSON",
                             out_path=_index_file_path(out_dir, zoom, "geojson"),
-                            crs=mp.config.output_pyramid.crs,
+                            crs=config.output_pyramid.crs,
                             fieldname=fieldname,
                         )
                     )
@@ -94,7 +98,7 @@ def zoom_index_gen(
                         VectorFileWriter(
                             driver="GPKG",
                             out_path=_index_file_path(out_dir, zoom, "gpkg"),
-                            crs=mp.config.output_pyramid.crs,
+                            crs=config.output_pyramid.crs,
                             fieldname=fieldname,
                         )
                     )
@@ -105,7 +109,7 @@ def zoom_index_gen(
                         VectorFileWriter(
                             driver="ESRI Shapefile",
                             out_path=_index_file_path(out_dir, zoom, "shp"),
-                            crs=mp.config.output_pyramid.crs,
+                            crs=config.output_pyramid.crs,
                             fieldname=fieldname,
                         )
                     )
@@ -116,7 +120,7 @@ def zoom_index_gen(
                         VectorFileWriter(
                             driver="FlatGeobuf",
                             out_path=_index_file_path(out_dir, zoom, "fgb"),
-                            crs=mp.config.output_pyramid.crs,
+                            crs=config.output_pyramid.crs,
                             fieldname=fieldname,
                         )
                     )
@@ -132,8 +136,8 @@ def zoom_index_gen(
                     es.enter_context(
                         VRTFileWriter(
                             out_path=_index_file_path(out_dir, zoom, "vrt"),
-                            output=mp.config.output,
-                            out_pyramid=mp.config.output_pyramid,
+                            output=config.output,
+                            out_pyramid=config.output_pyramid,
                         )
                     )
                 )
@@ -141,30 +145,24 @@ def zoom_index_gen(
             logger.debug("use the following index writers: %s", index_writers)
 
             if tile:
-                output_tiles_batches = (
-                    mp.config.output_pyramid.tiles_from_bounds_batches(
-                        mp.config.process_pyramid.tile(*tile).bounds,
-                        zoom,
-                        batch_by=batch_sort_property(
-                            mp.config.output_reader.tile_path_schema
-                        ),
-                    )
+                output_tiles_batches = config.output_pyramid.tiles_from_bounds_batches(
+                    config.process_pyramid.tile(*tile).bounds,
+                    zoom,
+                    batch_by=batch_sort_property(config.output_reader.tile_path_schema),
                 )
             else:
-                output_tiles_batches = mp.config.output_pyramid.tiles_from_geom_batches(
-                    mp.config.area_at_zoom(zoom),
+                output_tiles_batches = config.output_pyramid.tiles_from_geom_batches(
+                    config.area_at_zoom(zoom),
                     zoom,
-                    batch_by=batch_sort_property(
-                        mp.config.output_reader.tile_path_schema
-                    ),
+                    batch_by=batch_sort_property(config.output_reader.tile_path_schema),
                     exact=True,
                 )
 
             for output_tile, exists in tiles_exist(
-                mp.config, output_tiles_batches=output_tiles_batches
+                config, output_tiles_batches=output_tiles_batches
             ):
                 tile_path = _tile_path(
-                    orig_path=mp.config.output.get_path(output_tile),
+                    orig_path=config.output.get_path(output_tile),
                     basepath=basepath,
                     for_gdal=for_gdal,
                 )
@@ -185,11 +183,13 @@ def zoom_index_gen(
                 yield output_tile
 
 
-def _index_file_path(out_dir, zoom, ext):
+def _index_file_path(out_dir: MPathLike, zoom: int, ext: str) -> MPath:
     return MPath.from_inp(out_dir) / f"{str(zoom)}.{ext}"
 
 
-def _tile_path(orig_path=None, basepath=None, for_gdal=True):
+def _tile_path(
+    orig_path: MPathLike, basepath: Optional[MPathLike] = None, for_gdal: bool = True
+) -> str:
     path = (
         MPath.from_inp(basepath).joinpath(*orig_path.elements[-3:])
         if basepath
@@ -204,7 +204,7 @@ def _tile_path(orig_path=None, basepath=None, for_gdal=True):
 class VectorFileWriter:
     """Writes GeoJSON or GeoPackage files."""
 
-    def __init__(self, out_path=None, crs=None, fieldname=None, driver=None):
+    def __init__(self, out_path: MPathLike, crs: CRSLike, fieldname: str, driver: str):
         self.path = MPath.from_inp(out_path)
         self._append = (
             "a" in fiona.supported_drivers[driver] and not self.path.is_remote()
@@ -266,7 +266,7 @@ class VectorFileWriter:
         finally:
             self.close()
 
-    def write(self, tile, path):
+    def write(self, tile: TileLike, path: MPathLike) -> None:
         if not self.entry_exists(tile=tile):
             logger.debug("write %s to %s", path, self)
             self.sink.write(
@@ -283,7 +283,7 @@ class VectorFileWriter:
             )
             self.new_entries += 1
 
-    def entry_exists(self, tile=None, path=None):
+    def entry_exists(self, tile: TileLike, path=None):
         exists = str(tile.id) in self._existing.keys()
         logger.debug("%s exists: %s", tile, exists)
         return exists

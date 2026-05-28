@@ -90,7 +90,7 @@ def index(
         all_observers.notify(progress=Progress(total=total))
         for ii, tile in enumerate(
             zoom_index_gen(
-                mp=mp,
+                config=mp.config,
                 zoom=None if tile else mp.config.init_zoom_levels,
                 tile=tile,
                 out_dir=idx_out_dir if idx_out_dir else mp.config.output.path,

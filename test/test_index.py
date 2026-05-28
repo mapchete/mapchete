@@ -17,7 +17,7 @@ def test_remote_indexes(gtiff_s3):
         # generate indexes
         list(
             zoom_index_gen(
-                mp=mp,
+                config=mp.config,
                 zoom=zoom,
                 out_dir=mp.config.output.path,
                 geojson=True,
@@ -63,7 +63,7 @@ def test_vrt(mp_tmpdir, cleantopo_br):
         # generate index
         list(
             zoom_index_gen(
-                mp=mp,
+                config=mp.config,
                 zoom=zoom,
                 out_dir=mp.config.output.path,
                 vrt=True,
@@ -119,7 +119,7 @@ def test_vrt(mp_tmpdir, cleantopo_br):
         # generate index
         list(
             zoom_index_gen(
-                mp=mp,
+                config=mp.config,
                 zoom=zoom,
                 out_dir=mp.config.output.path,
                 vrt=True,
@@ -138,7 +138,7 @@ def test_vrt_mercator(cleantopo_br_mercator):
         # generate index
         list(
             zoom_index_gen(
-                mp=mp,
+                config=mp.config,
                 zoom=zoom,
                 out_dir=mp.config.output.path,
                 vrt=True,
@@ -197,7 +197,7 @@ def test_vrt_mercator(cleantopo_br_mercator):
         # generate index
         list(
             zoom_index_gen(
-                mp=mp,
+                config=mp.config,
                 zoom=zoom,
                 out_dir=mp.config.output.path,
                 vrt=True,
