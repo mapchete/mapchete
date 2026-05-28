@@ -174,8 +174,6 @@ exclude = ["test/testdata/syntax_error.py"]
 
 [tool.pyproject2conda]
 channels = ["conda-forge"]
-# Maps PyPI names to Conda-Forge names if they differ
-map_deps = { "opencv-python-headless" = "opencv", "pystac-client" = "python-pystac-client" }
 
 [tool.pytest.ini_options]
 markers = [
@@ -201,6 +199,3 @@ testpaths = ["test"]
 
 [tool.unidep]
 channels = ["conda-forge"]
-
-[tool.unidep.list_names]
-opencv-python-headless = "opencv"

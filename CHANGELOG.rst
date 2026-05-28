@@ -3,6 +3,17 @@ Changelog
 #########
 
 
+Unreleased
+----------
+
+* CI/CD
+
+  * modernize workflows for `uv 0.5+`
+  * standardized on `astral-sh/setup-uv@v5` for `uv` installation
+  * use `uv sync --frozen` for test environment management
+  * enable `uv` caching and add `uv cache prune --ci` steps
+
+
 2026.4.1 - 2026-04-13
 ---------------------
 

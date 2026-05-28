@@ -28,15 +28,19 @@ jobs:
 
       - name: ⚡ Setup uv
         uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
 
       - name: 🛠️ Upgrade & Sync
         run: |
-          # Robust repair: if the lockfile is out of sync/corrupted, fix it, then upgrade everything
-          uv lock || (rm uv.lock && uv lock)
+          # Upgrade lockfile
           uv lock --upgrade
           
           # Sync the conda recipe
-          uvx pyproject2conda yaml -f pyproject.toml --output conda/meta.yaml --python-include infer
+          uvx pyproject2conda yaml --pyproject pyproject.toml --output conda/meta.yaml --python-include infer
+
+      - name: 🧹 Cache Prune
+        run: uv cache prune --ci
 
       - name: 📋 Check for Changes
         id: check

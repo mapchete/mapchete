@@ -27,48 +27,19 @@ jobs:
     if: github.event_name != 'workflow_call'
     steps:
       - uses: actions/checkout@v4
-      - name: ⚡ Install uv
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+      - name: ⚡ Setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
       - name: 🏃 Run Pre-commit
         run: |
           uv tool install pre-commit
           uv tool run pre-commit run --show-diff-on-failure --all-files
-
-  setup:
-      name: "🏗️ Build Py${{ matrix.python-version }}"
-      needs: lint
-      runs-on: ubuntu-latest
-      strategy:
-        matrix:
-          python-version: ["3.10", "3.11", "3.12", "3.13"]
-      container: ghcr.io/osgeo/gdal:ubuntu-small-latest
-      steps:
-        - uses: actions/checkout@v4
-
-        - name: 📥 Apply Dependency Overrides
-          if: "${{ inputs.override-deps-artifact != '' && inputs.override-deps-artifact != 'null' }}"
-          uses: actions/download-artifact@v4
-          with:
-            name: ${{ inputs.override-deps-artifact }}
-
-        - name: ⚡ Install uv
-          run: |
-            apt-get update && apt-get install -y curl
-            curl -LsSf https://astral.sh/uv/install.sh BINDIR=/usr/local/bin | sh
-
-        - name: 📝 Export Locked Requirements
-          run: |
-            uv export --frozen --all-extras --format requirements-txt > requirements.txt
-      
-        - name: 📤 Upload Requirements
-          uses: actions/upload-artifact@v4
-          with:
-            name: frozen-reqs-${{ matrix.python-version }}
-            path: requirements.txt
-            retention-days: 1
+      - name: 🧹 Cache Prune
+        run: uv cache prune --ci
 
   test:
-    needs: setup
+    needs: lint
     name: "🧪 py${{ matrix.python-version }} [${{ matrix.split }}/4]"
     runs-on: ubuntu-latest
     strategy:
@@ -78,27 +49,27 @@ jobs:
         split: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v4
-      - name: 📥 Download Requirements
+
+      - name: 📥 Apply Dependency Overrides
+        if: "${{ inputs.override-deps-artifact != '' && inputs.override-deps-artifact != 'null' }}"
         uses: actions/download-artifact@v4
         with:
-          name: frozen-reqs-${{ matrix.python-version }}     
-      
-      - name: ⚡ Install uv, git & GIS Dependencies
+          name: ${{ inputs.override-deps-artifact }}
+
+      - name: ⚡ Install git & GIS Dependencies
         run: |
           sudo apt-add-repository -y ppa:ubuntugis/ubuntugis-unstable
           sudo apt-get update
           sudo apt-get install -y curl git gpg gdal-bin libgdal-dev libproj-dev libgeos-dev g++
+      
+      - name: ⚡ Setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
 
-          curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR="/usr/local/bin" sh          
-          
-          docker compose --version
-          uv --version
-
-      - name: 🏗️ Restore Native Env
+      - name: 🏗️ Sync Environment
         run: |
-          uv venv --python ${{ matrix.python-version }}
-          uv pip install -r requirements.txt
-          uv pip install -e ".[test]" --no-deps      
+          uv sync --frozen --all-extras --python ${{ matrix.python-version }}
 
       - name: 🐳 Start containers (MinIO & Nginx)
         run: |
@@ -145,6 +116,9 @@ jobs:
           path: pytest-${{ matrix.python-version }}-${{ matrix.split }}.xml
           retention-days: 1
 
+      - name: 🧹 Cache Prune
+        run: uv cache prune --ci
+
   summary:
     name: "📊 Final Summary & Coverage"
     needs: test
@@ -153,8 +127,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4 # Needed for coverage to see source files
 
-      - name: ⚡ Install uv
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+      - name: ⚡ Setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
 
       - name: 📥 Download Artifacts
         uses: actions/download-artifact@v4
