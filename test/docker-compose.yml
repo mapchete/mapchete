@@ -11,7 +11,7 @@ services:
       ['server', '/data']
 
   nginx:
-    image: nginx
+    image: nginx:stable-alpine
     volumes:
       - type: bind
         source: ./testdata
