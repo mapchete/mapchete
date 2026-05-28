@@ -15,7 +15,6 @@ Unreleased
   * fix CI cache reservation collisions in parallel test matrix using `cache-suffix`
   * use `uv sync --frozen` for test environment management
   * enable `uv` caching and add `uv cache prune --ci` steps
-  * pyproject2conda: migrate to new `dependencies` table in `pyproject.toml`
 
 
 2026.4.1 - 2026-04-13
