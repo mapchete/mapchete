@@ -24,12 +24,14 @@ import operator
 import xml.etree.ElementTree as ET
 from contextlib import ExitStack
 from copy import deepcopy
+from typing import Optional, Any, List
 from xml.dom import minidom
 
 import fiona
 from rasterio.dtypes import _gdal_typename
 from shapely.geometry import mapping
 
+from mapchete.config import MapcheteConfig
 from mapchete.config.parse import get_zoom_levels
 from mapchete.io import (
     MPath,
@@ -41,7 +43,10 @@ from mapchete.io import (
     tiles_exist,
     vector,
 )
+from mapchete.commands.observer import ObserverProtocol, Observers
 from mapchete.path import batch_sort_property
+from mapchete.tile import BufferedTile, BufferedTilePyramid
+from mapchete.types import ZoomLevelsLike, TileLike, MPathLike, CRSLike, Progress
 
 logger = logging.getLogger(__name__)
 
@@ -51,28 +56,32 @@ spatial_schema = {
 }
 
 
-def zoom_index_gen(
-    mp=None,
-    out_dir=None,
-    zoom=None,
-    tile=None,
-    geojson=False,
-    gpkg=False,
-    shapefile=False,
-    flatgeobuf=False,
-    txt=False,
-    vrt=False,
-    fieldname="location",
-    basepath=None,
-    for_gdal=True,
-):
+def create_indexes(
+    config: MapcheteConfig,
+    out_dir: MPath,
+    zoom: Optional[ZoomLevelsLike] = None,
+    tile: Optional[TileLike] = None,
+    geojson: bool = False,
+    gpkg: bool = False,
+    shapefile: bool = False,
+    flatgeobuf: bool = False,
+    txt: bool = False,
+    vrt: bool = False,
+    fieldname: str = "location",
+    basepath: Optional[MPathLike] = None,
+    for_gdal: bool = True,
+    observers: Optional[List[ObserverProtocol]] = None,
+) -> None:
     """
     Generate indexes for given zoom level.
     """
     if tile and zoom:  # pragma: no cover
         raise ValueError("tile and zoom cannot be used at the same time")
 
+    all_observers = Observers(observers)
+
     zoom = tile.zoom if tile else zoom
+    ii = 0
     for zoom in get_zoom_levels(process_zoom_levels=zoom):
         with ExitStack() as es:
             # get index writers for all enabled formats
@@ -83,7 +92,7 @@ def zoom_index_gen(
                         VectorFileWriter(
                             driver="GeoJSON",
                             out_path=_index_file_path(out_dir, zoom, "geojson"),
-                            crs=mp.config.output_pyramid.crs,
+                            crs=config.output_pyramid.crs,
                             fieldname=fieldname,
                         )
                     )
@@ -94,7 +103,7 @@ def zoom_index_gen(
                         VectorFileWriter(
                             driver="GPKG",
                             out_path=_index_file_path(out_dir, zoom, "gpkg"),
-                            crs=mp.config.output_pyramid.crs,
+                            crs=config.output_pyramid.crs,
                             fieldname=fieldname,
                         )
                     )
@@ -105,7 +114,7 @@ def zoom_index_gen(
                         VectorFileWriter(
                             driver="ESRI Shapefile",
                             out_path=_index_file_path(out_dir, zoom, "shp"),
-                            crs=mp.config.output_pyramid.crs,
+                            crs=config.output_pyramid.crs,
                             fieldname=fieldname,
                         )
                     )
@@ -116,7 +125,7 @@ def zoom_index_gen(
                         VectorFileWriter(
                             driver="FlatGeobuf",
                             out_path=_index_file_path(out_dir, zoom, "fgb"),
-                            crs=mp.config.output_pyramid.crs,
+                            crs=config.output_pyramid.crs,
                             fieldname=fieldname,
                         )
                     )
@@ -132,8 +141,8 @@ def zoom_index_gen(
                     es.enter_context(
                         VRTFileWriter(
                             out_path=_index_file_path(out_dir, zoom, "vrt"),
-                            output=mp.config.output,
-                            out_pyramid=mp.config.output_pyramid,
+                            output=config.output,
+                            out_pyramid=config.output_pyramid,
                         )
                     )
                 )
@@ -141,30 +150,24 @@ def zoom_index_gen(
             logger.debug("use the following index writers: %s", index_writers)
 
             if tile:
-                output_tiles_batches = (
-                    mp.config.output_pyramid.tiles_from_bounds_batches(
-                        mp.config.process_pyramid.tile(*tile).bounds,
-                        zoom,
-                        batch_by=batch_sort_property(
-                            mp.config.output_reader.tile_path_schema
-                        ),
-                    )
+                output_tiles_batches = config.output_pyramid.tiles_from_bounds_batches(
+                    config.process_pyramid.tile(*tile).bounds,
+                    zoom,
+                    batch_by=batch_sort_property(config.output_reader.tile_path_schema),
                 )
             else:
-                output_tiles_batches = mp.config.output_pyramid.tiles_from_geom_batches(
-                    mp.config.area_at_zoom(zoom),
+                output_tiles_batches = config.output_pyramid.tiles_from_geom_batches(
+                    config.area_at_zoom(zoom),
                     zoom,
-                    batch_by=batch_sort_property(
-                        mp.config.output_reader.tile_path_schema
-                    ),
+                    batch_by=batch_sort_property(config.output_reader.tile_path_schema),
                     exact=True,
                 )
 
             for output_tile, exists in tiles_exist(
-                mp.config, output_tiles_batches=output_tiles_batches
+                config, output_tiles_batches=output_tiles_batches
             ):
                 tile_path = _tile_path(
-                    orig_path=mp.config.output.get_path(output_tile),
+                    orig_path=config.output.get_path(output_tile),
                     basepath=basepath,
                     for_gdal=for_gdal,
                 )
@@ -181,15 +184,19 @@ def zoom_index_gen(
                     for index in indexes:
                         index.write(output_tile, tile_path)
 
-                # yield tile for progress information
-                yield output_tile
+                ii += 1
+                all_observers.notify(
+                    progress=Progress(current=ii), message=f"{output_tile.id} indexed"
+                )
 
 
-def _index_file_path(out_dir, zoom, ext):
+def _index_file_path(out_dir: MPathLike, zoom: int, ext: str) -> MPath:
     return MPath.from_inp(out_dir) / f"{str(zoom)}.{ext}"
 
 
-def _tile_path(orig_path=None, basepath=None, for_gdal=True):
+def _tile_path(
+    orig_path: MPathLike, basepath: Optional[MPathLike] = None, for_gdal: bool = True
+) -> str:
     path = (
         MPath.from_inp(basepath).joinpath(*orig_path.elements[-3:])
         if basepath
@@ -204,7 +211,7 @@ def _tile_path(orig_path=None, basepath=None, for_gdal=True):
 class VectorFileWriter:
     """Writes GeoJSON or GeoPackage files."""
 
-    def __init__(self, out_path=None, crs=None, fieldname=None, driver=None):
+    def __init__(self, out_path: MPathLike, crs: CRSLike, fieldname: str, driver: str):
         self.path = MPath.from_inp(out_path)
         self._append = (
             "a" in fiona.supported_drivers[driver] and not self.path.is_remote()
@@ -266,7 +273,9 @@ class VectorFileWriter:
         finally:
             self.close()
 
-    def write(self, tile, path):
+    def write(
+        self, tile: Optional[BufferedTile] = None, path: Optional[MPathLike] = None
+    ):
         if not self.entry_exists(tile=tile):
             logger.debug("write %s to %s", path, self)
             self.sink.write(
@@ -283,7 +292,9 @@ class VectorFileWriter:
             )
             self.new_entries += 1
 
-    def entry_exists(self, tile=None, path=None):
+    def entry_exists(
+        self, tile: Optional[BufferedTile] = None, path: Optional[MPathLike] = None
+    ) -> bool:
         exists = str(tile.id) in self._existing.keys()
         logger.debug("%s exists: %s", tile, exists)
         return exists
@@ -296,7 +307,7 @@ class VectorFileWriter:
 class TextFileWriter:
     """Writes tile paths into text file."""
 
-    def __init__(self, out_path=None):
+    def __init__(self, out_path: MPathLike):
         self.path = out_path
         logger.debug("initialize TXT writer")
         self.fs = fs_from_path(out_path)
@@ -310,7 +321,7 @@ class TextFileWriter:
         for line in self._existing:
             self._write_line(line)
 
-    def __repr__(self):
+    def __repr__(self):  # pragma: no cover
         return "TextFileWriter(%s)" % self.path
 
     def __enter__(self):
@@ -322,13 +333,17 @@ class TextFileWriter:
     def _write_line(self, line):
         self.sink.write(line)
 
-    def write(self, tile, path):
+    def write(
+        self, tile: Optional[BufferedTile] = None, path: Optional[MPathLike] = None
+    ):
         if not self.entry_exists(path=path):
             logger.debug("write %s to %s", path, self)
             self._write_line(path + "\n")
             self.new_entries += 1
 
-    def entry_exists(self, tile=None, path=None):
+    def entry_exists(
+        self, tile: Optional[BufferedTile] = None, path: Optional[MPathLike] = None
+    ) -> bool:
         exists = path + "\n" in self._existing
         logger.debug("tile %s with path %s exists: %s", tile, path, exists)
         return exists
@@ -341,7 +356,9 @@ class TextFileWriter:
 class VRTFileWriter:
     """Generates GDAL-style VRT file."""
 
-    def __init__(self, out_path=None, output=None, out_pyramid=None):
+    def __init__(
+        self, out_path: MPathLike, output: Any, out_pyramid: BufferedTilePyramid
+    ):
         # see if lxml is installed before checking all output tiles
 
         self.path = out_path
@@ -384,13 +401,17 @@ class VRTFileWriter:
             path = next(entry.iter("SourceFilename")).text
             yield (self._path_to_tile(path), path)
 
-    def write(self, tile, path):
+    def write(
+        self, tile: Optional[BufferedTile] = None, path: Optional[MPathLike] = None
+    ):
         if not self.entry_exists(tile=tile, path=path):
             logger.debug("write %s to %s", path, self)
             self._add_entry(tile=tile, path=path)
             self.new_entries += 1
 
-    def entry_exists(self, tile=None, path=None):
+    def entry_exists(
+        self, tile: Optional[BufferedTile] = None, path: Optional[MPathLike] = None
+    ) -> bool:
         path = relative_path(path=path, base_dir=self.path.dirname)
         exists = path in self._existing
         logger.debug("tile %s with path %s exists: %s", tile, path, exists)
