@@ -510,9 +510,7 @@ class TileDirectoryOutputReader(OutputDataReader, OutputSTACMixin):
             "tile_path_schema", DEFAULT_TILE_PATH_SCHEMA
         )
         if not readonly:
-            write_output_metadata(
-                {k: v for k, v in output_params.items() if k not in ["stac"]}
-            )
+            write_output_metadata(output_params)
 
     def tiles_exist(
         self,
