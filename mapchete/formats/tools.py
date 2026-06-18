@@ -222,7 +222,15 @@ def dump_metadata(params: Dict, parse_datetime=True) -> Dict:
         driver={
             k: v
             for k, v in params.items()
-            if k not in ["path", "grid", "pixelbuffer", "metatiling"]
+            if k
+            not in (
+                "path",
+                "grid",
+                "pixelbuffer",
+                "metatiling",
+                "stac",
+                "storage_options",
+            )
         },
     )
 
