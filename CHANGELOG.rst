@@ -3,8 +3,8 @@ Changelog
 #########
 
 
-Unreleased
-----------
+2026.6.0 - 2026-06-18
+---------------------
 
 * CI/CD
 
@@ -15,6 +15,10 @@ Unreleased
   * fix CI cache reservation collisions in parallel test matrix using `cache-suffix`
   * use `uv sync --frozen` for test environment management
   * enable `uv` caching and add `uv cache prune --ci` steps
+
+* core
+
+  * `formats.tools.write_output_metadata()`: don't write `storage_options` into `metadata.json` (#809)
 
 
 2026.4.1 - 2026-04-13
