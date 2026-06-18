@@ -67,6 +67,7 @@ def create_indexes(
     flatgeobuf: bool = False,
     txt: bool = False,
     vrt: bool = False,
+    tif: bool = False,
     fieldname: str = "location",
     basepath: Optional[MPathLike] = None,
     for_gdal: bool = True,
@@ -81,7 +82,7 @@ def create_indexes(
     all_observers = Observers(observers)
 
     zoom = tile.zoom if tile else zoom
-    ii = 0
+    count = 0
     for zoom in get_zoom_levels(process_zoom_levels=zoom):
         with ExitStack() as es:
             # get index writers for all enabled formats
@@ -184,9 +185,10 @@ def create_indexes(
                     for index in indexes:
                         index.write(output_tile, tile_path)
 
-                ii += 1
+                count += 1
                 all_observers.notify(
-                    progress=Progress(current=ii), message=f"{output_tile.id} indexed"
+                    progress=Progress(current=count),
+                    message=f"{output_tile.id} indexed",
                 )
 
 
