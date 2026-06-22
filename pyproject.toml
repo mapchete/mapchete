@@ -31,7 +31,7 @@ dependencies = [
     "dask",
     "distributed",
     "fiona>=1.8.13.post1",
-    "fsspec",
+    "fsspec!=2026.6.0",
     "geojson-pydantic",    
     "importlib-metadata",
     "importlib-resources",
@@ -59,7 +59,7 @@ complete = [
     "distributed",
     "Flask<4.0.0",
     "Flask-RangeRequest",
-    "fsspec[http,s3]>=2023.12.0",
+    "fsspec[http,s3]>=2023.12.0,!=2026.6.0",
     "lxml",
     "matplotlib<3.11",
     "memray",
@@ -74,7 +74,7 @@ contours = [
 ]
 http = [
     "aiohttp",
-    "fsspec[http]",
+    "fsspec[http]!=2026.6.0",
     "requests",
 ]
 profiling = [
@@ -84,7 +84,7 @@ profiling = [
 s3 = [
     "aiobotocore>=1.1.2",
     "boto3>=1.14.44",
-    "fsspec[s3]",
+    "fsspec[s3]!=2026.6.0",
     "s3fs!=2023.9.0",
 ]
 serve = [
