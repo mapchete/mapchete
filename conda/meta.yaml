@@ -19,7 +19,7 @@ dependencies:
   - dask
   - distributed
   - fiona>=1.8.13.post1
-  - fsspec
+  - fsspec!=2026.6.0
   - geojson-pydantic
   - importlib-metadata
   - importlib-resources
