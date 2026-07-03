@@ -565,7 +565,7 @@ class RasterFileWriter:
             self.array = np.zeros(shape, dtype=bool)
         self.existing_entries = self.array.sum()
 
-    def __repr__(self):
+    def __repr__(self):  # pragma: no cover
         return "RasterFileWriter(%s)" % self.path
 
     def __enter__(self):
@@ -579,6 +579,7 @@ class RasterFileWriter:
             **self.profile,
         ) as dst:
             dst.write(self.array, 1)
+        self.close()
 
     def write(
         self, tile: Optional[BufferedTile] = None, path: Optional[MPathLike] = None
@@ -588,7 +589,7 @@ class RasterFileWriter:
             self.array[tile.row][tile.col] = True
 
     def entry_exists(self, tile: Optional[BufferedTile] = None, **_) -> bool:
-        if tile is None:
+        if tile is None:  # pragma: no cover
             raise ValueError("tile must be provided")
         exists = bool(self.array[tile.row][tile.col])
         logger.debug("%s exists: %s", tile, exists)
