@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 @options.opt_shp
 @options.opt_fgb
 @options.opt_vrt
+@options.opt_tif
 @options.opt_txt
 @options.opt_fieldname
 @options.opt_basepath

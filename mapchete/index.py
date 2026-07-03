@@ -28,6 +28,7 @@ from typing import Optional, Any, List
 from xml.dom import minidom
 
 import fiona
+import numpy as np
 from rasterio.dtypes import _gdal_typename
 from shapely.geometry import mapping
 
@@ -39,13 +40,16 @@ from mapchete.io import (
     fs_from_path,
     path_exists,
     raster,
+    rasterio_open,
     relative_path,
     tiles_exist,
     vector,
 )
+from mapchete.io.profiles import COGDeflateProfile
+from mapchete.io.raster import ReferencedRaster
 from mapchete.commands.observer import ObserverProtocol, Observers
 from mapchete.path import batch_sort_property
-from mapchete.tile import BufferedTile, BufferedTilePyramid
+from mapchete.tile import BufferedTile, BufferedTilePyramid, Shape
 from mapchete.types import ZoomLevelsLike, TileLike, MPathLike, CRSLike, Progress
 
 logger = logging.getLogger(__name__)
@@ -131,6 +135,16 @@ def create_indexes(
                         )
                     )
                 )
+            if tif:
+                index_writers.append(
+                    es.enter_context(
+                        RasterFileWriter(
+                            out_path=_index_file_path(out_dir, zoom, "tif"),
+                            out_pyramid=config.output_pyramid,
+                            zoom=zoom,
+                        )
+                    )
+                )
             if txt:
                 index_writers.append(
                     es.enter_context(
@@ -164,6 +178,7 @@ def create_indexes(
                     exact=True,
                 )
 
+            # TODO: make function to quickly return only existing tiles
             for output_tile, exists in tiles_exist(
                 config, output_tiles_batches=output_tiles_batches
             ):
@@ -518,3 +533,67 @@ class VRTFileWriter:
         logger.debug("write to %s", self.path)
         with self.fs.open(self.path, "w") as dst:
             dst.write(xmlstr)
+
+
+class RasterFileWriter:
+    """Writes raster files."""
+
+    array: np.ndarray
+
+    def __init__(
+        self,
+        out_path: MPathLike,
+        out_pyramid: BufferedTilePyramid,
+        zoom: int,
+    ):
+        self.path = MPath.from_inp(out_path)
+        self.pyramid = out_pyramid.without_pixelbuffer()
+        self.zoom = zoom
+        shape = Shape(self.pyramid.matrix_height(zoom), self.pyramid.matrix_width(zoom))
+        self.profile = COGDeflateProfile(
+            count=1,
+            nodata=0,
+            crs=out_pyramid.crs,
+            width=shape.width,
+            height=shape.height,
+            transform=self.pyramid.matrix_affine(zoom),
+            dtype=np.uint8,
+        )
+        try:
+            self.array = ReferencedRaster.from_file(self.path).array.data.astype(bool)
+        except FileNotFoundError:
+            self.array = np.zeros(shape, dtype=bool)
+        self.existing_entries = self.array.sum()
+
+    def __repr__(self):
+        return "RasterFileWriter(%s)" % self.path
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        # TODO: reload existing file in case it was changed while this index was updated
+        with rasterio_open(
+            self.path,
+            "w",
+            **self.profile,
+        ) as dst:
+            dst.write(self.array, 1)
+
+    def write(
+        self, tile: Optional[BufferedTile] = None, path: Optional[MPathLike] = None
+    ):
+        if not self.entry_exists(tile=tile):
+            logger.debug("write %s to %s", path, self)
+            self.array[tile.row][tile.col] = True
+
+    def entry_exists(self, tile: Optional[BufferedTile] = None, **_) -> bool:
+        if tile is None:
+            raise ValueError("tile must be provided")
+        exists = bool(self.array[tile.row][tile.col])
+        logger.debug("%s exists: %s", tile, exists)
+        return exists
+
+    def close(self):
+        new_entries = self.array.sum() - self.existing_entries
+        logger.debug("%s new entries in %s", new_entries, self)

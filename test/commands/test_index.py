@@ -2,6 +2,7 @@ import pytest
 
 import mapchete
 from mapchete.commands import execute, index
+from mapchete.io.raster import ReferencedRaster
 from mapchete.io.vector import fiona_open
 
 
@@ -245,6 +246,20 @@ def test_index_tiledir(cleantopo_br):
         for feature in src:
             assert "location" in feature["properties"]
         assert len(list(src)) == 2
+
+
+def test_index_tif(cleantopo_br):
+    # execute process
+    execute(cleantopo_br.dict, zoom=5)
+
+    # generate index
+    index(cleantopo_br.dict, zoom=5, tif=True)
+
+    with mapchete.open(cleantopo_br.dict) as mp:
+        files = mp.config.output.path.ls(absolute_paths=False)
+        assert "5.tif" in files
+    arr = ReferencedRaster.from_file(mp.config.output.path / "5.tif").array
+    assert arr.sum() == 2
 
 
 def test_index_errors(cleantopo_br):

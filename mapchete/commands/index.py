@@ -25,6 +25,7 @@ def index(
     gpkg: bool = False,
     shp: bool = False,
     fgb: bool = False,
+    tif: bool = False,
     vrt: bool = False,
     txt: bool = False,
     fieldname: Optional[str] = "location",
@@ -45,9 +46,9 @@ def index(
     """
     Create one or more indexes from a TileDirectory.
     """
-    if not any([geojson, gpkg, shp, fgb, txt, vrt]):
+    if not any([geojson, gpkg, shp, fgb, tif, txt, vrt]):
         raise ValueError(
-            """At least one of '--geojson', '--gpkg', '--shp', '--fgb', '--vrt' or '--txt'"""
+            """At least one of '--geojson', '--gpkg', '--shp', '--fgb', '--tif', '--vrt' or '--txt'"""
             """must be provided."""
         )
 
@@ -97,6 +98,7 @@ def index(
             gpkg=gpkg,
             shapefile=shp,
             flatgeobuf=fgb,
+            tif=tif,
             vrt=vrt,
             txt=txt,
             fieldname=fieldname,
