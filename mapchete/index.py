@@ -138,7 +138,7 @@ def create_indexes(
             if tif:
                 index_writers.append(
                     es.enter_context(
-                        RasterFileWriter(
+                        RasterIndexWriter(
                             out_path=_index_file_path(out_dir, zoom, "tif"),
                             out_pyramid=config.output_pyramid,
                             zoom=zoom,
@@ -535,7 +535,7 @@ class VRTFileWriter:
             dst.write(xmlstr)
 
 
-class RasterFileWriter:
+class RasterIndexWriter:
     """Writes raster files."""
 
     array: np.ndarray
@@ -562,7 +562,7 @@ class RasterFileWriter:
             transform=self.pyramid.matrix_affine(zoom),
             dtype=np.uint8,
         )
-        self.array = self.existing_or_empty_array()
+        self.array = self.reload()
         self.existing_entries = self.array.sum()
         self.reload_before_write = reload_before_write
 
@@ -573,13 +573,22 @@ class RasterFileWriter:
         return self
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
-        self.close()
+        self.dump(self.reload_before_write)
 
-    def existing_or_empty_array(self) -> np.ndarray:
+    def reload(self) -> np.ndarray:
+        """Reloads existing index if it exists and combines it with current array."""
         try:
-            return ReferencedRaster.from_file(self.path).array.data.astype(bool)
+            existing = ReferencedRaster.from_file(self.path).array.data.astype(bool)[0]
         except FileNotFoundError:
-            return np.zeros(self.shape, dtype=bool)
+            existing = np.zeros(self.shape, dtype=bool)
+
+        try:
+            self.array += existing
+        except AttributeError:
+            # if self.array hasn't been set yet, an AttributeError is being thrown
+            self.array = existing
+
+        return self.array
 
     def write(
         self, tile: Optional[BufferedTile] = None, path: Optional[MPathLike] = None
@@ -595,18 +604,18 @@ class RasterFileWriter:
         logger.debug("%s exists: %s", tile, exists)
         return exists
 
-    def close(self):
+    def dump(self, reload_before_write: bool = False):
+        # reload existing file in case it was changed while this index was updated
+        if reload_before_write or self.reload_before_write:
+            self.reload()
+
         new_entries = self.array.sum() - self.existing_entries
         logger.debug("%s new entries in %s", new_entries, self)
-        if self.reload_before_write:
-            # reload existing file in case it was changed while this index was updated
-            array = self.array + self.existing_or_empty_array()
-        else:
-            array = self.array
+
         # write
         with rasterio_open(
             self.path,
             "w",
             **self.profile,
         ) as dst:
-            dst.write(array, 1)
+            dst.write(self.array, 1)
