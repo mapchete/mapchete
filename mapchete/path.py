@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 import hashlib
 import json
 import logging
@@ -11,11 +12,13 @@ from collections import defaultdict
 from datetime import datetime
 from functools import cached_property
 from io import TextIOWrapper
+import time
 from typing import (
     IO,
     Any,
     Dict,
     Generator,
+    Iterator,
     List,
     Optional,
     Set,
@@ -36,7 +39,7 @@ from rasterio.session import Session as RioSession
 from retry.api import retry_call
 
 from mapchete.executor import Executor
-from mapchete.pretty import pretty_bytes
+from mapchete.pretty import pretty_bytes, pretty_seconds
 from mapchete.protocols import ObserverProtocol
 from mapchete.settings import GDALHTTPOptions, IORetrySettings, mapchete_options
 from mapchete.tile import BatchBy, BufferedTile
@@ -841,6 +844,48 @@ class MPath(os.PathLike):
                 opts=opts, allowed_remote_extensions=allowed_remote_extensions
             )
         )
+
+    def wait_for_lock(
+        self,
+        postfix: str = ".lock",
+        wait_interval_seconds: float = 1.0,
+        timeout: float = 30.0,
+    ) -> None:
+        lockfile = self + postfix
+        started = time.time()
+
+        # wait if there is an existing lockfile
+        while lockfile.exists():
+            elapsed = time.time() - started
+            if elapsed > timeout:  # pragma: no cover
+                raise TimeoutError(
+                    f"lockfile {str(lockfile)} exists for longer than {pretty_seconds(elapsed)}"
+                )
+            logger.debug(
+                "%s exists, waiting for %s",
+                str(lockfile),
+                pretty_seconds(wait_interval_seconds),
+            )
+            time.sleep(wait_interval_seconds)
+
+    @contextmanager
+    def lock(
+        self, postfix: str = ".lock", wait_interval_seconds: float = 1.0
+    ) -> Iterator[MPath]:
+        """Locks this path but wait if there is an existing lock."""
+        lockfile = self + postfix
+
+        # wait if there is an existing lockfile
+        self.wait_for_lock(postfix=postfix, wait_interval_seconds=wait_interval_seconds)
+
+        # create lockfile and only delete when context manager closes
+        try:
+            logger.debug("create lockfile %s", str(lockfile))
+            lockfile.write_content(b"")
+            yield lockfile
+        finally:
+            lockfile.rm(ignore_errors=True)
+            logger.debug("deleted lockfile %s", str(lockfile))
 
     def __truediv__(self, other: MPathLike) -> MPath:
         """Short for self.joinpath()."""

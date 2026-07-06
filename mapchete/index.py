@@ -578,6 +578,7 @@ class RasterIndexWriter:
     def reload(self) -> np.ndarray:
         """Reloads existing index if it exists and combines it with current array."""
         try:
+            self.path.wait_for_lock()
             existing = ReferencedRaster.from_file(self.path).array.data.astype(bool)[0]
         except FileNotFoundError:
             existing = np.zeros(self.shape, dtype=bool)
@@ -609,13 +610,13 @@ class RasterIndexWriter:
         if reload_before_write or self.reload_before_write:
             self.reload()
 
-        new_entries = self.array.sum() - self.existing_entries
-        logger.debug("%s new entries in %s", new_entries, self)
-
-        # write
-        with rasterio_open(
-            self.path,
-            "w",
-            **self.profile,
-        ) as dst:
-            dst.write(self.array, 1)
+        with self.path.lock():
+            new_entries = self.array.sum() - self.existing_entries
+            logger.debug("%s new entries in %s", new_entries, self)
+            # write
+            with rasterio_open(
+                self.path,
+                "w",
+                **self.profile,
+            ) as dst:
+                dst.write(self.array, 1)
