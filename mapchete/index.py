@@ -545,25 +545,26 @@ class RasterFileWriter:
         out_path: MPathLike,
         out_pyramid: BufferedTilePyramid,
         zoom: int,
+        reload_before_write: bool = False,
     ):
         self.path = MPath.from_inp(out_path)
         self.pyramid = out_pyramid.without_pixelbuffer()
         self.zoom = zoom
-        shape = Shape(self.pyramid.matrix_height(zoom), self.pyramid.matrix_width(zoom))
+        self.shape = Shape(
+            self.pyramid.matrix_height(zoom), self.pyramid.matrix_width(zoom)
+        )
         self.profile = COGDeflateProfile(
             count=1,
             nodata=0,
             crs=out_pyramid.crs,
-            width=shape.width,
-            height=shape.height,
+            width=self.shape.width,
+            height=self.shape.height,
             transform=self.pyramid.matrix_affine(zoom),
             dtype=np.uint8,
         )
-        try:
-            self.array = ReferencedRaster.from_file(self.path).array.data.astype(bool)
-        except FileNotFoundError:
-            self.array = np.zeros(shape, dtype=bool)
+        self.array = self.existing_or_empty_array()
         self.existing_entries = self.array.sum()
+        self.reload_before_write = reload_before_write
 
     def __repr__(self):  # pragma: no cover
         return "RasterFileWriter(%s)" % self.path
@@ -572,14 +573,13 @@ class RasterFileWriter:
         return self
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
-        # TODO: reload existing file in case it was changed while this index was updated
-        with rasterio_open(
-            self.path,
-            "w",
-            **self.profile,
-        ) as dst:
-            dst.write(self.array, 1)
         self.close()
+
+    def existing_or_empty_array(self) -> np.ndarray:
+        try:
+            return ReferencedRaster.from_file(self.path).array.data.astype(bool)
+        except FileNotFoundError:
+            return np.zeros(self.shape, dtype=bool)
 
     def write(
         self, tile: Optional[BufferedTile] = None, path: Optional[MPathLike] = None
@@ -598,3 +598,15 @@ class RasterFileWriter:
     def close(self):
         new_entries = self.array.sum() - self.existing_entries
         logger.debug("%s new entries in %s", new_entries, self)
+        if self.reload_before_write:
+            # reload existing file in case it was changed while this index was updated
+            array = self.array + self.existing_or_empty_array()
+        else:
+            array = self.array
+        # write
+        with rasterio_open(
+            self.path,
+            "w",
+            **self.profile,
+        ) as dst:
+            dst.write(array, 1)
