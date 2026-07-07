@@ -4,8 +4,9 @@ import numpy as np
 import pytest
 
 import mapchete
-from mapchete.index import zoom_index_gen
+from mapchete.index import create_indexes, RasterIndexWriter
 from mapchete.io import fiona_open, rasterio_open
+from mapchete.tile import BufferedTilePyramid
 
 
 @pytest.mark.integration
@@ -15,15 +16,13 @@ def test_remote_indexes(gtiff_s3):
 
     def gen_indexes_and_check():
         # generate indexes
-        list(
-            zoom_index_gen(
-                mp=mp,
-                zoom=zoom,
-                out_dir=mp.config.output.path,
-                geojson=True,
-                txt=True,
-                vrt=True,
-            )
+        create_indexes(
+            config=mp.config,
+            zoom=zoom,
+            out_dir=mp.config.output.path,
+            geojson=True,
+            txt=True,
+            vrt=True,
         )
 
         # assert GeoJSON exists
@@ -61,13 +60,11 @@ def test_vrt(mp_tmpdir, cleantopo_br):
         list(mp.execute(zoom=zoom))
 
         # generate index
-        list(
-            zoom_index_gen(
-                mp=mp,
-                zoom=zoom,
-                out_dir=mp.config.output.path,
-                vrt=True,
-            )
+        create_indexes(
+            config=mp.config,
+            zoom=zoom,
+            out_dir=mp.config.output.path,
+            vrt=True,
         )
         output_tiles = list(
             mp.config.output_pyramid.tiles_from_bounds(
@@ -117,13 +114,11 @@ def test_vrt(mp_tmpdir, cleantopo_br):
         list(mp.execute(zoom=zoom))
 
         # generate index
-        list(
-            zoom_index_gen(
-                mp=mp,
-                zoom=zoom,
-                out_dir=mp.config.output.path,
-                vrt=True,
-            )
+        create_indexes(
+            config=mp.config,
+            zoom=zoom,
+            out_dir=mp.config.output.path,
+            vrt=True,
         )
 
 
@@ -136,13 +131,11 @@ def test_vrt_mercator(cleantopo_br_mercator):
         list(mp.execute(zoom=zoom))
 
         # generate index
-        list(
-            zoom_index_gen(
-                mp=mp,
-                zoom=zoom,
-                out_dir=mp.config.output.path,
-                vrt=True,
-            )
+        create_indexes(
+            config=mp.config,
+            zoom=zoom,
+            out_dir=mp.config.output.path,
+            vrt=True,
         )
         output_tiles = list(
             mp.config.output_pyramid.tiles_from_bounds(
@@ -195,11 +188,38 @@ def test_vrt_mercator(cleantopo_br_mercator):
         list(mp.execute(zoom=zoom))
 
         # generate index
-        list(
-            zoom_index_gen(
-                mp=mp,
-                zoom=zoom,
-                out_dir=mp.config.output.path,
-                vrt=True,
-            )
+        create_indexes(
+            config=mp.config,
+            zoom=zoom,
+            out_dir=mp.config.output.path,
+            vrt=True,
         )
+
+
+@pytest.mark.parametrize("grid", ["geodetic", "mercator"])
+def test_tif_index(mp_tmpdir, grid):
+    tile_pyramid = BufferedTilePyramid(grid)
+    zoom = 1
+    out_path = mp_tmpdir / f"{zoom}.tif"
+    with RasterIndexWriter(
+        out_path=out_path, out_pyramid=tile_pyramid, zoom=zoom, reload_before_write=True
+    ) as index:
+        assert index.array.sum() == 0
+        index.write(tile=tile_pyramid.tile(zoom, 0, 0))
+        assert index.array.sum() == 1
+
+        with RasterIndexWriter(
+            out_path=out_path,
+            out_pyramid=tile_pyramid,
+            zoom=zoom,
+            reload_before_write=True,
+        ) as another_index:
+            another_index.write(tile=tile_pyramid.tile(zoom, 0, 1))
+
+        assert index.array.sum() == 1
+        index.dump(reload_before_write=True)
+        assert index.array.sum() == 2
+
+    with rasterio_open(out_path) as src:
+        assert src.read().sum() == 2
+        assert src.crs == tile_pyramid.crs
