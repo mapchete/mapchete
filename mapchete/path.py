@@ -855,9 +855,9 @@ class MPath(os.PathLike):
         started = time.time()
 
         # wait if there is an existing lockfile
-        while lockfile.exists():
+        while lockfile.exists():  # pragma: no cover
             elapsed = time.time() - started
-            if elapsed > timeout:  # pragma: no cover
+            if elapsed > timeout:
                 raise TimeoutError(
                     f"lockfile {str(lockfile)} exists for longer than {pretty_seconds(elapsed)}"
                 )
