@@ -35,11 +35,14 @@ class PBar(ObserverProtocol):
         **kwargs,
     ):
         if progress:
-            if self._pbar.total is None or self._pbar.total != progress.total:
+            # reset progress bar if needed
+            if progress.total is not None and (
+                self._pbar.total is None or self._pbar.total != progress.total
+            ):
                 self._pbar.reset(progress.total)  # type: ignore
 
             self._pbar.n = progress.current
-            self._pbar.update(n=0)
+            self._pbar.update()
 
         if self.print_messages:
             if task_info:

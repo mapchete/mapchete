@@ -42,7 +42,7 @@ from mapchete.executor import Executor
 from mapchete.pretty import pretty_bytes, pretty_seconds
 from mapchete.protocols import ObserverProtocol
 from mapchete.settings import GDALHTTPOptions, IORetrySettings, mapchete_options
-from mapchete.tile import BatchBy, BufferedTile
+from mapchete.tile import BatchBy, BufferedTile, BufferedTilePyramid
 from mapchete.timer import Timer
 from mapchete.types import MPathLike, Progress
 
@@ -1122,6 +1122,26 @@ def tiles_exist(
         yield from _output_tiles_batches_exist(
             output_tiles_batches, config, is_https_without_ls
         )
+
+
+def all_existing_output_tiles(config, zoom: int) -> Generator[BufferedTile, None, None]:
+    basepath: MPath = config.output_reader.path
+    # for single file outputs:
+    if basepath.suffix == config.output_reader.file_extension:
+        raise NotImplementedError()
+
+    # for tile directory outputs:
+    zoom_directory = basepath / zoom
+    for page in zoom_directory.paginate():
+        for path in page:
+            try:
+                yield _path_to_tile(path, config.output_reader.pyramid)
+            except ValueError:
+                logger.debug("invalid tile path found: %s", str(path))
+
+
+def _path_to_tile(path: MPath, pyramid: BufferedTilePyramid):
+    return pyramid.tile(*map(int, MPath.from_inp(path).without_suffix().elements[-3:]))
 
 
 def _is_https_without_ls(path: MPath, default_file: str = "metadata.json") -> bool:

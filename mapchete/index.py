@@ -41,6 +41,7 @@ from mapchete.io import (
     rasterio_open,
     relative_path,
     tiles_exist,
+    all_existing_output_tiles,
     vector,
 )
 from mapchete.io.profiles import COGDeflateProfile
@@ -162,47 +163,90 @@ def create_indexes(
 
             logger.debug("use the following index writers: %s", index_writers)
 
-            if tile:
-                output_tiles_batches = config.output_pyramid.tiles_from_bounds_batches(
-                    config.process_pyramid.tile(*tile).bounds,
-                    zoom,
-                    batch_by=batch_sort_property(config.output_reader.tile_path_schema),
-                )
+            # global search
+            if tile is None and config.output.pyramid.bounds == config.init_bounds:
+                logger.debug("using quicker global index creation")
+                all_observers.notify(progress=Progress(total=None))
+                for output_tile in all_existing_output_tiles(config, zoom):
+                    tile_path = _tile_path(
+                        orig_path=config.output.get_path(output_tile),
+                        basepath=basepath,
+                        for_gdal=for_gdal,
+                    )
+                    # get indexes where tile entry does not exist
+                    indexes = [
+                        index_writer
+                        for index_writer in index_writers
+                        if not index_writer.entry_exists(
+                            tile=output_tile, path=tile_path
+                        )
+                    ]
+
+                    if indexes:
+                        logger.debug("%s exists", tile_path)
+                        logger.debug("write to %s indexes", len(indexes))
+                        for index in indexes:
+                            index.write(output_tile, tile_path)
+
+                    count += 1
+                    all_observers.notify(
+                        progress=Progress(current=count),
+                        message=f"{output_tile.id} indexed",
+                    )
+
+            # spatial subset search
             else:
-                output_tiles_batches = config.output_pyramid.tiles_from_geom_batches(
-                    config.area_at_zoom(zoom),
-                    zoom,
-                    batch_by=batch_sort_property(config.output_reader.tile_path_schema),
-                    exact=True,
-                )
+                if tile:
+                    output_tiles_batches = (
+                        config.output_pyramid.tiles_from_bounds_batches(
+                            config.process_pyramid.tile(*tile).bounds,
+                            zoom,
+                            batch_by=batch_sort_property(
+                                config.output_reader.tile_path_schema
+                            ),
+                        )
+                    )
+                else:
+                    output_tiles_batches = (
+                        config.output_pyramid.tiles_from_geom_batches(
+                            config.area_at_zoom(zoom),
+                            zoom,
+                            batch_by=batch_sort_property(
+                                config.output_reader.tile_path_schema
+                            ),
+                            exact=True,
+                        )
+                    )
 
-            # TODO: make function to quickly return only existing tiles
-            for output_tile, exists in tiles_exist(
-                config, output_tiles_batches=output_tiles_batches
-            ):
-                tile_path = _tile_path(
-                    orig_path=config.output.get_path(output_tile),
-                    basepath=basepath,
-                    for_gdal=for_gdal,
-                )
-                # get indexes where tile entry does not exist
-                indexes = [
-                    index_writer
-                    for index_writer in index_writers
-                    if not index_writer.entry_exists(tile=output_tile, path=tile_path)
-                ]
+                # TODO: make function to quickly return only existing tiles
+                for output_tile, exists in tiles_exist(
+                    config, output_tiles_batches=output_tiles_batches
+                ):
+                    tile_path = _tile_path(
+                        orig_path=config.output.get_path(output_tile),
+                        basepath=basepath,
+                        for_gdal=for_gdal,
+                    )
+                    # get indexes where tile entry does not exist
+                    indexes = [
+                        index_writer
+                        for index_writer in index_writers
+                        if not index_writer.entry_exists(
+                            tile=output_tile, path=tile_path
+                        )
+                    ]
 
-                if indexes and exists:
-                    logger.debug("%s exists", tile_path)
-                    logger.debug("write to %s indexes", len(indexes))
-                    for index in indexes:
-                        index.write(output_tile, tile_path)
+                    if indexes and exists:
+                        logger.debug("%s exists", tile_path)
+                        logger.debug("write to %s indexes", len(indexes))
+                        for index in indexes:
+                            index.write(output_tile, tile_path)
 
-                count += 1
-                all_observers.notify(
-                    progress=Progress(current=count),
-                    message=f"{output_tile.id} indexed",
-                )
+                    count += 1
+                    all_observers.notify(
+                        progress=Progress(current=count),
+                        message=f"{output_tile.id} indexed",
+                    )
 
 
 def _index_file_path(out_dir: MPathLike, zoom: int, ext: str) -> MPath:
