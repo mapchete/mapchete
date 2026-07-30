@@ -37,8 +37,6 @@ from mapchete.config.parse import get_zoom_levels
 from mapchete.io import (
     MPath,
     fiona_open,
-    fs_from_path,
-    path_exists,
     raster,
     rasterio_open,
     relative_path,
@@ -324,22 +322,23 @@ class VectorFileWriter:
 class TextFileWriter:
     """Writes tile paths into text file."""
 
+    path: MPath
+
     def __init__(self, out_path: MPathLike):
-        self.path = out_path
+        self.path = MPath.from_inp(out_path)
         logger.debug("initialize TXT writer")
-        self.fs = fs_from_path(out_path)
-        if path_exists(self.path):
-            with self.fs.open(self.path, "r") as src:
+        if self.path.exists():
+            with self.path.open("r") as src:
                 self._existing = {line for line in src.readlines()}
         else:
             self._existing = {}
         self.new_entries = 0
-        self.sink = self.fs.open(self.path, "w")
+        self.sink = self.path.open("w")
         for line in self._existing:
             self._write_line(line)
 
     def __repr__(self):  # pragma: no cover
-        return "TextFileWriter(%s)" % self.path
+        return f"TextFileWriter({str(self.path)})"
 
     def __enter__(self):
         return self
@@ -373,18 +372,19 @@ class TextFileWriter:
 class VRTFileWriter:
     """Generates GDAL-style VRT file."""
 
+    path: MPath
+
     def __init__(
         self, out_path: MPathLike, output: Any, out_pyramid: BufferedTilePyramid
     ):
         # see if lxml is installed before checking all output tiles
 
-        self.path = out_path
+        self.path = MPath.from_inp(out_path)
         self._tp = out_pyramid
         self._output = output
-        self.fs = fs_from_path(out_path)
         logger.debug("initialize VRT writer for %s", self.path)
-        if path_exists(self.path):
-            with self.fs.open(self.path) as src:
+        if self.path.exists():
+            with self.path.open() as src:
                 self._existing = {
                     k: MPath.from_inp(v) for k, v in self._xml_to_entries(src.read())
                 }
@@ -531,7 +531,7 @@ class VRTFileWriter:
         # generate pretty XML and write
         xmlstr = minidom.parseString(ET.tostring(vrt)).toprettyxml(indent="  ")
         logger.debug("write to %s", self.path)
-        with self.fs.open(self.path, "w") as dst:
+        with self.path.open("w") as dst:
             dst.write(xmlstr)
 
 
@@ -573,7 +573,8 @@ class RasterIndexWriter:
         return self
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
-        self.dump(self.reload_before_write)
+        if exc_type is None:
+            self.dump(self.reload_before_write)
 
     def reload(self) -> np.ndarray:
         """Reloads existing index if it exists and combines it with current array."""
