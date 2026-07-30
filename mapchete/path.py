@@ -433,6 +433,7 @@ class MPath(os.PathLike):
 
     @_retry
     def write_content(self, content: Union[str, bytes], mode: str = "wb") -> None:
+        self.parent.makedirs()
         with self.fs.open(self._path_str, mode) as dst:
             dst.write(content)  # type: ignore
 
@@ -1127,18 +1128,19 @@ def _is_https_without_ls(path: MPath, default_file: str = "metadata.json") -> bo
     # Some HTTP endpoints won't allow ls() on them, so we will have to
     # request tile by tile in order to determine whether they exist or not.
     # This flag will trigger this further down.
-    is_https_without_ls = False
     if "https" in path.protocols:
         try:
             path.ls()
+            return False
         except FileNotFoundError:  # pragma: no cover
             metadata_json = path / default_file
             if not metadata_json.exists():
                 raise FileNotFoundError(
                     f"TileDirectory does not seem to exist or {default_file} is not available: {path}"
                 )
-            is_https_without_ls = True
-    return is_https_without_ls
+            return True
+    else:
+        return False
 
 
 def _batch_tiles_by_attribute(
