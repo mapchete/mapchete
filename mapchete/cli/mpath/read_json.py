@@ -9,8 +9,11 @@ from mapchete.path import MPath
 @options.arg_path
 @options.opt_src_fs_opts
 @click.option("--indent", "-i", type=click.INT, default=4)
-def read_json(path: MPath, indent: int = 4, **_):
+@options.opt_debug
+def read_json(path: MPath, debug: bool = False, indent: int = 4, **_):
     try:
         click.echo(json.dumps(path.read_json(), indent=indent))
     except Exception as exc:  # pragma: no cover
+        if debug:
+            raise
         raise click.ClickException(str(exc))

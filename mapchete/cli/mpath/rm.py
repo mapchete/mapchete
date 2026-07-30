@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 @options.opt_force
 @options.opt_verbose
 @options.opt_workers
+@options.opt_debug
 @click.option(
     "--count",
     is_flag=True,
@@ -101,6 +102,8 @@ def rm(
                     tqdm.tqdm.write(msg)
 
         except Exception as exc:  # pragma: no cover
+            if debug:
+                raise
             raise click.ClickException(str(exc))
 
 
