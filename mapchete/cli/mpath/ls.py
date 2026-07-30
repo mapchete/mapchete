@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 @click.option("--spacing", type=click.INT, default=4, show_default=True)
 @click.option("--max-depth", type=click.INT, default=None, show_default=True)
 @options.opt_recursive
+@options.opt_debug
 def ls(
     path: MPath,
     date_format: str = "%y-%m-%d %H:%M:%S",
@@ -26,6 +27,7 @@ def ls(
     spacing: int = 4,
     recursive: bool = False,
     max_depth: Optional[int] = None,
+    debug: bool = False,
     **_,
 ):
     size_column_width = 10
@@ -100,6 +102,8 @@ def ls(
             )
 
     except Exception as exc:  # pragma: no cover
+        if debug:
+            raise
         raise click.ClickException(str(exc))
 
 
