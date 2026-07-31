@@ -1135,7 +1135,11 @@ def all_existing_output_tiles(config, zoom: int) -> Generator[BufferedTile, None
     for page in zoom_directory.paginate():
         for path in page:
             try:
-                yield path_to_tile(path, config.output_reader.pyramid)
+                yield path_to_tile(
+                    path,
+                    config.output_reader.pyramid,
+                    tile_path_schema=config.output_reader.tile_path_schema,
+                )
             except ValueError:
                 logger.debug("invalid tile path found: %s", str(path))
 
