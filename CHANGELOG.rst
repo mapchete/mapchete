@@ -3,6 +3,18 @@ Changelog
 #########
 
 
+2026.7.0 - 2026-07-31
+---------------------
+
+* core
+
+  * enables writing GeoTIFFs in addition to vector and text files (#796)
+  * renamed `index.zoom_index_gen()` into `index.create_indexes()` (#796)
+  * `index.create_indexes()`: modernize by adding observers (#796)
+  * `path.MPath`: added `lock()` and `wait_for_lock()` methods (#796)
+  * added `path.all_existing_output_tiles()` and `path.path_to_tile()` functions (#796)
+
+
 2026.6.0 - 2026-06-18
 ---------------------
 
