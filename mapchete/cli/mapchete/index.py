@@ -10,6 +10,7 @@ from mapchete import commands
 from mapchete.cli import options
 from mapchete.cli.progress_bar import PBar
 from mapchete.path import MPath
+from mapchete.timer import Timer
 
 # workaround for https://github.com/tqdm/tqdm/issues/481
 tqdm.monitor_interval = 0
@@ -25,6 +26,7 @@ logger = logging.getLogger(__name__)
 @options.opt_shp
 @options.opt_fgb
 @options.opt_vrt
+@options.opt_tif
 @options.opt_txt
 @options.opt_fieldname
 @options.opt_basepath
@@ -64,13 +66,14 @@ def index(
             )
         kwargs.pop(x)
 
-    with PBar(
-        total=100, desc="tiles", disable=debug or no_pbar, print_messages=verbose
-    ) as pbar:
-        commands.index(
-            MPath(tiledir, storage_options=fs_opts),
-            *args,
-            observers=[pbar],
-            **kwargs,
-        )
-    tqdm.tqdm.write(f"index(es) creation for {str(tiledir)} finished")
+    with Timer() as duration:
+        with PBar(
+            total=100, desc="tiles", disable=debug or no_pbar, print_messages=verbose
+        ) as pbar:
+            commands.index(
+                MPath(tiledir, storage_options=fs_opts),
+                *args,
+                observers=[pbar],
+                **kwargs,
+            )
+    tqdm.tqdm.write(f"index(es) creation for {str(tiledir)} finished in {duration}")
