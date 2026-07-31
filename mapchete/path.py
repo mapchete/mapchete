@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 import hashlib
 import json
 import logging
@@ -11,11 +12,13 @@ from collections import defaultdict
 from datetime import datetime
 from functools import cached_property
 from io import TextIOWrapper
+import time
 from typing import (
     IO,
     Any,
     Dict,
     Generator,
+    Iterator,
     List,
     Optional,
     Set,
@@ -36,10 +39,10 @@ from rasterio.session import Session as RioSession
 from retry.api import retry_call
 
 from mapchete.executor import Executor
-from mapchete.pretty import pretty_bytes
+from mapchete.pretty import pretty_bytes, pretty_seconds
 from mapchete.protocols import ObserverProtocol
 from mapchete.settings import GDALHTTPOptions, IORetrySettings, mapchete_options
-from mapchete.tile import BatchBy, BufferedTile
+from mapchete.tile import BatchBy, BufferedTile, BufferedTilePyramid
 from mapchete.timer import Timer
 from mapchete.types import MPathLike, Progress
 
@@ -430,6 +433,7 @@ class MPath(os.PathLike):
 
     @_retry
     def write_content(self, content: Union[str, bytes], mode: str = "wb") -> None:
+        self.parent.makedirs()
         with self.fs.open(self._path_str, mode) as dst:
             dst.write(content)  # type: ignore
 
@@ -842,6 +846,48 @@ class MPath(os.PathLike):
             )
         )
 
+    def wait_for_lock(
+        self,
+        postfix: str = ".lock",
+        wait_interval_seconds: float = 1.0,
+        timeout: float = 30.0,
+    ) -> None:
+        lockfile = self + postfix
+        started = time.time()
+
+        # wait if there is an existing lockfile
+        while lockfile.exists():  # pragma: no cover
+            elapsed = time.time() - started
+            if elapsed > timeout:
+                raise TimeoutError(
+                    f"lockfile {str(lockfile)} exists for longer than {pretty_seconds(elapsed)}"
+                )
+            logger.debug(
+                "%s exists, waiting for %s",
+                str(lockfile),
+                pretty_seconds(wait_interval_seconds),
+            )
+            time.sleep(wait_interval_seconds)
+
+    @contextmanager
+    def lock(
+        self, postfix: str = ".lock", wait_interval_seconds: float = 1.0
+    ) -> Iterator[MPath]:
+        """Locks this path but wait if there is an existing lock."""
+        lockfile = self + postfix
+
+        # wait if there is an existing lockfile
+        self.wait_for_lock(postfix=postfix, wait_interval_seconds=wait_interval_seconds)
+
+        # create lockfile and only delete when context manager closes
+        try:
+            logger.debug("create lockfile %s", str(lockfile))
+            lockfile.write_content(b"")
+            yield lockfile
+        finally:
+            lockfile.rm(ignore_errors=True)
+            logger.debug("deleted lockfile %s", str(lockfile))
+
     def __truediv__(self, other: MPathLike) -> MPath:
         """Short for self.joinpath()."""
         return self.joinpath(other)
@@ -1078,22 +1124,69 @@ def tiles_exist(
         )
 
 
+def all_existing_output_tiles(config, zoom: int) -> Generator[BufferedTile, None, None]:
+    basepath: MPath = config.output_reader.path
+    # for single file outputs:
+    if basepath.suffix == config.output_reader.file_extension:  # pragma: no cover
+        raise NotImplementedError()
+
+    # for tile directory outputs:
+    zoom_directory = basepath / zoom
+    for page in zoom_directory.paginate():
+        for path in page:
+            try:
+                yield path_to_tile(
+                    path,
+                    config.output_reader.pyramid,
+                    tile_path_schema=config.output_reader.tile_path_schema,
+                )
+            except ValueError:
+                logger.debug("invalid tile path found: %s", str(path))
+
+
+def path_to_tile(
+    path: MPath,
+    pyramid: BufferedTilePyramid,
+    tile_path_schema: str = "{zoom}/{row}/{col}.{extension}",
+):
+    # figure out order of zoom, row, col based on schema
+    required_elements = {"zoom", "row", "col"}
+    keys = tuple(
+        element.lstrip("{").rstrip("}")
+        for element in tile_path_schema.split(".")[0].split("/")
+    )
+    if (
+        set(keys).intersection(required_elements) != required_elements
+    ):  # pragma: no cover
+        raise ValueError(
+            f"tile path schema does not contain all required elements (zoom, row, col): {tile_path_schema}"
+        )
+
+    return pyramid.tile(
+        **{
+            key: value
+            for key, value in zip(keys, map(int, path.without_suffix().elements[-3:]))
+        }
+    )
+
+
 def _is_https_without_ls(path: MPath, default_file: str = "metadata.json") -> bool:
     # Some HTTP endpoints won't allow ls() on them, so we will have to
     # request tile by tile in order to determine whether they exist or not.
     # This flag will trigger this further down.
-    is_https_without_ls = False
     if "https" in path.protocols:
         try:
             path.ls()
+            return False
         except FileNotFoundError:  # pragma: no cover
             metadata_json = path / default_file
             if not metadata_json.exists():
                 raise FileNotFoundError(
                     f"TileDirectory does not seem to exist or {default_file} is not available: {path}"
                 )
-            is_https_without_ls = True
-    return is_https_without_ls
+            return True
+    else:
+        return False
 
 
 def _batch_tiles_by_attribute(

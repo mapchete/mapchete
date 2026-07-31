@@ -20,6 +20,7 @@ from mapchete.path import (
     path_is_remote,
     relative_path,
     tiles_exist,
+    all_existing_output_tiles,
 )
 from mapchete.settings import GDALHTTPOptions
 
@@ -34,6 +35,7 @@ __all__ = [
     "path_is_remote",
     "path_exists",
     "tiles_exist",
+    "all_existing_output_tiles",
     "absolute_path",
     "relative_path",
     "makedirs",
