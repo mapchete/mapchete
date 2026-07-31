@@ -47,7 +47,7 @@ from mapchete.io import (
 from mapchete.io.profiles import COGDeflateProfile
 from mapchete.io.raster import ReferencedRaster
 from mapchete.commands.observer import ObserverProtocol, Observers
-from mapchete.path import batch_sort_property
+from mapchete.path import batch_sort_property, path_to_tile
 from mapchete.tile import BufferedTile, BufferedTilePyramid, Shape
 from mapchete.types import ZoomLevelsLike, TileLike, MPathLike, CRSLike, Progress
 
@@ -417,6 +417,7 @@ class VRTFileWriter:
     """Generates GDAL-style VRT file."""
 
     path: MPath
+    tile_path_schema: str
 
     def __init__(
         self, out_path: MPathLike, output: Any, out_pyramid: BufferedTilePyramid
@@ -424,8 +425,11 @@ class VRTFileWriter:
         # see if lxml is installed before checking all output tiles
 
         self.path = MPath.from_inp(out_path)
-        self._tp = out_pyramid
+        self.pyramid = out_pyramid
         self._output = output
+        self.tile_path_schema = getattr(
+            output, "tile_path_schema", "{zoom}/{row}/{col}.{extension}"
+        )
         logger.debug("initialize VRT writer for %s", self.path)
         if self.path.exists():
             with self.path.open() as src:
@@ -447,11 +451,6 @@ class VRTFileWriter:
     def __exit__(self, *args):
         self.close()
 
-    def _path_to_tile(self, path):
-        return self._tp.tile(
-            *map(int, MPath.from_inp(path).without_suffix().elements[-3:])
-        )
-
     def _add_entry(self, tile=None, path=None):
         self._new[tile] = MPath.from_inp(path)
 
@@ -460,7 +459,14 @@ class VRTFileWriter:
             ET.ElementTree(ET.fromstring(xml_string)).getroot().iter("VRTRasterBand")
         ).iter("ComplexSource"):
             path = next(entry.iter("SourceFilename")).text
-            yield (self._path_to_tile(path), path)
+            yield (
+                path_to_tile(
+                    MPath.from_inp(path),
+                    pyramid=self.pyramid,
+                    tile_path_schema=self.tile_path_schema,
+                ),
+                path,
+            )
 
     def write(
         self, tile: Optional[BufferedTile] = None, path: Optional[MPathLike] = None
@@ -498,7 +504,7 @@ class VRTFileWriter:
         # build XML
         E = ElementMaker()
         vrt = E.VRTDataset(
-            E.SRS(self._tp.crs.wkt),
+            E.SRS(self.pyramid.crs.wkt),
             E.GeoTransform(", ".join(map(str, vrt_affine.to_gdal()))),
             *[
                 E.VRTRasterBand(
@@ -523,12 +529,12 @@ class VRTFileWriter:
                                 DataType=vrt_dtype,
                                 BlockXSize=str(
                                     self._output.profile().get(
-                                        "blockxsize", self._tp.tile_size
+                                        "blockxsize", self.pyramid.tile_size
                                     )
                                 ),
                                 BlockYSize=str(
                                     self._output.profile().get(
-                                        "blockysize", self._tp.tile_size
+                                        "blockysize", self.pyramid.tile_size
                                     )
                                 ),
                             ),

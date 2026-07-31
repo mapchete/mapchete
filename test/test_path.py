@@ -6,7 +6,8 @@ from pytest_lazy_fixtures import lf as lazy_fixture
 
 from mapchete.config import get_hash
 from mapchete.io.raster.referenced_raster import ReferencedRaster
-from mapchete.path import MPath, batch_sort_property
+from mapchete.path import MPath, batch_sort_property, path_to_tile
+from mapchete.tile import BufferedTilePyramid
 
 
 @pytest.mark.parametrize(
@@ -625,3 +626,20 @@ def test_checksum(src_path: MPath):
         src_path.checksum()
         == "fff06260d08965a898021b9513dc9226f6c3b964d755734357603c21fb2359ad"
     )
+
+
+@pytest.mark.parametrize(
+    "path_control",
+    [
+        ("/foo/bar/3/1/2.tif", "{zoom}/{row}/{col}.{extension}", (3, 1, 2)),
+        ("/foo/bar/3/2/1.tif", "{zoom}/{col}/{row}.{extension}", (3, 1, 2)),
+        ("/foo/bar/2/3/1.tif", "{col}/{zoom}/{row}.{extension}", (3, 1, 2)),
+    ],
+)
+def test_path_to_tile(path_control):
+    path_str, tile_path_schema, control_id = path_control
+    pyramid = BufferedTilePyramid("geodetic")
+    tile = path_to_tile(
+        MPath.from_inp(path_str), pyramid=pyramid, tile_path_schema=tile_path_schema
+    )
+    assert tile.id == control_id

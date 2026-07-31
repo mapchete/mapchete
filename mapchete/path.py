@@ -1127,7 +1127,7 @@ def tiles_exist(
 def all_existing_output_tiles(config, zoom: int) -> Generator[BufferedTile, None, None]:
     basepath: MPath = config.output_reader.path
     # for single file outputs:
-    if basepath.suffix == config.output_reader.file_extension:
+    if basepath.suffix == config.output_reader.file_extension:  # pragma: no cover
         raise NotImplementedError()
 
     # for tile directory outputs:
@@ -1135,13 +1135,35 @@ def all_existing_output_tiles(config, zoom: int) -> Generator[BufferedTile, None
     for page in zoom_directory.paginate():
         for path in page:
             try:
-                yield _path_to_tile(path, config.output_reader.pyramid)
+                yield path_to_tile(path, config.output_reader.pyramid)
             except ValueError:
                 logger.debug("invalid tile path found: %s", str(path))
 
 
-def _path_to_tile(path: MPath, pyramid: BufferedTilePyramid):
-    return pyramid.tile(*map(int, MPath.from_inp(path).without_suffix().elements[-3:]))
+def path_to_tile(
+    path: MPath,
+    pyramid: BufferedTilePyramid,
+    tile_path_schema: str = "{zoom}/{row}/{col}.{extension}",
+):
+    # figure out order of zoom, row, col based on schema
+    required_elements = {"zoom", "row", "col"}
+    keys = tuple(
+        element.lstrip("{").rstrip("}")
+        for element in tile_path_schema.split(".")[0].split("/")
+    )
+    if (
+        set(keys).intersection(required_elements) != required_elements
+    ):  # pragma: no cover
+        raise ValueError(
+            f"tile path schema does not contain all required elements (zoom, row, col): {tile_path_schema}"
+        )
+
+    return pyramid.tile(
+        **{
+            key: value
+            for key, value in zip(keys, map(int, path.without_suffix().elements[-3:]))
+        }
+    )
 
 
 def _is_https_without_ls(path: MPath, default_file: str = "metadata.json") -> bool:
