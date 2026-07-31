@@ -12,7 +12,7 @@ from mapchete.commands.parser import InputInfo
 from mapchete.config import MapcheteConfig
 from mapchete.config.parse import bounds_from_opts, raw_conf
 from mapchete.enums import InputType
-from mapchete.index import zoom_index_gen
+from mapchete.index import create_indexes
 from mapchete.types import MPathLike, Progress
 
 logger = logging.getLogger(__name__)
@@ -25,6 +25,7 @@ def index(
     gpkg: bool = False,
     shp: bool = False,
     fgb: bool = False,
+    tif: bool = False,
     vrt: bool = False,
     txt: bool = False,
     fieldname: Optional[str] = "location",
@@ -45,9 +46,9 @@ def index(
     """
     Create one or more indexes from a TileDirectory.
     """
-    if not any([geojson, gpkg, shp, fgb, txt, vrt]):
+    if not any([geojson, gpkg, shp, fgb, tif, txt, vrt]):
         raise ValueError(
-            """At least one of '--geojson', '--gpkg', '--shp', '--fgb', '--vrt' or '--txt'"""
+            """At least one of '--geojson', '--gpkg', '--shp', '--fgb', '--tif', '--vrt' or '--txt'"""
             """must be provided."""
         )
 
@@ -88,24 +89,20 @@ def index(
     ) as mp:
         total = 1 if tile else mp.count_tiles()
         all_observers.notify(progress=Progress(total=total))
-        for ii, tile in enumerate(
-            zoom_index_gen(
-                mp=mp,
-                zoom=None if tile else mp.config.init_zoom_levels,
-                tile=tile,
-                out_dir=idx_out_dir if idx_out_dir else mp.config.output.path,
-                geojson=geojson,
-                gpkg=gpkg,
-                shapefile=shp,
-                flatgeobuf=fgb,
-                vrt=vrt,
-                txt=txt,
-                fieldname=fieldname,
-                basepath=basepath,
-                for_gdal=for_gdal,
-            ),
-            1,
-        ):
-            all_observers.notify(
-                progress=Progress(current=ii, total=total), message=f"{tile.id} indexed"
-            )
+        create_indexes(
+            config=mp.config,
+            zoom=None if tile else mp.config.init_zoom_levels,
+            tile=tile,
+            out_dir=idx_out_dir if idx_out_dir else mp.config.output.path,
+            geojson=geojson,
+            gpkg=gpkg,
+            shapefile=shp,
+            flatgeobuf=fgb,
+            tif=tif,
+            vrt=vrt,
+            txt=txt,
+            fieldname=fieldname,
+            basepath=basepath,
+            for_gdal=for_gdal,
+            observers=all_observers.observers,
+        )
