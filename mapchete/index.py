@@ -164,11 +164,20 @@ def create_indexes(
             logger.debug("use the following index writers: %s", index_writers)
 
             # global search
-            if tile is None and config.output.pyramid.bounds == config.init_bounds:
+            if (
+                # no tile given
+                tile is None
+                and
+                # no subset given
+                config.output.pyramid.bounds == config.init_bounds
+                and
+                # is actually a TilePyramid and not a single file output
+                config.output_reader.path.suffix != config.output_reader.file_extension
+            ):
                 logger.debug("using quicker global index creation")
                 all_observers.notify(progress=Progress(total=None))
                 for output_tile in all_existing_output_tiles(config, zoom):
-                    tile_path = _tile_path(
+                    tile_path = _tile_path_str(
                         orig_path=config.output.get_path(output_tile),
                         basepath=basepath,
                         for_gdal=for_gdal,
@@ -196,8 +205,8 @@ def create_indexes(
 
             # spatial subset search
             else:
-                if tile:
-                    output_tiles_batches = (
+                output_tiles_batches = (
+                    (
                         config.output_pyramid.tiles_from_bounds_batches(
                             config.process_pyramid.tile(*tile).bounds,
                             zoom,
@@ -206,8 +215,8 @@ def create_indexes(
                             ),
                         )
                     )
-                else:
-                    output_tiles_batches = (
+                    if tile
+                    else (
                         config.output_pyramid.tiles_from_geom_batches(
                             config.area_at_zoom(zoom),
                             zoom,
@@ -217,12 +226,12 @@ def create_indexes(
                             exact=True,
                         )
                     )
+                )
 
-                # TODO: make function to quickly return only existing tiles
                 for output_tile, exists in tiles_exist(
                     config, output_tiles_batches=output_tiles_batches
                 ):
-                    tile_path = _tile_path(
+                    tile_path = _tile_path_str(
                         orig_path=config.output.get_path(output_tile),
                         basepath=basepath,
                         for_gdal=for_gdal,
@@ -253,7 +262,7 @@ def _index_file_path(out_dir: MPathLike, zoom: int, ext: str) -> MPath:
     return MPath.from_inp(out_dir) / f"{str(zoom)}.{ext}"
 
 
-def _tile_path(
+def _tile_path_str(
     orig_path: MPathLike, basepath: Optional[MPathLike] = None, for_gdal: bool = True
 ) -> str:
     path = (
@@ -514,7 +523,7 @@ class VRTFileWriter:
                         E.ComplexSource(
                             E.SourceFilename(
                                 (
-                                    _tile_path(orig_path=path, for_gdal=True)
+                                    _tile_path_str(orig_path=path, for_gdal=True)
                                     if path.is_remote()
                                     else str(
                                         path.relative_path(start=self.path.dirname)
