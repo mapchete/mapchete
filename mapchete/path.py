@@ -903,7 +903,7 @@ class MPath(os.PathLike):
                 logger.debug("%s is remote, download to %s", self._path_str, tempfile)
                 self.cp(tempfile)
                 yield tempfile
-        else:
+        else:  # pragma: no cover
             yield self
 
     def __truediv__(self, other: MPathLike) -> MPath:
