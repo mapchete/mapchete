@@ -1116,7 +1116,7 @@ def tiles_exist(
     if not is_https_without_ls:
         try:
             subdirs = next(config.output_reader.path.walk()).subdirs
-        except StopIteration:  # pragma: no cover
+        except (StopIteration, FileNotFoundError):
             subdirs = []
         if not subdirs:
             logger.debug("no output tiles found, skip existence check")
