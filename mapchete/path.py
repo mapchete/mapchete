@@ -2,23 +2,23 @@
 
 from __future__ import annotations
 
+from collections import defaultdict
 from contextlib import contextmanager
+from datetime import datetime
+from functools import cached_property
 import hashlib
+from io import TextIOWrapper
 import json
 import logging
 import os
+from tempfile import TemporaryDirectory
 import warnings
-from collections import defaultdict
-from datetime import datetime
-from functools import cached_property
-from io import TextIOWrapper
 import time
 from typing import (
     IO,
     Any,
     Dict,
     Generator,
-    Iterator,
     List,
     Optional,
     Set,
@@ -491,10 +491,13 @@ class MPath(os.PathLike):
         if detail is not None:  # pragma: no cover
             warnings.warn(DeprecationWarning("'detail' kwarg is deprecated."))
         logger.debug("%s: make self.fs.ls() call ...", str(self))
-        return [
-            self.new(path_info, relative_to_self=not absolute_paths)
-            for path_info in self.fs.ls(self._path_str, detail=True)
-        ]
+        try:
+            return [
+                self.new(path_info, relative_to_self=not absolute_paths)
+                for path_info in self.fs.ls(self._path_str, detail=True)
+            ]
+        except FileNotFoundError:  # pragma: no cover
+            raise FileNotFoundError(f"{self._path_str} does not exist")
 
     def walk(
         self,
@@ -526,6 +529,9 @@ class MPath(os.PathLike):
                         for file_str, file_info in files.items()  # type: ignore
                     ],
                 )
+        else:
+            if not self.exists():  # pragma: no cover
+                raise FileNotFoundError(f"{self._path_str} does not exist")
 
     def paginate(
         self, items_per_page: int = 1000
@@ -651,8 +657,8 @@ class MPath(os.PathLike):
     def size(self) -> int:
         return self.info().get("size", self.info().get("Size"))  # type: ignore
 
-    def pretty_size(self) -> str:
-        return pretty_bytes(self.size())
+    def pretty_size(self, decimal: bool = False) -> str:
+        return pretty_bytes(self.size(), decimal=decimal)
 
     def last_modified(self) -> datetime:
         # for S3 objects
@@ -872,7 +878,7 @@ class MPath(os.PathLike):
     @contextmanager
     def lock(
         self, postfix: str = ".lock", wait_interval_seconds: float = 1.0
-    ) -> Iterator[MPath]:
+    ) -> Generator[MPath]:
         """Locks this path but wait if there is an existing lock."""
         lockfile = self + postfix
 
@@ -887,6 +893,18 @@ class MPath(os.PathLike):
         finally:
             lockfile.rm(ignore_errors=True)
             logger.debug("deleted lockfile %s", str(lockfile))
+
+    @contextmanager
+    def local_copy(self, active: bool = True) -> Generator[MPath]:
+        """If path is remote, download to temporary directory and return path."""
+        if active and self.is_remote():
+            with TemporaryDirectory() as tempdir:
+                tempfile = MPath(tempdir) / self.name
+                logger.debug("%s is remote, download to %s", self._path_str, tempfile)
+                self.cp(tempfile)
+                yield tempfile
+        else:
+            yield self
 
     def __truediv__(self, other: MPathLike) -> MPath:
         """Short for self.joinpath()."""
