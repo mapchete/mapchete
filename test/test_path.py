@@ -643,3 +643,18 @@ def test_path_to_tile(path_control):
         MPath.from_inp(path_str), pyramid=pyramid, tile_path_schema=tile_path_schema
     )
     assert tile.id == control_id
+
+
+def test_path_lock(s3_metadata_json):
+    with s3_metadata_json.lock() as lockfile:
+        assert lockfile.exists()
+    assert not lockfile.exists()
+
+
+def test_path_local_copy(s3_metadata_json: MPath):
+    with s3_metadata_json.local_copy() as local_copy:
+        assert local_copy.exists()
+        assert s3_metadata_json.is_remote()
+        assert not local_copy.is_remote()
+        assert s3_metadata_json.open().read() == local_copy.open().read()
+    assert not local_copy.exists()
