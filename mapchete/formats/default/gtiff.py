@@ -414,7 +414,7 @@ class GTiffSingleFileOutputWriter(
     write_in_parent_process = True
     zoom: int
     cog: bool
-    in_memory: bool
+    in_memory: Optional[bool] = None
 
     def __init__(self, output_params: dict, **kwargs):
         """Initialize."""
@@ -426,7 +426,7 @@ class GTiffSingleFileOutputWriter(
             raise ValueError("single file output only works with one zoom level")
         self.zoom = output_params["delimiters"]["zoom"][0]
         self.cog = output_params.get("cog", False)
-        self.in_memory = output_params.get("in_memory", False)
+        self.in_memory = output_params.get("in_memory", None)
 
     @property
     def stac_asset_type(

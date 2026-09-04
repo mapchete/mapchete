@@ -164,10 +164,6 @@ class OutputDataWriter(base.TileDirectoryOutputWriter, OutputDataReader):
                 "vector driver data has to be a list or generator of GeoJSON objects"
             )
 
-        if data is None:
-            logger.debug("no features to write")
-            return
-
         data = list(data)
         if len(data) == 0:
             logger.debug("no features to write")
