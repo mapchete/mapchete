@@ -11,7 +11,7 @@ from mapchete.cli.progress_bar import PBar
 from mapchete.enums import Concurrency
 from mapchete.executor import get_executor
 from mapchete.path import MPath
-from mapchete.pretty import pretty_bytes
+from mapchete.pretty import pretty_bytes, pretty_number
 from mapchete.timer import Timer
 
 logger = logging.getLogger(__name__)
@@ -68,7 +68,7 @@ def sync(
                             total += len(page)
                             for file in page:
                                 size += file.size()
-                msg = f"{str(path)}: contains {total} file(s) totalling {pretty_bytes(size)} and counted in {duration}"
+                msg = f"{str(path)}: contains {pretty_number(total)} file(s) totalling {pretty_bytes(size)} and counted in {duration}"
                 tqdm.tqdm.write(msg)
                 logger.debug(msg)
             else:

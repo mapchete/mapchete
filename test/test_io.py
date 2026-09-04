@@ -31,8 +31,8 @@ def test_best_zoom_level(dummy1_tif):
 
 
 @pytest.mark.integration
-def test_s3_path_exists(raster_4band_s3):
-    assert path_exists(raster_4band_s3)
+def test_s3_path_exists(s3_metadata_json):
+    assert path_exists(s3_metadata_json)
 
 
 @pytest.mark.integration

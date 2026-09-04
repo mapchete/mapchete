@@ -19,6 +19,7 @@ from mapchete.executor import get_executor
 from mapchete.executor.base import ExecutorType
 from mapchete.executor.concurrent_futures import MULTIPROCESSING_DEFAULT_START_METHOD
 from mapchete.executor.types import Profiler
+from mapchete.pretty import pretty_number
 from mapchete.processing.profilers import preconfigured_profilers
 from mapchete.processing.profilers.time import measure_time
 from mapchete.settings import mapchete_options
@@ -146,7 +147,7 @@ def execute(
                 if observers:
                     try:
                         potential_tasks_count = mp.count_tasks()
-                        message = f"determining which of up to {potential_tasks_count} tasks to process "
+                        message = f"determining which of up to {pretty_number(potential_tasks_count)} tasks to process "
                         message += (
                             "(this may take a while) ..."
                             if potential_tasks_count > 10_000
@@ -169,7 +170,7 @@ def execute(
                     return
 
                 all_observers.notify(
-                    message=f"processing {len(tasks)} tasks on {workers} worker(s)",
+                    message=f"processing {pretty_number(len(tasks))} tasks on {workers} worker(s)",
                     progress=Progress(total=len(tasks)),
                 )
                 all_observers.notify(message="waiting for executor ...")
@@ -193,7 +194,7 @@ def execute(
                             )
                         all_observers.notify(
                             status=Status.running,
-                            message=f"sending {len(tasks)} tasks to {executor} ...",
+                            message=f"sending {pretty_number(len(tasks))} tasks to {executor} ...",
                             executor=executor,
                         )
                         # TODO it would be nice to track the time it took sending tasks to the executor
