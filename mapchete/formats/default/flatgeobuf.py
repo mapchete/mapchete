@@ -18,9 +18,11 @@ schema: key-value pairs
     Polygon, MultiPolygon)
 """
 
+from typing import Literal
 import warnings
 
 from mapchete.formats.default import _fiona_base
+from mapchete.path import MPath
 
 METADATA = {"driver_name": "FlatGeobuf", "data_type": "vector", "mode": "rw"}
 
@@ -53,23 +55,25 @@ class OutputDataReader(_fiona_base.OutputDataReader):
     """
 
     METADATA = METADATA
+    path = MPath
+    file_extension: Literal[".fgb"] = ".fgb"
+    output_params: dict
 
-    def __init__(self, output_params, **kwargs):
+    def __init__(self, output_params: dict, **__):
         """Initialize."""
         super().__init__(output_params)
         self.path = output_params["path"]
-        self.file_extension = ".fgb"
 
         # make sure only field types allowed by FlatGeobuf are defined
-        for k, v in output_params["schema"]["properties"].items():
-            if v == "date":  # pragma: no cover
+        for key, value in output_params["schema"]["properties"].items():
+            if value == "date":  # pragma: no cover
                 warnings.warn(
                     UserWarning(
-                        f"""'{k}' field has type '{v}' which is not allowed by FlatGeobuf """
+                        f"""'{key}' field has type '{value}' which is not allowed by FlatGeobuf """
                         """and will be changed to 'string'"""
                     )
                 )
-                output_params["schema"]["properties"][k] = "str"
+                output_params["schema"]["properties"][key] = "str"
 
         self.output_params = output_params
 
