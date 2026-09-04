@@ -183,7 +183,8 @@ markers = [
 env = [
     "D:AK1=foo",
     "D:AK2=bar",
-    "D:FILE1=dummy2.tif"
+    "D:FILE1=dummy2.tif",
+    "D:FOO_PATH=cleantopo"
 ]
 addopts = [
     "--durations=20",
