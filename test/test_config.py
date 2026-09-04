@@ -569,6 +569,7 @@ def test_env_params(env_input_path_mapchete):
     with mapchete.open(env_input_path_mapchete.dict) as mp:
         inp = mp.config.params_at_zoom(5)
         assert inp["input"]["file1"].path.endswith("dummy2.tif")
+        assert inp["input"]["file2"].path.endswith("cleantopo/1/1/0.tif")
 
 
 def test_process_config_pyramid_settings():

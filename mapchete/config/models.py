@@ -177,17 +177,17 @@ class ProcessConfig(BaseModel, arbitrary_types_allowed=True):
     ) -> ProcessConfig:
         """Read config from file or dictionary and return validated configuration"""
 
-        def _include_env(d: dict) -> OrderedDict:
+        def _include_env(dictionary: dict) -> OrderedDict:
             """Search for environment variables and add their values."""
             out = OrderedDict()
-            for k, v in d.items():
-                if isinstance(v, dict):
-                    out[k] = _include_env(v)
-                elif isinstance(v, str) and v.startswith("${") and v.endswith("}"):
-                    envvar = v.lstrip("${").rstrip("}")
-                    out[k] = os.environ.get(envvar)
+            for key, value in dictionary.items():
+                if isinstance(value, dict):
+                    out[key] = _include_env(value)
+                elif isinstance(value, str):
+                    # this still wouldn't fail if an env variable wasn't set but let's keep the old behavior
+                    out[key] = os.path.expandvars(value)
                 else:
-                    out[k] = v
+                    out[key] = value
             return out
 
         def _config_to_dict(input_config: Union[dict, MPathLike]) -> dict:
