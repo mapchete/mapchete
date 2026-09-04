@@ -8,7 +8,7 @@ input:
         path: ${FILE1}
     file2:
         format: raster_file
-        path: ${FOO_PATH2}/1/1/0.tif
+        path: ${FOO_PATH}/1/1/0.tif
 output:
     dtype: float32
     bands: 1
