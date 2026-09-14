@@ -2,8 +2,13 @@
 Baseclasses for all drivers using fiona for reading and writing data.
 """
 
+from __future__ import annotations
+
 import logging
 import types
+from typing import List, Tuple, Literal, Iterator, TYPE_CHECKING
+
+from fiona import Feature
 
 from mapchete.formats import base
 from mapchete.formats.protocols import VectorInput
@@ -11,6 +16,11 @@ from mapchete.io import MPath, fiona_open
 from mapchete.io.vector import write_vector_window
 from mapchete.tile import BufferedTile
 from mapchete.validate import validate_values
+
+if TYPE_CHECKING:
+    from mapchete.processing import Mapchete
+    from mapchete.types import GeoJSONLikeFeature
+
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +52,11 @@ class OutputDataReader(base.TileDirectoryOutputReader):
         spatial reference ID of CRS (e.g. "{'init': 'epsg:4326'}")
     """
 
-    def read(self, output_tile, **kwargs):
+    path = MPath
+    file_extension: str
+    output_params: dict
+
+    def read(self, output_tile: BufferedTile, **_) -> List[Feature]:
         """
         Read existing process output.
 
@@ -61,7 +75,7 @@ class OutputDataReader(base.TileDirectoryOutputReader):
         except FileNotFoundError:
             return self.empty(output_tile)
 
-    def is_valid_with_config(self, config):
+    def is_valid_with_config(self, config: dict) -> Literal[True]:
         """
         Check if output format is valid with other process parameters.
 
@@ -90,7 +104,7 @@ class OutputDataReader(base.TileDirectoryOutputReader):
             raise TypeError("invalid geometry type")
         return True
 
-    def empty(self, process_tile=None):
+    def empty(self, *_, **__) -> List[Feature]:
         """
         Return empty data.
 
@@ -105,7 +119,9 @@ class OutputDataReader(base.TileDirectoryOutputReader):
         """
         return []
 
-    def for_web(self, data):
+    def for_web(
+        self, data: Iterator
+    ) -> Tuple[List[GeoJSONLikeFeature], Literal["application/json"]]:
         """
         Convert data to web output (raster only).
 
@@ -119,7 +135,7 @@ class OutputDataReader(base.TileDirectoryOutputReader):
         """
         return list(data), "application/json"
 
-    def open(self, tile, process):
+    def open(self, tile: BufferedTile, process: Mapchete) -> InputTile:
         """
         Open process output as input for other process.
 
@@ -132,7 +148,9 @@ class OutputDataReader(base.TileDirectoryOutputReader):
 
 
 class OutputDataWriter(base.TileDirectoryOutputWriter, OutputDataReader):
-    def write(self, process_tile, data):
+    def write(
+        self, process_tile: BufferedTile, data: Iterator[GeoJSONLikeFeature]
+    ) -> None:
         """
         Write data from process tiles into vector file(s).
 
@@ -141,16 +159,15 @@ class OutputDataWriter(base.TileDirectoryOutputWriter, OutputDataReader):
         process_tile : ``BufferedTile``
             must be member of process ``TilePyramid``
         """
-        if data is None or len(data) == 0:
-            return
-        if not isinstance(data, (list, types.GeneratorType)):  # pragma: no cover
+        if not isinstance(data, (list, tuple, types.GeneratorType)):  # pragma: no cover
             raise TypeError(
                 "vector driver data has to be a list or generator of GeoJSON objects"
             )
 
         data = list(data)
-        if not len(data):  # pragma: no cover
+        if len(data) == 0:
             logger.debug("no features to write")
+            return
         else:
             # Convert from process_tile to output_tiles
             for tile in self.pyramid.intersecting(process_tile):
@@ -184,13 +201,18 @@ class InputTile(base.InputTile, VectorInput):
     process : ``MapcheteProcess``
     """
 
-    def __init__(self, tile, process):
+    tile: BufferedTile
+    process: Mapchete
+
+    def __init__(self, tile: BufferedTile, process: Mapchete):
         """Initialize."""
         self.tile = tile
         self.process = process
         self._cache = {}
 
-    def read(self, validity_check=True, no_neighbors=False, **kwargs):
+    def read(
+        self, validity_check: bool = True, no_neighbors: bool = False, **__
+    ) -> List[GeoJSONLikeFeature]:
         """
         Read data from process output.
 
@@ -211,7 +233,7 @@ class InputTile(base.InputTile, VectorInput):
             raise NotImplementedError()
         return self._from_cache(validity_check=validity_check)
 
-    def is_empty(self, validity_check=True, **_):  # pragma: no cover
+    def is_empty(self, validity_check=True, **_) -> bool:  # pragma: no cover
         """
         Check if there is data within this tile.
 
@@ -221,7 +243,7 @@ class InputTile(base.InputTile, VectorInput):
         """
         return len(self._from_cache(validity_check=validity_check)) == 0
 
-    def _from_cache(self, validity_check=True):
+    def _from_cache(self, validity_check: bool = True) -> List[GeoJSONLikeFeature]:
         if validity_check not in self._cache:
             self._cache[validity_check] = self.process.get_raw_output(self.tile)
         return self._cache[validity_check]
@@ -230,6 +252,6 @@ class InputTile(base.InputTile, VectorInput):
         """Enable context manager."""
         return self
 
-    def __exit__(self, t, v, tb):
+    def __exit__(self, *_):
         """Clear cache on close."""
         self._cache = {}

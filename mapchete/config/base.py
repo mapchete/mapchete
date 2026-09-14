@@ -7,7 +7,7 @@ from collections import OrderedDict
 from copy import deepcopy
 from functools import cached_property
 import textwrap
-from typing import Any, Iterator, Optional, Tuple, Union
+from typing import Any, Iterator, Optional, Tuple, Union, TYPE_CHECKING
 
 import oyaml as yaml
 from shapely.geometry import box
@@ -44,6 +44,9 @@ from mapchete.validate import (
     validate_zooms,
 )
 from mapchete.zoom_levels import ZoomLevels
+
+if TYPE_CHECKING:
+    from mapchete.formats.base import OutputDataReader, OutputDataWriter
 
 logger = logging.getLogger(__name__)
 
@@ -89,14 +92,14 @@ class MapcheteConfig(object):
 
     """
 
-    parsed_config: ProcessConfig = None
+    parsed_config: ProcessConfig
     mode: ProcessingMode = ProcessingMode.CONTINUE
     preprocessing_tasks_finished: bool = False
-    config_dir: MPath = None
-    process: Union[ProcessFunc, None] = None
+    config_dir: MPath
+    process: Optional[ProcessFunc] = None
     process_pyramid: BufferedTilePyramid
     output_pyramid: BufferedTilePyramid
-    baselevels: Union[dict, None]
+    baselevels: Optional[dict]
     area: BaseGeometry
     bounds: Bounds
     zoom_levels: ZoomLevels
@@ -106,8 +109,8 @@ class MapcheteConfig(object):
     effective_area: BaseGeometry
     effective_bounds: Bounds
     input: OrderedDict
-    output: "OutputDataWriter"  # noqa: F821
-    output_reader: "OutputDataReader"  # noqa: F821
+    output: OutputDataWriter
+    output_reader: OutputDataReader
 
     def __init__(
         self,

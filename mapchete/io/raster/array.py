@@ -22,6 +22,8 @@ from mapchete.types import BoundsLike, CRSLike, NodataVal
 
 logger = logging.getLogger(__name__)
 
+WritableRasterData = Union[Iterable[np.ndarray], np.ndarray, ma.MaskedArray]
+
 
 def extract_from_array(
     array: Union[np.ndarray, ma.MaskedArray, GridProtocol],
@@ -213,7 +215,7 @@ def bounds_to_ranges(
 
 
 def prepare_array(
-    data: Union[Iterable[np.ndarray], np.ndarray, ma.MaskedArray],
+    data: WritableRasterData,
     masked: bool = True,
     nodata: NodataVal = 0,
     dtype: DTypeLike = "int16",

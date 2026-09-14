@@ -21,7 +21,10 @@ schema: key-value pairs
     Polygon, MultiPolygon)
 """
 
+from typing import Literal
+
 from mapchete.formats.default import _fiona_base
+from mapchete.path import MPath
 
 METADATA = {"driver_name": "GeoJSON", "data_type": "vector", "mode": "rw"}
 
@@ -54,12 +57,14 @@ class OutputDataReader(_fiona_base.OutputDataReader):
     """
 
     METADATA = METADATA
+    path = MPath
+    file_extension: Literal[".geojson"] = ".geojson"
+    output_params: dict
 
-    def __init__(self, output_params, **kwargs):
+    def __init__(self, output_params: dict, **__):
         """Initialize."""
         super().__init__(output_params)
         self.path = output_params["path"]
-        self.file_extension = ".geojson"
         self.output_params = output_params
 
 

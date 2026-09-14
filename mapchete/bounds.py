@@ -6,6 +6,7 @@ from rasterio.crs import CRS
 from shapely import unary_union
 from shapely.geometry import shape
 
+from mapchete._deprecated import deprecated
 from mapchete.types import CRSLike, BoundsLike, Geometry, Polygon, MultiPolygon
 
 
@@ -271,6 +272,9 @@ class Bounds(list):
         )
 
 
+@deprecated(
+    "bounds_intersect() will be removed soon. Please use 'Bounds.intersects(other_bounds)'"
+)
 def bounds_intersect(
     bounds1: BoundsLike, bounds2: BoundsLike
 ) -> bool:  # pragma: no cover

@@ -32,15 +32,17 @@ compress: string
 
 from __future__ import annotations
 
+from contextlib import ExitStack
 import logging
 import math
 import os
+from typing import Literal, Union, Tuple, Optional, Dict, Any, List, TYPE_CHECKING
 import warnings
-from contextlib import ExitStack
 
 import numpy as np
 from affine import Affine
 from numpy import ma
+from rasterio.io import MemoryFile
 from rasterio.rio.overview import get_maximum_overview_level
 from rasterio.windows import from_bounds
 from shapely.geometry import box
@@ -60,10 +62,14 @@ from mapchete.io.raster import (
     read_raster_no_crs,
     write_raster_window,
 )
+from mapchete.io.raster.array import WritableRasterData
 from mapchete.settings import mapchete_options
 from mapchete.tile import BufferedTile
-from mapchete.types import to_resampling
+from mapchete.types import to_resampling, Geometry
 from mapchete.validate import deprecated_kwargs, validate_values
+
+if TYPE_CHECKING:
+    from mapchete.processing import Mapchete
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +106,7 @@ class OutputDataReader:
         spatial reference ID of CRS (e.g. "{'init': 'epsg:4326'}")
     """
 
-    def __new__(self, output_params, **kwargs):
+    def __new__(self, output_params: dict, **kwargs):
         """Initialize."""
         return GTiffTileDirectoryOutputReader(output_params, **kwargs)
 
@@ -135,10 +141,13 @@ class OutputDataWriter:
         spatial reference ID of CRS (e.g. "{'init': 'epsg:4326'}")
     """
 
-    def __new__(self, output_params, **kwargs):
+    path: MPath
+    file_extension: Literal[".tif"] = ".tif"
+    output_params: dict
+
+    def __new__(self, output_params: dict, **kwargs):
         """Initialize."""
         self.path = output_params["path"]
-        self.file_extension = ".tif"
         if self.path.suffix == self.file_extension:
             return GTiffSingleFileOutputWriter(output_params, **kwargs)
         else:
@@ -149,8 +158,9 @@ class GTiffOutputReaderFunctions:
     """Common functions."""
 
     METADATA = METADATA
+    file_extension: Literal[".tif"] = ".tif"
 
-    def empty(self, process_tile):
+    def empty(self, process_tile: BufferedTile) -> ma.MaskedArray:
         """
         Return empty data.
 
@@ -174,7 +184,9 @@ class GTiffOutputReaderFunctions:
             mask=True,
         )
 
-    def for_web(self, data):
+    def for_web(
+        self, data: WritableRasterData
+    ) -> Tuple[MemoryFile, Literal["image/tiff"]]:
         """
         Convert data to web output (raster only).
 
@@ -200,7 +212,7 @@ class GTiffOutputReaderFunctions:
         )
 
     @deprecated_kwargs
-    def open(self, tile, process, **kwargs) -> InputTile:
+    def open(self, tile: BufferedTile, process: Mapchete, **kwargs) -> InputTile:
         """
         Open process output as input for other process.
 
@@ -212,7 +224,7 @@ class GTiffOutputReaderFunctions:
         """
         return InputTile(tile, process)
 
-    def is_valid_with_config(self, config):
+    def is_valid_with_config(self, config: dict) -> Literal[True]:
         """
         Check if output format is valid with other process parameters.
 
@@ -231,7 +243,6 @@ class GTiffOutputReaderFunctions:
 
     def _set_attributes(self, output_params):
         self.path = output_params["path"]
-        self.file_extension = ".tif"
         self.output_params = dict(
             output_params,
             nodata=output_params.get("nodata", DEFAULT_PROFILES["COG"]()["nodata"]),
@@ -241,13 +252,15 @@ class GTiffOutputReaderFunctions:
 class GTiffTileDirectoryOutputReader(
     GTiffOutputReaderFunctions, base.TileDirectoryOutputReader
 ):
-    def __init__(self, output_params, **kwargs):
+    def __init__(self, output_params: dict, **kwargs):
         """Initialize."""
         logger.debug("output is tile directory")
         super().__init__(output_params, **kwargs)
         self._set_attributes(output_params)
 
-    def read(self, output_tile, raise_if_empty: bool = False, **kwargs):
+    def read(
+        self, output_tile: BufferedTile, raise_if_empty: bool = False, **kwargs
+    ) -> ma.MaskedArray:
         """
         Read existing process output.
 
@@ -270,7 +283,7 @@ class GTiffTileDirectoryOutputReader(
                 )
             return self.empty(output_tile)
 
-    def empty(self, process_tile):
+    def empty(self, process_tile: BufferedTile) -> ma.MaskedArray:
         """
         Return empty data.
 
@@ -295,7 +308,7 @@ class GTiffTileDirectoryOutputReader(
             fill_value=profile["nodata"],
         )
 
-    def profile(self, tile=None):
+    def profile(self, tile: Optional[BufferedTile] = None) -> Dict[str, Any]:
         """
         Create a metadata dictionary for rasterio.
 
@@ -345,9 +358,13 @@ class GTiffTileDirectoryOutputReader(
 class GTiffTileDirectoryOutputWriter(
     GTiffTileDirectoryOutputReader, base.TileDirectoryOutputWriter
 ):
-    use_stac = True
+    use_stac: bool = True
 
-    def write(self, process_tile, data):
+    def write(
+        self,
+        process_tile: BufferedTile,
+        data: Union[WritableRasterData, Tuple[WritableRasterData, Dict[str, Any]]],
+    ) -> None:
         """
         Write data from process tiles into GeoTIFF file(s).
 
@@ -386,7 +403,7 @@ class GTiffTileDirectoryOutputWriter(
                 )
 
     @property
-    def stac_asset_type(self):
+    def stac_asset_type(self) -> Literal["image/tiff; application=geotiff"]:
         """GeoTIFF media type."""
         return "image/tiff; application=geotiff"
 
@@ -395,8 +412,11 @@ class GTiffSingleFileOutputWriter(
     GTiffOutputReaderFunctions, base.SingleFileOutputWriter
 ):
     write_in_parent_process = True
+    zoom: int
+    cog: bool
+    in_memory: Optional[bool] = None
 
-    def __init__(self, output_params, **kwargs):
+    def __init__(self, output_params: dict, **kwargs):
         """Initialize."""
         logger.debug("output is single file")
         self.dst = None
@@ -409,11 +429,13 @@ class GTiffSingleFileOutputWriter(
         self.in_memory = output_params.get("in_memory", None)
 
     @property
-    def stac_asset_type(self):  # pragma: no cover
+    def stac_asset_type(
+        self,
+    ) -> Literal["image/tiff; application=geotiff"]:  # pragma: no cover
         """GeoTIFF media type."""
         return "image/tiff; application=geotiff"
 
-    def prepare(self, process_area=None, **kwargs):
+    def prepare(self, process_area: Optional[Geometry] = None, **kwargs) -> None:
         bounds = (
             snap_bounds(
                 bounds=Bounds(
@@ -527,7 +549,7 @@ class GTiffSingleFileOutputWriter(
             rasterio_write(self.path, "w+", **self._profile)
         )
 
-    def read(self, output_tile, **kwargs):
+    def read(self, output_tile: BufferedTile, **kwargs) -> ma.MaskedArray:
         """
         Read existing process output.
 
@@ -542,7 +564,7 @@ class GTiffSingleFileOutputWriter(
         """
         return self.dst.read(window=self.dst.window(*output_tile.bounds), masked=True)
 
-    def get_path(self, tile=None):
+    def get_path(self, tile: Optional[BufferedTile] = None) -> MPath:
         """
         Determine target file path.
 
@@ -557,7 +579,11 @@ class GTiffSingleFileOutputWriter(
         """
         return self.path
 
-    def tiles_exist(self, process_tile=None, output_tile=None):
+    def tiles_exist(
+        self,
+        process_tile: Optional[BufferedTile] = None,
+        output_tile: Optional[BufferedTile] = None,
+    ) -> bool:
         """
         Check whether output tiles of a tile (either process or output) exists.
 
@@ -582,7 +608,7 @@ class GTiffSingleFileOutputWriter(
         if output_tile:
             return not self.read(output_tile).mask.all()
 
-    def write(self, process_tile, data):
+    def write(self, process_tile: BufferedTile, data: WritableRasterData) -> None:
         """
         Write data from process tiles into GeoTIFF file(s).
 
@@ -627,7 +653,7 @@ class GTiffSingleFileOutputWriter(
                         window=write_window,
                     )
 
-    def profile(self, tile=None):
+    def profile(self, tile: Optional[BufferedTile] = None) -> Dict[str, Any]:
         """
         Create a metadata dictionary for rasterio.
 
@@ -691,13 +717,15 @@ class InputTile(base.InputTile, RasterInput):
     pixelbuffer : integer
     """
 
-    def __init__(self, tile, process):
+    def __init__(self, tile: BufferedTile, process: Mapchete):
         """Initialize."""
         self.tile = tile
         self.process = process
         self.pixelbuffer = None
 
-    def read(self, indexes=None, **kwargs):
+    def read(
+        self, indexes: Optional[Union[int, List[int]]] = None, **kwargs
+    ) -> ma.MaskedArray:
         """
         Read reprojected & resampled input data.
 
@@ -718,7 +746,7 @@ class InputTile(base.InputTile, RasterInput):
             else ma.concatenate([ma.expand_dims(arr[i - 1], 0) for i in band_indexes])
         )
 
-    def is_empty(self, **_):
+    def is_empty(self, **_) -> bool:
         """
         Check if there is data within this tile.
 
@@ -729,7 +757,9 @@ class InputTile(base.InputTile, RasterInput):
         # empty if tile does not intersect with file bounding box
         return not self.tile.bbox.intersects(self.process.config.area_at_zoom())
 
-    def _get_band_indexes(self, indexes=None):
+    def _get_band_indexes(
+        self, indexes: Optional[Union[int, List[int]]] = None
+    ) -> List[int]:
         """Return valid band indexes."""
         if indexes:
             if isinstance(indexes, list):
@@ -737,7 +767,9 @@ class InputTile(base.InputTile, RasterInput):
             else:
                 return [indexes]
         else:
-            return range(1, self.process.config.output.profile(self.tile)["count"] + 1)
+            return list(
+                range(1, self.process.config.output.profile(self.tile)["count"] + 1)
+            )
 
     def __enter__(self):
         """Enable context manager."""

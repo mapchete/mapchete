@@ -1,10 +1,15 @@
 """Use another Mapchete process as input."""
 
+from typing import Optional
+
 from mapchete import Mapchete
 from mapchete.config import MapcheteConfig
 from mapchete.formats import base
 from mapchete.formats.protocols import InputTileProtocol
 from mapchete.geometry import reproject_geometry
+from mapchete.path import MPath
+from mapchete.tile import BufferedTile
+from mapchete.types import CRSLike, Polygon
 
 METADATA = {
     "driver_name": "Mapchete",
@@ -43,14 +48,16 @@ class InputData(base.InputData):
         "mode": "r",
         "file_extensions": ["mapchete"],
     }
+    path: MPath
+    process: Mapchete
 
-    def __init__(self, input_params, **kwargs):
+    def __init__(self, input_params: dict, **kwargs):
         """Initialize."""
         super().__init__(input_params, **kwargs)
         self.path = input_params["path"]
         self.process = Mapchete(MapcheteConfig(self.path, mode="readonly"))
 
-    def open(self, tile, **kwargs) -> InputTileProtocol:
+    def open(self, tile: BufferedTile, **kwargs) -> InputTileProtocol:
         """
         Return InputTile object.
 
@@ -65,7 +72,7 @@ class InputData(base.InputData):
         """
         return self.process.config.output.open(tile, self.process, **kwargs)
 
-    def bbox(self, out_crs=None):
+    def bbox(self, out_crs: Optional[CRSLike] = None) -> Polygon:
         """
         Return data bounding box.
 
