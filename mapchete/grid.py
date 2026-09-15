@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import math
 from typing import Tuple
 
@@ -32,7 +30,7 @@ class Grid:
         self.shape = Shape(self.height, self.width)
         self.__geo_interface__ = mapping(shape(self.bounds))
 
-    def extract(self, bounds: BoundsLike) -> Grid:
+    def extract(self, bounds: BoundsLike) -> "Grid":
         bounds = Bounds.from_inp(bounds)
 
         # use rasterio.window.Window to help with calculation
@@ -62,7 +60,7 @@ class Grid:
         return Grid(transform, obj.height, obj.width, obj.crs)
 
     @staticmethod
-    def from_bounds(bounds: BoundsLike, shape: ShapeLike, crs: CRSLike) -> Grid:
+    def from_bounds(bounds: BoundsLike, shape: ShapeLike, crs: CRSLike) -> "Grid":
         shape = Shape(*shape)
         bounds = Bounds.from_inp(bounds)
         transform = from_bounds(
