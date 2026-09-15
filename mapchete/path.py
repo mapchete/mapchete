@@ -876,7 +876,7 @@ class MPath(os.PathLike):
     @contextmanager
     def lock(
         self, postfix: str = ".lock", wait_interval_seconds: float = 1.0
-    ) -> Generator["MPath"]:
+    ) -> Generator["MPath", None, None]:
         """Locks this path but wait if there is an existing lock."""
         lockfile = self + postfix
 
@@ -893,7 +893,7 @@ class MPath(os.PathLike):
             logger.debug("deleted lockfile %s", str(lockfile))
 
     @contextmanager
-    def local_copy(self, active: bool = True) -> Generator["MPath"]:
+    def local_copy(self, active: bool = True) -> Generator["MPath", None, None]:
         """If path is remote, download to temporary directory and return path."""
         if active and self.is_remote():
             with TemporaryDirectory() as tempdir:
