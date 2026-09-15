@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from types import TracebackType
 from typing import Any, Callable, Generator, List, Optional, Protocol, Tuple, Type
 
@@ -35,7 +33,7 @@ class InputTileProtocol(GridProtocol):  # pragma: no cover
 
     def set_preprocessing_task_result(self, task_key: str, result: Any) -> None: ...
 
-    def __enter__(self) -> InputTileProtocol:
+    def __enter__(self) -> "InputTileProtocol":
         """Required for 'with' statement."""
         return self
 
@@ -102,7 +100,7 @@ class InputDataProtocol(Protocol):  # pragma: no cover
     preprocessing_tasks: dict = {}
     preprocessing_tasks_results: dict = {}
 
-    def open(self, tile: BufferedTile, **kwargs) -> InputTileProtocol:
+    def open(self, tile: BufferedTile, **kwargs) -> "InputTileProtocol":
         """Return an input instance for a given process tile."""
         ...
 

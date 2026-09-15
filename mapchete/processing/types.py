@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
@@ -26,7 +24,7 @@ class TaskInfo:
     profiling: dict = field(default_factory=dict)
 
     @staticmethod
-    def from_future(future: MFuture) -> LazyTaskInfo:
+    def from_future(future: MFuture) -> "LazyTaskInfo":
         return LazyTaskInfo(future)
 
 

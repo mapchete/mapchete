@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import operator
 import os
 import warnings
@@ -59,6 +57,11 @@ class DaskSettings(BaseModel):
     chunksize: int = 100
     scheduler: Optional[str] = None
     client: Optional[Type[Client]] = None
+
+
+class ZoomParameters(BaseModel):
+    input: OrderedDict = Field(default_factory=OrderedDict)
+    process_parameters: OrderedDict = Field(default_factory=OrderedDict)
 
 
 class ProcessConfig(BaseModel, arbitrary_types_allowed=True):
@@ -174,7 +177,7 @@ class ProcessConfig(BaseModel, arbitrary_types_allowed=True):
     @staticmethod
     def parse(
         input_config: Union[dict, MPathLike], strict: bool = False
-    ) -> ProcessConfig:
+    ) -> "ProcessConfig":
         """Read config from file or dictionary and return validated configuration"""
 
         def _include_env(dictionary: dict) -> OrderedDict:
@@ -247,11 +250,6 @@ class ProcessConfig(BaseModel, arbitrary_types_allowed=True):
     def zoom_parameters(self, zoom: int) -> ZoomParameters:
         """Return parameter dictionary per zoom level."""
         return ZoomParameters(**self.raw_conf_at_zoom(zoom))
-
-
-class ZoomParameters(BaseModel):
-    input: OrderedDict = Field(default_factory=OrderedDict)
-    process_parameters: OrderedDict = Field(default_factory=OrderedDict)
 
 
 def _element_at_zoom(name: str, element: Any, zoom: int) -> Any:

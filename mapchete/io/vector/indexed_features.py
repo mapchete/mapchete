@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from itertools import chain
 import logging
 from typing import Any, Dict, Iterable, List, Literal, Optional, Tuple, Union, Generator
@@ -294,7 +292,7 @@ class IndexedFeatures(FeatureCollectionProtocol):
     def from_fiona(
         src: Collection,
         index: Optional[IndexType] = "strtree",
-    ) -> IndexedFeatures:
+    ) -> "IndexedFeatures":
         return IndexedFeatures(src, index=index, crs=src.crs)
 
     @staticmethod
@@ -303,7 +301,7 @@ class IndexedFeatures(FeatureCollectionProtocol):
         grid: Optional[Union[Grid, GridProtocol]] = None,
         index: Optional[IndexType] = "strtree",
         **kwargs,
-    ) -> IndexedFeatures:
+    ) -> "IndexedFeatures":
         logger.debug(f"reading {str(path)} into memory")
         if grid:
             return IndexedFeatures(

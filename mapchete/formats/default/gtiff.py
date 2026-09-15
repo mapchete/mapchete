@@ -30,8 +30,6 @@ compress: string
     CCITTFAX3, CCITTFAX4, lzma
 """
 
-from __future__ import annotations
-
 from contextlib import ExitStack
 import logging
 import math
@@ -145,7 +143,9 @@ class OutputDataWriter:
     file_extension: Literal[".tif"] = ".tif"
     output_params: dict
 
-    def __new__(self, output_params: dict, **kwargs):
+    def __new__(
+        self, output_params: dict, **kwargs
+    ) -> Union["GTiffSingleFileOutputWriter", "GTiffTileDirectoryOutputWriter"]:
         """Initialize."""
         self.path = output_params["path"]
         if self.path.suffix == self.file_extension:
@@ -212,7 +212,7 @@ class GTiffOutputReaderFunctions:
         )
 
     @deprecated_kwargs
-    def open(self, tile: BufferedTile, process: Mapchete, **kwargs) -> InputTile:
+    def open(self, tile: BufferedTile, process: Mapchete, **kwargs) -> "InputTile":
         """
         Open process output as input for other process.
 

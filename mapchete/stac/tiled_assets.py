@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from collections import OrderedDict
 from dataclasses import dataclass, field
 import datetime
@@ -185,7 +183,7 @@ class STACTA:
         mime_type: str = "image/tiff; application=geotiff",
         asset_template_name: str = "bands",
         href: Optional[MPath] = None,
-    ) -> STACTA:
+    ) -> "STACTA":
         return STACTA(
             id=id,
             tile_pyramid=tile_pyramid,
@@ -204,14 +202,14 @@ class STACTA:
         )
 
     @staticmethod
-    def from_file(path: MPathLike) -> STACTA:
+    def from_file(path: MPathLike) -> "STACTA":
         path = MPath.from_inp(path)
         return STACTA.from_item(
             Item.from_dict(path.read_json(), href=str(path)), item_href=path
         )
 
     @staticmethod
-    def from_item(item: Item, item_href: Optional[MPath] = None) -> STACTA:
+    def from_item(item: Item, item_href: Optional[MPath] = None) -> "STACTA":
         tile_matrix_sets = item.properties.get("tiles:tile_matrix_sets", [])
         for values in tile_matrix_sets.values():
             # TODO: account for multiple tile matrix sets

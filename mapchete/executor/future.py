@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import uuid
 import logging
 from typing import Any, Callable, Dict, Optional, Protocol, Tuple, Union
@@ -71,7 +69,7 @@ class MFuture:
         lazy: bool = True,
         result: Optional[Any] = None,
         timeout: float = mapchete_options.future_timeout,
-    ) -> MFuture:
+    ) -> "MFuture":
         # get status and name if possible
         # get distributed.Future.status or None
         status = getattr(future, "status", None)
@@ -111,13 +109,15 @@ class MFuture:
             )
 
     @staticmethod
-    def skip(skip_info: Optional[Any] = None, result: Optional[Any] = None) -> MFuture:
+    def skip(
+        skip_info: Optional[Any] = None, result: Optional[Any] = None
+    ) -> "MFuture":
         return MFuture(result=result, skip_info=skip_info, skipped=True)
 
     @staticmethod
     def from_func(
         func: Callable, fargs: Optional[Tuple] = None, fkwargs: Optional[Dict] = None
-    ) -> MFuture:
+    ) -> "MFuture":
         fargs = fargs or ()
         fkwargs = fkwargs or {}
         try:
@@ -126,7 +126,7 @@ class MFuture:
             return MFuture(exception=exc)
 
     @staticmethod
-    def from_func_partial(func: Callable, item: Any) -> MFuture:
+    def from_func_partial(func: Callable, item: Any) -> "MFuture":
         name = getattr(item, "id", None)
         try:
             result = func(item)
