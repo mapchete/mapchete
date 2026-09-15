@@ -1,7 +1,5 @@
 """Wrapper functions around rasterio and useful raster functions."""
 
-from __future__ import annotations
-
 import logging
 import sys
 import warnings

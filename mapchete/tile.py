@@ -1,7 +1,5 @@
 """Mapchtete handling tiles."""
 
-from __future__ import annotations
-
 from enum import Enum
 import logging
 from itertools import product
@@ -87,7 +85,7 @@ class BufferedTilePyramid(TilePyramid):
         else:  # pragma: no cover
             raise ValueError("pixelbuffer has to be a non-negative int")
 
-    def tile(self, zoom: int, row: int, col: int) -> BufferedTile:
+    def tile(self, zoom: int, row: int, col: int) -> "BufferedTile":
         """
         Return ``BufferedTile`` object of this ``BufferedTilePyramid``.
         """
@@ -97,7 +95,7 @@ class BufferedTilePyramid(TilePyramid):
 
     def tiles_from_bounds(
         self, bounds: BoundsLike, zoom: int
-    ) -> Generator[BufferedTile, None, None]:
+    ) -> Generator["BufferedTile", None, None]:
         """
         Yield BufferedTiles intersecting with bounds.
         """
@@ -105,7 +103,7 @@ class BufferedTilePyramid(TilePyramid):
 
     def tiles_from_bounds_batches(
         self, bounds: BoundsLike, zoom: int, batch_by: BatchBy = BatchBy.row
-    ) -> Generator[Generator[BufferedTile, None, None], None, None]:
+    ) -> Generator[Generator["BufferedTile", None, None], None, None]:
         """
         Yield batches of BufferedTiles intersecting with bounds.
         """
@@ -115,7 +113,7 @@ class BufferedTilePyramid(TilePyramid):
 
     def tiles_from_bbox(
         self, geometry: Geometry, zoom: int
-    ) -> Generator[BufferedTile, None, None]:
+    ) -> Generator["BufferedTile", None, None]:
         """
         Yield BufferedTiles intersecting with geometry bounds.
         """
@@ -125,7 +123,7 @@ class BufferedTilePyramid(TilePyramid):
 
     def tiles_from_bbox_batches(
         self, geometry: Geometry, zoom: int, batch_by: BatchBy = BatchBy.row
-    ) -> Generator[Generator[BufferedTile, None, None], None, None]:
+    ) -> Generator[Generator["BufferedTile", None, None], None, None]:
         """
         Yield batches of BufferedTiles intersecting with geometry bounds.
         """
@@ -138,7 +136,7 @@ class BufferedTilePyramid(TilePyramid):
 
     def tiles_from_geom(
         self, geometry: Geometry, zoom: int, exact: bool = False
-    ) -> Generator[BufferedTile, None, None]:
+    ) -> Generator["BufferedTile", None, None]:
         """
         Yield BufferedTiles intersecting with geometry.
         """
@@ -152,7 +150,7 @@ class BufferedTilePyramid(TilePyramid):
         zoom: int,
         batch_by: BatchBy = BatchBy.row,
         exact: bool = False,
-    ) -> Generator[Generator[BufferedTile, None, None], None, None]:
+    ) -> Generator[Generator["BufferedTile", None, None], None, None]:
         """
         Yield batches of BufferedTiles intersecting with geometry.
         """
@@ -164,7 +162,7 @@ class BufferedTilePyramid(TilePyramid):
         ):
             yield (self.tile(*tile.id) for tile in batch if isinstance(tile, Tile))
 
-    def intersecting(self, tile: BufferedTile) -> List[BufferedTile]:
+    def intersecting(self, tile: "BufferedTile") -> List["BufferedTile"]:
         """
         Return all BufferedTiles intersecting with tile.
         """
@@ -201,13 +199,13 @@ class BufferedTilePyramid(TilePyramid):
             pixelbuffer=self.pixelbuffer,
         )  # type: ignore
 
-    def without_pixelbuffer(self) -> BufferedTilePyramid:
+    def without_pixelbuffer(self) -> "BufferedTilePyramid":
         config_dict = self.to_dict()
         config_dict.update(pixelbuffer=0)
         return BufferedTilePyramid(**config_dict)
 
     @staticmethod
-    def from_dict(config_dict) -> BufferedTilePyramid:
+    def from_dict(config_dict) -> "BufferedTilePyramid":
         """
         Initialize TilePyramid from configuration dictionary.
         """
@@ -282,19 +280,19 @@ class BufferedTile(GridProtocol):
     def is_valid(self) -> bool:  # pragma: no cover
         return self._tile.is_valid()
 
-    def get_children(self) -> List[BufferedTile]:
+    def get_children(self) -> List["BufferedTile"]:
         """
         Get tile children (intersecting tiles in next zoom level).
         """
         return [BufferedTile(t, self.pixelbuffer) for t in self._tile.get_children()]
 
-    def get_parent(self) -> BufferedTile:
+    def get_parent(self) -> "BufferedTile":
         """
         Get tile parent (intersecting tile in previous zoom level).
         """
         return BufferedTile(self._tile.get_parent(), self.pixelbuffer)  # type: ignore
 
-    def get_neighbors(self, connectedness: Literal[4, 8] = 8) -> List[BufferedTile]:
+    def get_neighbors(self, connectedness: Literal[4, 8] = 8) -> List["BufferedTile"]:
         """
         Return tile neighbors.
 
@@ -328,7 +326,7 @@ class BufferedTile(GridProtocol):
             or self.top >= self.tile_pyramid.top  # touches_right  # touches_top
         )
 
-    def __eq__(self, other: BufferedTile):
+    def __eq__(self, other: "BufferedTile"):
         return (
             isinstance(other, self.__class__)
             and self.pixelbuffer == other.pixelbuffer
@@ -336,7 +334,7 @@ class BufferedTile(GridProtocol):
             and self.id == other.id
         )
 
-    def __ne__(self, other: BufferedTile):
+    def __ne__(self, other: "BufferedTile"):
         return not self.__eq__(other)
 
     def __repr__(self):

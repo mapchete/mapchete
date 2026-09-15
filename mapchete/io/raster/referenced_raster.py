@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import logging
 from typing import List, Optional, Tuple, Union, Any
 import uuid
@@ -174,7 +172,7 @@ class ReferencedRaster(GridProtocol):
     def from_rasterio(
         src,
         masked: bool = True,
-    ) -> ReferencedRaster:
+    ) -> "ReferencedRaster":
         if src.transform.is_identity and src.gcps:  # pragma: no cover
             raise NotImplementedError(
                 "ReferencedRaster cannot be created from a GCPS georeferenced source"
@@ -192,7 +190,7 @@ class ReferencedRaster(GridProtocol):
         grid: Optional[Union[Grid, GridProtocol]] = None,
         masked: bool = True,
         **kwargs,
-    ) -> ReferencedRaster:
+    ) -> "ReferencedRaster":
         path = MPath.from_inp(path)
 
         logger.debug(f"reading {str(path)} into memory")
@@ -218,10 +216,10 @@ class ReferencedRaster(GridProtocol):
 
     @staticmethod
     def from_array_like(
-        array_like: Union[np.ndarray, ma.MaskedArray, GridProtocol, ReferencedRaster],
+        array_like: Union[np.ndarray, ma.MaskedArray, GridProtocol, "ReferencedRaster"],
         transform: Optional[Affine] = None,
         crs: Optional[CRSLike] = None,
-    ) -> ReferencedRaster:
+    ) -> "ReferencedRaster":
         if isinstance(array_like, ReferencedRaster):
             return array_like
         elif isinstance(array_like, np.ndarray):
@@ -279,7 +277,7 @@ class ReferencedRasterInput(RasterInput):
         # should this even be called?
         pass
 
-    def __enter__(self) -> ReferencedRasterInput:  # pragma: no cover
+    def __enter__(self) -> "ReferencedRasterInput":  # pragma: no cover
         """Required for 'with' statement."""
         return self
 
@@ -289,7 +287,7 @@ class ReferencedRasterInput(RasterInput):
     @staticmethod
     def from_array(
         array: np.ndarray, tile: BufferedTile, **kwargs
-    ) -> ReferencedRasterInput:
+    ) -> "ReferencedRasterInput":
         return ReferencedRasterInput(
             ReferencedRaster.from_array_like(
                 array, transform=tile.transform, crs=tile.crs
@@ -304,7 +302,7 @@ class ReferencedRasterInput(RasterInput):
         tile: BufferedTile,
         masked: bool = True,
         **kwargs,
-    ) -> ReferencedRasterInput:
+    ) -> "ReferencedRasterInput":
         return ReferencedRasterInput(
             ReferencedRaster.from_file(path, grid=tile, masked=masked),
             tile=tile,

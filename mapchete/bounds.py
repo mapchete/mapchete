@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from typing import Any, Optional, Union, Iterable
 
 from rasterio.crs import CRS
@@ -52,7 +50,7 @@ class Bounds(list):
     @staticmethod
     def from_inp(
         inp: BoundsLike, strict: bool = True, crs: Optional[CRSLike] = None
-    ) -> Bounds:
+    ) -> "Bounds":
         if isinstance(inp, (list, tuple)):
             if len(inp) != 4:
                 raise ValueError("Bounds must be initialized with exactly four values.")
@@ -67,15 +65,15 @@ class Bounds(list):
     @staticmethod
     def from_dict(
         inp: dict, strict: bool = True, crs: Optional[CRSLike] = None
-    ) -> Bounds:
+    ) -> "Bounds":
         return Bounds(**inp, strict=strict, crs=crs)
 
     @staticmethod
-    def latlon() -> Bounds:
+    def latlon() -> "Bounds":
         return Bounds(-180.0, -90.0, 180.0, 90.0, crs="EPSG:4326")
 
     @staticmethod
-    def mercator() -> Bounds:
+    def mercator() -> "Bounds":
         return Bounds(
             -20037508.3427892,
             -20037508.3427892,
@@ -122,7 +120,7 @@ class Bounds(list):
     def __ne__(self, other):
         return not self == other
 
-    def __add__(self, other: Any) -> Bounds:
+    def __add__(self, other: Any) -> "Bounds":
         other = Bounds.from_inp(other)
         return Bounds(
             left=min([self.left, other.left]),
@@ -158,7 +156,7 @@ class Bounds(list):
         if hasattr(left, "__iter__") and not isinstance(
             left, (float, int)
         ):  # pragma: no cover
-            self.left, self.bottom, self.right, self.top = [i for i in left]
+            self.left, self.bottom, self.right, self.top = left
         elif (
             isinstance(left, (float, int))
             and isinstance(bottom, (float, int))
@@ -249,7 +247,7 @@ class Bounds(list):
         )
         return horizontal and vertical
 
-    def intersection(self, other: BoundsLike) -> Bounds:
+    def intersection(self, other: BoundsLike) -> "Bounds":
         other = Bounds.from_inp(other)
         if not self.intersects(other):  # pragma: no cover
             raise ValueError("bounds do not intersect")
@@ -261,7 +259,7 @@ class Bounds(list):
             crs=self._shared_crs(other),
         )
 
-    def union(self, other: BoundsLike) -> Bounds:
+    def union(self, other: BoundsLike) -> "Bounds":
         other = Bounds.from_inp(other)
         return Bounds(
             left=min([self.left, other.left]),

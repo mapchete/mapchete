@@ -20,9 +20,11 @@ nodata: integer or float
 """
 
 import logging
+from typing import Literal, Optional, Dict, Any, Tuple
 
 import numpy as np
 import numpy.ma as ma
+from rasterio.io import MemoryFile
 
 from mapchete.errors import MapcheteNodataTile
 from mapchete.formats import base
@@ -31,6 +33,7 @@ from mapchete.io.raster import (
     prepare_array,
     read_raster_no_crs,
     write_raster_window,
+    WritableRasterData,
 )
 from mapchete.path import MPath
 from mapchete.tile import BufferedTile
@@ -71,8 +74,11 @@ class OutputDataReader(base.TileDirectoryOutputReader):
     """
 
     METADATA = METADATA
+    path: MPath
+    file_extension: Literal[".png"] = ".png"
+    output_params: dict
 
-    def __init__(self, output_params, **kwargs):
+    def __init__(self, output_params: dict, **kwargs):
         """Initialize."""
         super().__init__(output_params)
         self.path = output_params["path"]
@@ -83,7 +89,9 @@ class OutputDataReader(base.TileDirectoryOutputReader):
             dtype=PNG_DEFAULT_PROFILE["dtype"],
         )
 
-    def read(self, output_tile, raise_if_empty: bool = False, **kwargs):
+    def read(
+        self, output_tile: BufferedTile, raise_if_empty: bool = False, **kwargs
+    ) -> ma.MaskedArray:
         """
         Read existing process output.
 
@@ -105,7 +113,7 @@ class OutputDataReader(base.TileDirectoryOutputReader):
                 )
             return self.empty(output_tile)
 
-    def is_valid_with_config(self, config):
+    def is_valid_with_config(self, config: dict) -> Literal[True]:
         """
         Check if output format is valid with other process parameters.
 
@@ -120,7 +128,7 @@ class OutputDataReader(base.TileDirectoryOutputReader):
         """
         return validate_values(config, [("path", (str, MPath))])
 
-    def profile(self, tile=None):
+    def profile(self, tile: Optional[BufferedTile] = None) -> Dict[str, Any]:
         """
         Create a metadata dictionary for rasterio.
 
@@ -145,7 +153,9 @@ class OutputDataReader(base.TileDirectoryOutputReader):
             pass
         return dst_metadata
 
-    def for_web(self, data):
+    def for_web(
+        self, data: WritableRasterData
+    ) -> Tuple[MemoryFile, Literal["image/png"]]:
         """
         Convert data to web output.
 
@@ -158,10 +168,11 @@ class OutputDataReader(base.TileDirectoryOutputReader):
         web data : array
         """
         rgba = self._prepare_array_for_png(data)
-        data = ma.masked_where(rgba == self.output_params["nodata"], rgba)
-        return memory_file(data, self.profile()), "image/png"
+        return memory_file(
+            ma.masked_where(rgba == self.output_params["nodata"], rgba), self.profile()
+        ), "image/png"
 
-    def empty(self, process_tile):
+    def empty(self, process_tile: BufferedTile) -> ma.MaskedArray:
         """
         Return empty data.
 
@@ -186,7 +197,7 @@ class OutputDataReader(base.TileDirectoryOutputReader):
             dtype=PNG_DEFAULT_PROFILE["dtype"],
         )
 
-    def _prepare_array_for_png(self, data):
+    def _prepare_array_for_png(self, data: WritableRasterData) -> np.ndarray:
         data = prepare_array(data, dtype=np.uint8)
         # Create 3D NumPy array with alpha channel.
         if len(data) == 1:
@@ -223,7 +234,7 @@ class OutputDataReader(base.TileDirectoryOutputReader):
 class OutputDataWriter(base.OutputDataWriter, OutputDataReader):
     METADATA = METADATA
 
-    def write(self, process_tile, data):
+    def write(self, process_tile: BufferedTile, data: WritableRasterData) -> None:
         """
         Write data from one or more process tiles.
 

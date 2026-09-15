@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import logging
 from dataclasses import dataclass
 from typing import Optional, Union
@@ -38,7 +36,7 @@ class InputInfo:
     pixel_size: Optional[int] = None
 
     @staticmethod
-    def from_inp(inp: Union[MPathLike, dict, MapcheteConfig]) -> InputInfo:
+    def from_inp(inp: Union[MPathLike, dict, MapcheteConfig]) -> "InputInfo":
         try:
             path = MPath.from_inp(inp)
 
@@ -53,7 +51,7 @@ class InputInfo:
         return InputInfo.from_path(path)
 
     @staticmethod
-    def from_config_dict(conf: dict) -> InputInfo:
+    def from_config_dict(conf: dict) -> "InputInfo":
         output_params = conf["output"]
         output_pyramid = raw_conf_output_pyramid(conf)
         return InputInfo(
@@ -69,7 +67,7 @@ class InputInfo:
     @staticmethod
     def from_mapchete_config(
         mapchete_config: MapcheteConfig,
-    ) -> InputInfo:  # pragma: no cover
+    ) -> "InputInfo":  # pragma: no cover
         return InputInfo(
             input_type=InputType.mapchete,
             output_params=mapchete_config.output.params,
@@ -83,7 +81,7 @@ class InputInfo:
         )
 
     @staticmethod
-    def from_path(path: MPath) -> InputInfo:
+    def from_path(path: MPath) -> "InputInfo":
         # assuming single file if path has a file extension
         if path.suffix:
             logger.debug("assuming single file")
@@ -112,11 +110,11 @@ class InputInfo:
             return InputInfo.from_tile_directory(path)
 
     @staticmethod
-    def from_mapchete_file(path: MPath) -> InputInfo:
+    def from_mapchete_file(path: MPath) -> "InputInfo":
         return InputInfo.from_config_dict(raw_conf(path))
 
     @staticmethod
-    def from_rasterio_file(path: MPath) -> InputInfo:
+    def from_rasterio_file(path: MPath) -> "InputInfo":
         with rasterio_open(path) as src:
             if src.transform.is_identity:
                 if src.gcps[1] is not None:
@@ -148,7 +146,7 @@ class InputInfo:
             )
 
     @staticmethod
-    def from_fiona_file(path: MPath) -> InputInfo:
+    def from_fiona_file(path: MPath) -> "InputInfo":
         with fiona_open(path) as src:
             return InputInfo(
                 input_type=InputType.single_file,
@@ -164,7 +162,7 @@ class InputInfo:
             )
 
     @staticmethod
-    def from_tile_directory(path) -> InputInfo:
+    def from_tile_directory(path) -> "InputInfo":
         conf = (path / "metadata.json").read_json()
         pyramid = BufferedTilePyramid.from_dict(conf["pyramid"])
         return InputInfo(
@@ -182,7 +180,7 @@ class OutputInfo:
     driver: Optional[str]
 
     @staticmethod
-    def from_path(path: MPath) -> OutputInfo:
+    def from_path(path: MPath) -> "OutputInfo":
         if path.suffix:
             if path.suffix == ".tif":
                 return OutputInfo(type=OutputType.single_file, driver="GTiff")

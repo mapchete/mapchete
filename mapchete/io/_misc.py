@@ -57,7 +57,7 @@ def get_best_zoom_level(input_file, tile_pyramid_type, tile_size: int = 256):
             return max([0, zoom - 1])
 
 
-def get_segmentize_value(input_file: MPathLike, tile_pyramid: TilePyramid):
+def get_segmentize_value(input_file: MPathLike, tile_pyramid: TilePyramid) -> float:
     """
     Return the recommended segmentation value in input file units.
 

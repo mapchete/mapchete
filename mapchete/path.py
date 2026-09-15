@@ -1,7 +1,5 @@
 """Functions handling paths and file systems."""
 
-from __future__ import annotations
-
 from collections import defaultdict
 from contextlib import contextmanager
 from datetime import datetime
@@ -82,9 +80,9 @@ def _retry(func):
 
 
 class DirectoryContent(NamedTuple):
-    root: MPath
-    subdirs: List[MPath]
-    files: List[MPath]
+    root: "MPath"
+    subdirs: List["MPath"]
+    files: List["MPath"]
 
 
 class MPath(os.PathLike):
@@ -97,7 +95,7 @@ class MPath(os.PathLike):
 
     def __init__(
         self,
-        path: Union[str, os.PathLike, MPath],
+        path: Union[str, os.PathLike, "MPath"],
         fs: Optional[AbstractFileSystem] = None,
         storage_options: Union[dict, None] = None,
         gdal_options: Union[dict, None] = None,
@@ -140,7 +138,7 @@ class MPath(os.PathLike):
         self._info = info_dict
 
     @staticmethod
-    def from_dict(dictionary: dict) -> MPath:
+    def from_dict(dictionary: dict) -> "MPath":
         path_str = dictionary.get("path")
         if not path_str:
             raise ValueError(
@@ -154,7 +152,7 @@ class MPath(os.PathLike):
         )
 
     @staticmethod
-    def from_inp(inp: MPathLike, **kwargs) -> MPath:
+    def from_inp(inp: MPathLike, **kwargs) -> "MPath":
         if isinstance(inp, dict):
             return MPath.from_dict(inp)
         elif isinstance(inp, str):
@@ -169,7 +167,7 @@ class MPath(os.PathLike):
             raise TypeError(f"cannot construct MPath object from {inp}")
 
     @staticmethod
-    def cwd() -> MPath:
+    def cwd() -> "MPath":
         return MPath(os.getcwd())
 
     @_retry
@@ -220,7 +218,7 @@ class MPath(os.PathLike):
         return os.path.dirname(self._path_str)
 
     @property
-    def parent(self) -> MPath:
+    def parent(self) -> "MPath":
         return self.new(self.dirname)
 
     @property
@@ -284,14 +282,14 @@ class MPath(os.PathLike):
         else:
             return set(self.fs.protocol)
 
-    def without_suffix(self) -> MPath:
+    def without_suffix(self) -> "MPath":
         return self.new(os.path.splitext(self._path_str)[0])
 
-    def with_suffix(self, suffix: str) -> MPath:
+    def with_suffix(self, suffix: str) -> "MPath":
         suffix = suffix.lstrip(".")
         return self.new(self.without_suffix() + f".{suffix}")
 
-    def without_protocol(self) -> MPath:
+    def without_protocol(self) -> "MPath":
         # Split the input string on "://"
         parts = self._path_str.split("://", 1)
 
@@ -302,7 +300,7 @@ class MPath(os.PathLike):
         # If "://" was not found, return the input string as-is
         return self
 
-    def with_protocol(self, protocol: str) -> MPath:
+    def with_protocol(self, protocol: str) -> "MPath":
         return self.new(f"{protocol}://") / self.without_protocol()
 
     def startswith(self, string: str) -> bool:
@@ -314,7 +312,7 @@ class MPath(os.PathLike):
     def split(self, by: str) -> List[str]:  # pragma: no cover
         return self._path_str.split(by)
 
-    def crop(self, elements: int) -> MPath:
+    def crop(self, elements: int) -> "MPath":
         return self.new("/".join(self.elements[elements:]))
 
     def new(
@@ -322,7 +320,7 @@ class MPath(os.PathLike):
         path: Union[MPathLike, Dict[str, Any]],
         relative_to_self: bool = False,
         info_dict: Optional[Dict[str, Any]] = None,
-    ) -> MPath:
+    ) -> "MPath":
         """Create a new MPath instance with given path."""
         if isinstance(path, str):
             path_info = info_dict
@@ -372,7 +370,7 @@ class MPath(os.PathLike):
             return True
         return os.path.isabs(self._path_str)
 
-    def absolute_path(self, base_dir: Union[MPathLike, None] = None) -> MPath:
+    def absolute_path(self, base_dir: Union[MPathLike, None] = None) -> "MPath":
         """
         Return absolute path if path is local.
 
@@ -398,7 +396,7 @@ class MPath(os.PathLike):
         self,
         start: Union[MPathLike, None] = None,
         base_dir: Union[MPathLike, None] = None,
-    ) -> MPath:
+    ) -> "MPath":
         """
         Return relative path if path is local.
 
@@ -487,7 +485,7 @@ class MPath(os.PathLike):
     @_retry
     def ls(
         self, absolute_paths: bool = True, detail: Optional[bool] = None
-    ) -> List[MPath]:
+    ) -> List["MPath"]:
         if detail is not None:  # pragma: no cover
             warnings.warn(DeprecationWarning("'detail' kwarg is deprecated."))
         logger.debug("%s: make self.fs.ls() call ...", str(self))
@@ -535,7 +533,7 @@ class MPath(os.PathLike):
 
     def paginate(
         self, items_per_page: int = 1000
-    ) -> Generator[List[MPath], None, None]:
+    ) -> Generator[List["MPath"], None, None]:
         """
         List all files in directory and all subdirectories.
 
@@ -682,7 +680,7 @@ class MPath(os.PathLike):
         logger.debug("%s: make self.fs.isdir() call ...", str(self))
         return self.fs.isdir(self._path_str)
 
-    def joinpath(self, *other: Union[MPathLike, List[MPathLike]]) -> MPath:
+    def joinpath(self, *other: Union[MPathLike, List[MPathLike]]) -> "MPath":
         """Join path with other."""
         return self.new(os.path.join(self._path_str, *list(map(str, other))))
 
@@ -878,7 +876,7 @@ class MPath(os.PathLike):
     @contextmanager
     def lock(
         self, postfix: str = ".lock", wait_interval_seconds: float = 1.0
-    ) -> Generator[MPath]:
+    ) -> Generator["MPath", None, None]:
         """Locks this path but wait if there is an existing lock."""
         lockfile = self + postfix
 
@@ -895,7 +893,7 @@ class MPath(os.PathLike):
             logger.debug("deleted lockfile %s", str(lockfile))
 
     @contextmanager
-    def local_copy(self, active: bool = True) -> Generator[MPath]:
+    def local_copy(self, active: bool = True) -> Generator["MPath", None, None]:
         """If path is remote, download to temporary directory and return path."""
         if active and self.is_remote():
             with TemporaryDirectory() as tempdir:
@@ -906,7 +904,7 @@ class MPath(os.PathLike):
         else:  # pragma: no cover
             yield self
 
-    def __truediv__(self, other: MPathLike) -> MPath:
+    def __truediv__(self, other: MPathLike) -> "MPath":
         """Short for self.joinpath()."""
         return self.joinpath(other)
 

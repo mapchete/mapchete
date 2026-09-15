@@ -2,6 +2,7 @@
 
 import logging
 from functools import cached_property
+from typing import Optional
 
 from shapely.geometry import box
 
@@ -16,7 +17,8 @@ from mapchete.formats import (
 from mapchete.formats.protocols import RasterInput
 from mapchete.io import MPath, tile_to_zoom_level
 from mapchete.geometry import reproject_geometry
-from mapchete.tile import BufferedTilePyramid
+from mapchete.tile import BufferedTilePyramid, BufferedTile
+from mapchete.types import CRSLike, Polygon
 from mapchete.validate import validate_values
 
 logger = logging.getLogger(__name__)
@@ -52,6 +54,7 @@ class InputData(base.InputData):
     """
 
     METADATA = METADATA
+    path: MPath
 
     def __init__(self, input_params: dict, **kwargs):
         """Initialize."""
@@ -163,10 +166,10 @@ class InputData(base.InputData):
         self._resampling = self._params.get("resampling")
 
     @cached_property
-    def _tiledir_metadata_json(self):
+    def _tiledir_metadata_json(self) -> dict:
         return read_output_metadata(self.path.joinpath("metadata.json"))
 
-    def open(self, tile, **kwargs):
+    def open(self, tile: BufferedTile, **kwargs) -> "InputTile":
         """
         Return InputTile object.
 
@@ -193,7 +196,7 @@ class InputData(base.InputData):
             **kwargs,
         )
 
-    def bbox(self, out_crs=None):
+    def bbox(self, out_crs: Optional[CRSLike] = None) -> Polygon:
         """
         Return data bounding box.
 
@@ -245,7 +248,7 @@ class InputTile(base.InputTile, RasterInput):
 
     def __init__(
         self,
-        tile,
+        tile: BufferedTile,
         data_type=None,
         basepath=None,
         file_extension=None,

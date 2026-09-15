@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import logging
 from typing import List, Literal, Optional, Tuple
 
@@ -54,7 +52,7 @@ class BoundingBox(BaseModel):
     upperCorner: List[float]
 
     @staticmethod
-    def from_bounds(bounds: Bounds) -> BoundingBox:
+    def from_bounds(bounds: Bounds) -> "BoundingBox":
         if bounds.crs is None:  # pragma: no cover
             raise ValueError("bounds.crs must be set")
         return BoundingBox(
@@ -88,7 +86,7 @@ class TileMatrixSet(BaseModel):
     @staticmethod
     def from_tile_pyramid(
         tile_pyramid: BufferedTilePyramid, zoom_levels: ZoomLevels = ZoomLevels(0, 20)
-    ) -> TileMatrixSet:
+    ) -> "TileMatrixSet":
         grid = tile_pyramid.grid.type
         match grid:
             case "geodetic":

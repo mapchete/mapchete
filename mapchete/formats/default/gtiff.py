@@ -30,13 +30,11 @@ compress: string
     CCITTFAX3, CCITTFAX4, lzma
 """
 
-from __future__ import annotations
-
 from contextlib import ExitStack
 import logging
 import math
 import os
-from typing import Literal, Union, Tuple, Optional, Dict, Any, List, TYPE_CHECKING
+from typing import Literal, Union, Tuple, Optional, Dict, Any, List
 import warnings
 
 import numpy as np
@@ -61,15 +59,14 @@ from mapchete.io.raster import (
     rasterio_write,
     read_raster_no_crs,
     write_raster_window,
+    WritableRasterData,
 )
-from mapchete.io.raster.array import WritableRasterData
+from mapchete.processing import Mapchete
 from mapchete.settings import mapchete_options
 from mapchete.tile import BufferedTile
 from mapchete.types import to_resampling, Geometry
 from mapchete.validate import deprecated_kwargs, validate_values
 
-if TYPE_CHECKING:
-    from mapchete.processing import Mapchete
 
 logger = logging.getLogger(__name__)
 
@@ -145,7 +142,9 @@ class OutputDataWriter:
     file_extension: Literal[".tif"] = ".tif"
     output_params: dict
 
-    def __new__(self, output_params: dict, **kwargs):
+    def __new__(
+        self, output_params: dict, **kwargs
+    ) -> Union["GTiffSingleFileOutputWriter", "GTiffTileDirectoryOutputWriter"]:
         """Initialize."""
         self.path = output_params["path"]
         if self.path.suffix == self.file_extension:
@@ -212,7 +211,7 @@ class GTiffOutputReaderFunctions:
         )
 
     @deprecated_kwargs
-    def open(self, tile: BufferedTile, process: Mapchete, **kwargs) -> InputTile:
+    def open(self, tile: BufferedTile, process: Mapchete, **kwargs) -> "InputTile":
         """
         Open process output as input for other process.
 
