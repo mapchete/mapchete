@@ -5,9 +5,12 @@ Currently limited by extensions .tif, .vrt., .png and .jp2 but could be
 extended easily.
 """
 
-import logging
-import warnings
+from __future__ import annotations
+
 from copy import deepcopy
+import logging
+from typing import Dict, Any, Optional, Union, List
+import warnings
 
 import numpy.ma as ma
 from rasterio.crs import CRS
@@ -26,6 +29,8 @@ from mapchete.io.raster import (
 )
 from mapchete.geometry import reproject_geometry, segmentize_geometry
 from mapchete.path import MPath
+from mapchete.tile import BufferedTile, TilePyramid
+from mapchete.types import CRSLike, Polygon, ResamplingLike, MPathLike
 
 logger = logging.getLogger(__name__)
 
@@ -68,11 +73,12 @@ class InputData(base.InputData):
         "mode": "r",
         "file_extensions": ["tif", "vrt", "png", "jp2"],
     }
+    path: MPath
     _cached_path = None
     _cache_keep = False
     _memory_cache_active = False
 
-    def __init__(self, input_params, **kwargs):
+    def __init__(self, input_params: Dict[str, Any], **kwargs):
         """Initialize."""
         super().__init__(input_params, **kwargs)
         self.path = (
@@ -143,7 +149,7 @@ class InputData(base.InputData):
                     f"invalid cache configuration given: {input_params['abstract']['cache']}"
                 )
 
-    def open(self, tile, **kwargs):
+    def open(self, tile: BufferedTile, **kwargs) -> InputTile:
         """
         Return InputTile object.
 
@@ -170,7 +176,7 @@ class InputData(base.InputData):
             **kwargs,
         )
 
-    def bbox(self, out_crs=None):
+    def bbox(self, out_crs: Optional[CRSLike] = None) -> Polygon:
         """
         Return data bounding box.
 
@@ -200,7 +206,7 @@ class InputData(base.InputData):
         else:
             return self._src_bbox
 
-    def exists(self):
+    def exists(self) -> bool:
         """
         Check if data or file even exists.
 
@@ -210,7 +216,7 @@ class InputData(base.InputData):
         """
         return self.path.exists()  # pragma: no cover
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         """Cleanup when mapchete closes."""
         if self._cached_path and not self._cache_keep:  # pragma: no cover
             logger.debug("remove cached file %s", self._cached_path)
@@ -240,7 +246,12 @@ class InputTile(base.InputTile, RasterInput):
     _in_memory_raster = None
 
     def __init__(
-        self, tile, input_data, in_memory_raster=None, cache_task_key=None, **kwargs
+        self,
+        tile: BufferedTile,
+        input_data: InputData,
+        in_memory_raster: Optional[bool] = None,
+        cache_task_key: Optional[str] = None,
+        **kwargs,
     ):
         """Initialize."""
         super().__init__(tile, input_key=input_data.input_key, **kwargs)
@@ -260,7 +271,12 @@ class InputTile(base.InputTile, RasterInput):
         )
         return f"raster_file.InputTile(tile={self.tile.id}, source={source})"
 
-    def read(self, indexes=None, resampling="nearest", **kwargs):
+    def read(
+        self,
+        indexes: Optional[Union[int, List[int]]] = None,
+        resampling: ResamplingLike = "nearest",
+        **kwargs,
+    ) -> ma.MaskedArray:
         """
         Read reprojected & resampled input data.
 
@@ -312,7 +328,7 @@ class InputTile(base.InputTile, RasterInput):
                 gdal_opts=self.gdal_opts,
             )
 
-    def is_empty(self, **_):
+    def is_empty(self, **_) -> bool:
         """
         Check if there is data within this tile.
 
@@ -323,7 +339,9 @@ class InputTile(base.InputTile, RasterInput):
         # empty if tile does not intersect with file bounding box
         return not self.tile.bbox.intersects(self.bbox)
 
-    def _get_band_indexes(self, indexes=None):
+    def _get_band_indexes(
+        self, indexes: Optional[Union[int, List[int]]] = None
+    ) -> List[int]:
         """Return valid band indexes."""
         if indexes:
             return indexes
@@ -331,7 +349,7 @@ class InputTile(base.InputTile, RasterInput):
             return list(range(1, self.profile["count"] + 1))
 
 
-def get_segmentize_value(input_file=None, tile_pyramid=None):
+def get_segmentize_value(input_file: MPathLike, tile_pyramid: TilePyramid) -> float:
     """
     Return the recommended segmentation value in input file units.
 
@@ -353,4 +371,6 @@ def get_segmentize_value(input_file=None, tile_pyramid=None):
     warnings.warn(
         DeprecationWarning("get_segmentize_value() has moved to mapchete.io")
     )  # pragma: no cover
-    return io.get_segmentize_value(input_file, tile_pyramid)  # pragma: no cover
+    return io.get_segmentize_value(
+        input_file=input_file, tile_pyramid=tile_pyramid
+    )  # pragma: no cover

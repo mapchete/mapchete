@@ -5,6 +5,7 @@ from mapchete.io.raster.array import (
     prepare_iterable,
     prepare_masked_array,
     resample_from_array,
+    WritableRasterData,
 )
 from mapchete.io.raster.convert import convert_raster
 from mapchete.io.raster.mosaic import create_mosaic
@@ -45,4 +46,5 @@ __all__ = [
     "read_raster",
     "rasterio_write",
     "write_raster_window",
+    "WritableRasterData",
 ]

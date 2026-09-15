@@ -61,8 +61,8 @@ from mapchete.io.raster import (
     rasterio_write,
     read_raster_no_crs,
     write_raster_window,
+    WritableRasterData,
 )
-from mapchete.io.raster.array import WritableRasterData
 from mapchete.settings import mapchete_options
 from mapchete.tile import BufferedTile
 from mapchete.types import to_resampling, Geometry
