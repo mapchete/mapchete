@@ -1,7 +1,5 @@
 """Use a directory of zoom/row/column tiles as input."""
 
-from __future__ import annotations
-
 import logging
 from functools import cached_property
 from typing import Optional
@@ -171,7 +169,7 @@ class InputData(base.InputData):
     def _tiledir_metadata_json(self) -> dict:
         return read_output_metadata(self.path.joinpath("metadata.json"))
 
-    def open(self, tile: BufferedTile, **kwargs) -> InputTile:
+    def open(self, tile: BufferedTile, **kwargs) -> "InputTile":
         """
         Return InputTile object.
 
