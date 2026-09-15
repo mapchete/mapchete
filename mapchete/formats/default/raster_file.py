@@ -5,8 +5,6 @@ Currently limited by extensions .tif, .vrt., .png and .jp2 but could be
 extended easily.
 """
 
-from __future__ import annotations
-
 from copy import deepcopy
 import logging
 from typing import Dict, Any, Optional, Union, List
@@ -149,7 +147,7 @@ class InputData(base.InputData):
                     f"invalid cache configuration given: {input_params['abstract']['cache']}"
                 )
 
-    def open(self, tile: BufferedTile, **kwargs) -> InputTile:
+    def open(self, tile: BufferedTile, **kwargs) -> "InputTile":
         """
         Return InputTile object.
 
