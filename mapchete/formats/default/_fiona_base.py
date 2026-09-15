@@ -4,7 +4,7 @@ Baseclasses for all drivers using fiona for reading and writing data.
 
 import logging
 import types
-from typing import List, Tuple, Literal, Iterator, TYPE_CHECKING
+from typing import List, Tuple, Literal, Iterator
 
 from fiona import Feature
 
@@ -12,12 +12,10 @@ from mapchete.formats import base
 from mapchete.formats.protocols import VectorInput
 from mapchete.io import MPath, fiona_open
 from mapchete.io.vector import write_vector_window
+from mapchete.processing import Mapchete
 from mapchete.tile import BufferedTile
+from mapchete.types import GeoJSONLikeFeature
 from mapchete.validate import validate_values
-
-if TYPE_CHECKING:
-    from mapchete.processing import Mapchete
-    from mapchete.types import GeoJSONLikeFeature
 
 
 logger = logging.getLogger(__name__)

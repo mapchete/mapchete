@@ -34,7 +34,7 @@ from contextlib import ExitStack
 import logging
 import math
 import os
-from typing import Literal, Union, Tuple, Optional, Dict, Any, List, TYPE_CHECKING
+from typing import Literal, Union, Tuple, Optional, Dict, Any, List
 import warnings
 
 import numpy as np
@@ -61,13 +61,12 @@ from mapchete.io.raster import (
     write_raster_window,
     WritableRasterData,
 )
+from mapchete.processing import Mapchete
 from mapchete.settings import mapchete_options
 from mapchete.tile import BufferedTile
 from mapchete.types import to_resampling, Geometry
 from mapchete.validate import deprecated_kwargs, validate_values
 
-if TYPE_CHECKING:
-    from mapchete.processing import Mapchete
 
 logger = logging.getLogger(__name__)
 
