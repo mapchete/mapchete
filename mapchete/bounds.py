@@ -156,7 +156,7 @@ class Bounds(list):
         if hasattr(left, "__iter__") and not isinstance(
             left, (float, int)
         ):  # pragma: no cover
-            self.left, self.bottom, self.right, self.top = [i for i in left]
+            self.left, self.bottom, self.right, self.top = left
         elif (
             isinstance(left, (float, int))
             and isinstance(bottom, (float, int))
