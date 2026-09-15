@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from typing import Any, List, Union, Optional
 
 from mapchete.types import ZoomLevelsLike
@@ -74,7 +72,7 @@ class ZoomLevels(list):
     @staticmethod
     def from_inp(
         min: ZoomLevelsLike, max: Optional[int] = None, descending: bool = False
-    ) -> ZoomLevels:
+    ) -> "ZoomLevels":
         """Constructs ZoomLevels from various input forms"""
         if isinstance(min, int) and max is None:
             return ZoomLevels.from_int(min, descending=descending)
@@ -91,11 +89,11 @@ class ZoomLevels(list):
             raise TypeError(f"cannot create ZoomLevels with min={min}, max={max}")
 
     @staticmethod
-    def from_int(inp: int, **kwargs) -> ZoomLevels:
+    def from_int(inp: int, **kwargs) -> "ZoomLevels":
         return ZoomLevels(min=inp, max=inp, **kwargs)
 
     @staticmethod
-    def from_list(inp: List[int], **kwargs) -> ZoomLevels:
+    def from_list(inp: List[int], **kwargs) -> "ZoomLevels":
         if len(inp) == 0:
             raise ValueError("zoom level list is empty")
         elif len(inp) == 1:
@@ -110,7 +108,7 @@ class ZoomLevels(list):
             return ZoomLevels(min=min(inp), max=max(inp), **kwargs)
 
     @staticmethod
-    def from_dict(inp: dict, **kwargs) -> ZoomLevels:
+    def from_dict(inp: dict, **kwargs) -> "ZoomLevels":
         try:
             return ZoomLevels(min=inp["min"], max=inp["max"], **kwargs)
         except KeyError:
@@ -122,21 +120,21 @@ class ZoomLevels(list):
             "max": self.max,
         }
 
-    def intersection(self, other: ZoomLevelsLike) -> ZoomLevels:
+    def intersection(self, other: ZoomLevelsLike) -> "ZoomLevels":
         other = ZoomLevels.from_inp(other)
         intersection = set(self).intersection(set(other))
         if len(intersection) == 0:
             raise ValueError("ZoomLevels do not intersect")
         return ZoomLevels(min(intersection), max(intersection))
 
-    def difference(self, other: ZoomLevelsLike) -> ZoomLevels:
+    def difference(self, other: ZoomLevelsLike) -> "ZoomLevels":
         other = ZoomLevels.from_inp(other)
         difference = set(self).difference(set(other))
         if len(difference) == 0:  # pragma: no cover
             raise ValueError("ZoomLevels do not differ")
         return ZoomLevels(min(difference), max(difference))
 
-    def union(self, other: ZoomLevelsLike) -> ZoomLevels:
+    def union(self, other: ZoomLevelsLike) -> "ZoomLevels":
         other = ZoomLevels.from_inp(other)
         combined = list(set(self).union(set(other)))
         combined.sort()
@@ -153,5 +151,5 @@ class ZoomLevels(list):
         except ValueError:
             return False
 
-    def descending(self) -> ZoomLevels:
+    def descending(self) -> "ZoomLevels":
         return ZoomLevels(min=self.min, max=self.max, descending=True)
