@@ -3,6 +3,23 @@ Changelog
 #########
 
 
+2026.11.0 - 2026-11-20
+----------------------
+
+* core
+
+  * `path.MPath`: add `local_copy()` context manager (#830)
+  * `pretty`: add `pretty_number()` (#830)
+  * `pretty.pretty_bytes()`: add `decimal` flag to switch to decimal annotation (e.g. `KB` instead of `KiB`) (#830)
+  * enable environmental variable expansion within strings (#831)
+  * add some typing information to `config.base`, `formats.default`, `io.raster.array` and `bounds` (#832)
+  * avoid `from __future__ import annotations` statements (#835)
+
+* CI/CD
+
+  * pin runners to `ubuntu-24.04` to keep compatibility with `ubuntugis-unstable` PPA (#851)
+
+
 2026.7.0 - 2026-07-31
 ---------------------
 
